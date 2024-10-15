@@ -86,17 +86,21 @@
           </tr>
         </thead>
         <tbody>
-          <tr v-for="(app,i) in apps" :key="i">
-            <td>{{app.name}}</td>
-            <td>
-              <button class="btn btn-primary mx-1" @click="editApp(i)">
-                <i class="fas fa-edit"></i> {{ $t('apps.edit') }}
-              </button>
-              <button class="btn btn-danger mx-1" @click="showDeleteForm(i)">
-                <i class="fas fa-trash"></i> {{ $t('apps.delete') }}
-              </button>
-            </td>
-          </tr>
+          <draggable v-model="apps">
+            <template #item="{app, i}">
+              <tr style="cursor: move;">
+                <td>{{app.name}}</td>
+                <td>
+                  <button class="btn btn-primary mx-1" @click="editApp(i)">
+                    <i class="fas fa-edit"></i> {{ $t('apps.edit') }}
+                  </button>
+                  <button class="btn btn-danger mx-1" @click="showDeleteForm(i)">
+                    <i class="fas fa-trash"></i> {{ $t('apps.delete') }}
+                  </button>
+                </td>
+              </tr>
+            </template>
+          </draggable>
         </tbody>
       </table>
     </div>
@@ -420,11 +424,13 @@
   import {initApp} from './init'
   import Navbar from './Navbar.vue'
   import {Dropdown} from 'bootstrap/dist/js/bootstrap'
+  import draggable from 'vuedraggable'
   import {nanoid} from 'nanoid'
 
   const app = createApp({
     components: {
-      Navbar
+      Navbar,
+      draggable,
     },
     data() {
       return {
