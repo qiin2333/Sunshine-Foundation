@@ -449,7 +449,7 @@ namespace display_device {
   }
 
   std::chrono::steady_clock::time_point last_toggle_time;
-  std::chrono::milliseconds debounce_interval { 5000 };  // 5000毫秒防抖间隔
+  std::chrono::milliseconds debounce_interval { 9000 };  // 9000毫秒防抖间隔
 
   void
   session_t::toggle_display_power() {
