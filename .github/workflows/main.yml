@@ -228,12 +228,8 @@ jobs:
             -B build \
             -G Ninja \
             -S . \
-            -DBUILD_WERROR=ON \
-            -DCMAKE_BUILD_TYPE=RelWithDebInfo \
-            -DSUNSHINE_ASSETS_DIR=assets \
-            -DSUNSHINE_PUBLISHER_NAME='${{ github.repository_owner }}' \
-            -DSUNSHINE_PUBLISHER_WEBSITE='https://app.lizardbyte.dev' \
-            -DSUNSHINE_PUBLISHER_ISSUE_URL='https://app.lizardbyte.dev/support'
+            -DBUILD_DOCS=OFF \
+            -DSUNSHINE_ASSETS_DIR=assets
           ninja -C build
 
       - name: Package Windows
