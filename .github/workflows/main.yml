@@ -2,15 +2,11 @@ name: Build and Release
 
 on:
   push:
+    branches:
+      - master
     tags:
       - '*'
   workflow_dispatch:
-    inputs:
-      create_release:
-        description: 'Create a release with current build'
-        required: true
-        default: false
-        type: boolean
 
 jobs:
   build_win:
