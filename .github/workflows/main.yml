@@ -127,14 +127,35 @@ jobs:
           cd build
           cp -r ../../../Sunshine/build/* ./
 
-      - name: Upload Artifacts
+      # - name: Package Windows
+      #   shell: msys2 {0}
+      #   run: |
+      #     mkdir -p artifacts
+      #     cd build
+
+      #     # package
+      #     cpack -G NSIS
+      #     cpack -G ZIP
+
+      #     # move
+      #     mv ./cpack_artifacts/Sunshine.exe ../artifacts/sunshine-windows-installer.exe
+      #     mv ./cpack_artifacts/Sunshine.zip ../artifacts/sunshine-windows-portable.zip
+
+      - name: Upload Build Artifacts
         uses: actions/upload-artifact@v4
         with:
           name: build
           path: build/
           if-no-files-found: error
 
-      - name: Upload Artifacts
+      - name: Upload Packaged Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: sunshine-windows
+          path: artifacts/
+          if-no-files-found: error
+
+      - name: Upload Single Executable
         uses: actions/upload-artifact@v4
         with:
           name: sunshine
