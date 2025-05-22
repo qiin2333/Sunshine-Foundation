@@ -130,6 +130,13 @@ jobs:
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: sunshine-windows
+          name: build
           path: build/
+          if-no-files-found: error
+
+      - name: Upload Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: sunshine
+          path: build/sunshine.exe
           if-no-files-found: error
