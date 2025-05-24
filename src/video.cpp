@@ -281,6 +281,7 @@ namespace video {
     REF_FRAMES_INVALIDATION = 1 << 8,  ///< Support reference frames invalidation
     ALWAYS_REPROBE = 1 << 9,  ///< This is an encoder of last resort and we want to aggressively probe for a better one
     YUV444_SUPPORT = 1 << 10,  ///< Encoder may support 4:4:4 chroma sampling depending on hardware
+    ASYNC_TEARDOWN = 1 << 11,  ///< Encoder supports async teardown on a different thread
   };
 
   class avcodec_encode_session_t: public encode_session_t {
@@ -574,7 +575,7 @@ namespace video {
       {},  // Fallback options
       "h264_nvenc"s,
     },
-    PARALLEL_ENCODING
+    PARALLEL_ENCODING | REF_FRAMES_INVALIDATION | YUV444_SUPPORT | ASYNC_TEARDOWN  // flags
   };
 #endif
 
@@ -1796,9 +1797,26 @@ namespace video {
       return;
     }
 
-    // set minimum frame time, avoiding violation of client-requested target framerate
-    auto minimum_frame_time = std::chrono::milliseconds(1000 / std::min(config.framerate, (config::video.min_fps_factor * 10)));
-    BOOST_LOG(debug) << "Minimum frame time set to "sv << minimum_frame_time.count() << "ms, based on min fps factor of "sv << config::video.min_fps_factor << "."sv;
+    // As a workaround for NVENC hangs and to generally speed up encoder reinit,
+    // we will complete the encoder teardown in a separate thread if supported.
+    // This will move expensive processing off the encoder thread to allow us
+    // to restart encoding as soon as possible. For cases where the NVENC driver
+    // hang occurs, this thread may probably never exit, but it will allow
+    // streaming to continue without requiring a full restart of Sunshine.
+    auto fail_guard = util::fail_guard([&encoder, &session] {
+      if (encoder.flags & ASYNC_TEARDOWN) {
+        std::thread encoder_teardown_thread { [session = std::move(session)]() mutable {
+          BOOST_LOG(info) << "Starting async encoder teardown";
+          session.reset();
+          BOOST_LOG(info) << "Async encoder teardown complete";
+        } };
+        encoder_teardown_thread.detach();
+      }
+    });
+
+    // set minimum frame time based on client-requested target framerate
+    std::chrono::duration<double, std::milli> minimum_frame_time { 1000.0 / config.framerate };
+    BOOST_LOG(info) << "Minimum frame time set to "sv << minimum_frame_time.count() << "ms, based on client-requested target framerate "sv << config.framerate << "."sv;
 
     auto shutdown_event = mail->event<bool>(mail::shutdown);
     auto packets = mail::man->queue<packet_t>(mail::video_packets);
