@@ -9,7 +9,10 @@
 #include "process.h"
 
 #include <filesystem>
+#include <fstream>
+#include <regex>
 #include <set>
+#include <sstream>
 
 #include <boost/property_tree/json_parser.hpp>
 #include <boost/property_tree/ptree.hpp>
@@ -553,41 +556,56 @@ namespace confighttp {
     outputTree.put("status", "true");
     outputTree.put("locale", config::sunshine.locale);
   }
-
   std::vector<std::string>
   split(const std::string &str, char delimiter) {
     std::vector<std::string> tokens;
     size_t start = 0, end = 0;
     while ((end = str.find(delimiter, start)) != std::string::npos) {
-      tokens.push_back(str.substr(start, end - start));
+      std::string token = str.substr(start, end - start);
+      // 过滤空字符串和仅包含空白字符的字符串
+      boost::algorithm::trim(token);
+      if (!token.empty()) {
+        tokens.push_back(token);
+      }
       start = end + 1;
     }
-    tokens.push_back(str.substr(start));
+    std::string lastToken = str.substr(start);
+    boost::algorithm::trim(lastToken);
+    if (!lastToken.empty()) {
+      tokens.push_back(lastToken);
+    }
     return tokens;
   }
 
   bool
   saveVddSettings(std::string resArray, std::string fpsArray, std::string gpu_name) {
     pt::ptree iddOptionTree;
-    pt::ptree resolutions_nodes;
-
-    // prepare resolutions setting for vdd
+    pt::ptree resolutions_nodes;    // prepare resolutions setting for vdd
     boost::regex pattern("\\[|\\]|\\s+");
     char delimiter = ',';
     std::string str = boost::regex_replace(resArray, pattern, "");
     boost::algorithm::trim(str);
-    for (const auto &resolution : split(str, delimiter)) {
-      auto index = resolution.find('x');
-      if(index == std::string::npos) {
-        return false;
+    if (!str.empty()) {
+      for (const auto &resolution : split(str, delimiter)) {
+        auto index = resolution.find('x');
+        if(index == std::string::npos || resolution.empty()) {
+          continue; // 跳过无效的分辨率格式
+        }
+        pt::ptree res_node;
+        res_node.put("width", resolution.substr(0, index));
+        res_node.put("height", resolution.substr(index + 1));
+        
+        std::string fpsStr = boost::regex_replace(fpsArray, pattern, "");
+        boost::algorithm::trim(fpsStr);
+        if (!fpsStr.empty()) {
+          for (const auto &fps : split(fpsStr, delimiter)) {
+            if (!fps.empty()) { // 确保fps不为空
+              res_node.add("refresh_rate", fps);
+            }
+          }
+        }
+        resolutions_nodes.push_back(std::make_pair("resolution"s, res_node));
       }
-      pt::ptree res_node;
-      res_node.put("width", resolution.substr(0, index));
-      res_node.put("height", resolution.substr(index + 1));
-      for (const auto &fps : split(boost::regex_replace(fpsArray, pattern, ""), delimiter)) {
-        res_node.add("refresh_rate", fps);
-      }
-      resolutions_nodes.push_back(std::make_pair("resolution"s, res_node));
     }
 
     char* systemDrive = std::getenv("SystemDrive");
@@ -654,12 +672,22 @@ namespace confighttp {
       iddOptionTree.add_child("monitors", monitor_node);
       iddOptionTree.add_child("gpu", gpu_node);
       iddOptionTree.add_child("resolutions", resolutions_nodes);
-    }
-
-    root.add_child("vdd_settings", iddOptionTree);
+    }    root.add_child("vdd_settings", iddOptionTree);
     try {
-      auto setting = boost::property_tree::xml_writer_make_settings<std::string>('\t', 1);
-      write_xml(idd_option_path.string(), root, std::locale(), setting);
+      // 使用更紧凑的XML格式设置，减少不必要的空白
+      auto setting = boost::property_tree::xml_writer_make_settings<std::string>(' ', 2);
+      std::ostringstream oss;
+      write_xml(oss, root, setting);
+      
+      // 清理多余空行，保持XML格式整洁
+      std::string xml_content = oss.str();
+      std::regex empty_lines_regex("\\n\\s*\\n");
+      xml_content = std::regex_replace(xml_content, empty_lines_regex, "\n");
+      
+      std::ofstream file(idd_option_path.string());
+      file << xml_content;
+      file.close();
+      
       return true;
     }
     catch(...) {
