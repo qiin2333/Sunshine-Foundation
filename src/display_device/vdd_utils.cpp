@@ -264,7 +264,9 @@ namespace display_device {
       else {
         destroy_vdd_monitor();
       }
-    }    VddSettings
+    }
+
+    VddSettings
     prepare_vdd_settings(const parsed_config_t &config) {
       auto is_res_cached = false;
       auto is_fps_cached = false;
