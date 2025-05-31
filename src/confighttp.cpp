@@ -118,7 +118,7 @@ namespace confighttp {
     if (ip_type == net::PC) {
       return true;
     }
-  
+
     auto fg = util::fail_guard([&]() {
       send_unauthorized(response, request);
     });
@@ -594,7 +594,7 @@ namespace confighttp {
         pt::ptree res_node;
         res_node.put("width", resolution.substr(0, index));
         res_node.put("height", resolution.substr(index + 1));
-        
+
         std::string fpsStr = boost::regex_replace(fpsArray, pattern, "");
         boost::algorithm::trim(fpsStr);
         if (!fpsStr.empty()) {
@@ -613,36 +613,36 @@ namespace confighttp {
         BOOST_LOG(error) << "无法获取 SystemDrive 环境变量";
         return false;
     }
-    
+
     auto idd_option_path = std::filesystem::path(systemDrive) 
         / "\\"
         / "VirtualDisplayDriver" 
         / "vdd_settings.xml";
 
     BOOST_LOG(info) << "VDD配置文件路径: " << idd_option_path.string();
-    
+
     if (!fs::exists(idd_option_path)) {
         return false;
     }
-    
+
     // 先读取现有配置文件
     pt::ptree existing_root;
     pt::ptree root;
-    
+
     try {
       pt::read_xml(idd_option_path.string(), existing_root);
       // 如果现有配置文件中已有vdd_settings节点
       if (existing_root.get_child_optional("vdd_settings")) {
         // 复制现有配置
         iddOptionTree = existing_root.get_child("vdd_settings");
-        
+
         // 更新需要更改的部分
         pt::ptree monitor_node;
         monitor_node.put("count", 1);
-        
+
         pt::ptree gpu_node;
-        gpu_node.put("friendlyname", gpu_name);
-        
+        gpu_node.put("friendlyname", gpu_name.empty() ? "default" : gpu_name);
+
         // 替换配置
         iddOptionTree.put_child("monitors", monitor_node);
         iddOptionTree.put_child("gpu", gpu_node);
@@ -651,10 +651,10 @@ namespace confighttp {
         // 如果没有vdd_settings节点，创建新的
         pt::ptree monitor_node;
         monitor_node.put("count", 1);
-        
+
         pt::ptree gpu_node;
-        gpu_node.put("friendlyname", gpu_name);
-        
+        gpu_node.put("friendlyname", gpu_name.empty() ? "default" : gpu_name);
+
         iddOptionTree.add_child("monitors", monitor_node);
         iddOptionTree.add_child("gpu", gpu_node);
         iddOptionTree.add_child("resolutions", resolutions_nodes);
@@ -662,13 +662,13 @@ namespace confighttp {
     } catch(...) {
       // 读取失败，创建新的配置
       BOOST_LOG(warning) << "读取现有VDD配置失败，创建新配置";
-      
+
       pt::ptree monitor_node;
       monitor_node.put("count", 1);
-      
+
       pt::ptree gpu_node;
-      gpu_node.put("friendlyname", gpu_name);
-      
+      gpu_node.put("friendlyname", gpu_name.empty() ? "default" : gpu_name);
+
       iddOptionTree.add_child("monitors", monitor_node);
       iddOptionTree.add_child("gpu", gpu_node);
       iddOptionTree.add_child("resolutions", resolutions_nodes);
@@ -685,11 +685,11 @@ namespace confighttp {
       std::string xml_content = oss.str();
       boost::regex empty_lines_regex("\\n\\s*\\n");
       xml_content = boost::regex_replace(xml_content, empty_lines_regex, "\n");
-      
+
       std::ofstream file(idd_option_path.string());
       file << xml_content;
       file.close();
-      
+
       return true;
     }
     catch(...) {
