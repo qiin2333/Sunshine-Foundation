@@ -129,6 +129,7 @@
 1. 查看 [使用文档](https://docs.qq.com/aio/DSGdQc3htbFJjSFdO?p=YTpMj5JNNdB5hEKJhhqlSB)
 2. 参考官方 [LizardByte文档](https://lizardbyte.readthedocs.io/en/latest/about/support.html)
 3. 加入QQ交流群获取帮助
+4. [使用两个字母](https://uuyc.163.com/)
 
 **问题反馈标签：**
 - `hdr-support` - HDR相关问题
@@ -143,5 +144,3 @@
 ---
 
 **Sunshine基地版 - 让游戏串流更简单**
-
-[![Powered by DartNode](https://dartnode.com/branding/DN-Open-Source-sm.png)](https://dartnode.com "Powered by DartNode - Free VPS for Open Source")
