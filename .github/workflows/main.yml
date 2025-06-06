@@ -149,7 +149,7 @@ jobs:
           cd build
 
           # package
-          cpack -G NSIS
+          cpack -G NSIS --verbose
           # cpack -G ZIP
 
           # move
