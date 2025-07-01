@@ -133,9 +133,9 @@
 
 遇到问题时的解决路径：
 1. 查看 [使用文档](https://docs.qq.com/aio/DSGdQc3htbFJjSFdO?p=YTpMj5JNNdB5hEKJhhqlSB) [LizardByte文档](https://docs.lizardbyte.dev/projects/sunshine/latest/)
-3. 在设置中打开详细的日志等级找到相关信息
-4. [加入QQ交流群获取帮助](https://qm.qq.com/cgi-bin/qm/qr?k=5qnkzSaLIrIaU4FvumftZH_6Hg7fUuLD&jump_from=webapi)
-5. [使用两个字母！](https://uuyc.163.com/)
+2. 在设置中打开详细的日志等级找到相关信息
+3. [加入QQ交流群获取帮助](https://qm.qq.com/cgi-bin/qm/qr?k=5qnkzSaLIrIaU4FvumftZH_6Hg7fUuLD&jump_from=webapi)
+4. [使用两个字母！](https://uuyc.163.com/)
 
 **问题反馈标签：**
 - `hdr-support` - HDR相关问题
