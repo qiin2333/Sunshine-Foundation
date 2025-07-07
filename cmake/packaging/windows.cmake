@@ -40,7 +40,7 @@ if(EXISTS "${SUNSHINE_SOURCE_ASSETS_DIR}/windows/misc/helper")
     # Install helper directory without trailing slash to avoid Windows path issues
     install(DIRECTORY "${SUNSHINE_SOURCE_ASSETS_DIR}/windows/misc/helper"
             DESTINATION "tools"
-            COMPONENT supercmd)
+            COMPONENT assets)
 else()
     message(WARNING "helper directory not found at ${SUNSHINE_SOURCE_ASSETS_DIR}/windows/misc/helper")
 endif()
