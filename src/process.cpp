@@ -6,6 +6,7 @@
 
 #include "process.h"
 
+#include <algorithm>
 #include <filesystem>
 #include <string>
 #include <thread>
@@ -24,6 +25,7 @@
 #include "config.h"
 #include "crypto.h"
 #include "display_device/session.h"
+#include "httpcommon.h"
 #include "logging.h"
 #include "platform/common.h"
 #include "system_tray.h"
@@ -525,6 +527,44 @@ namespace proc {
       return DEFAULT_APP_IMAGE_PATH;
     }
 
+    // 处理网络图片下载
+    if (app_image_path.find("http://") == 0 || app_image_path.find("https://") == 0) {
+      try {
+        size_t query_start = app_image_path.find('?');
+        if (query_start != std::string::npos) {
+          app_image_path = app_image_path.substr(0, query_start);
+        }
+        // 从URL提取文件名
+        size_t last_slash = app_image_path.find_last_of('/');
+        std::string default_filename = "downloaded_image_" + std::to_string(std::time(nullptr)) + ".png"; 
+        std::string filename = (last_slash != std::string::npos) ? 
+                              app_image_path.substr(last_slash + 1) : 
+                              default_filename;
+        
+        // 如果文件名为空或不包含扩展名，使用默认名称
+        if (filename.empty() || filename.find('.') == std::string::npos) {
+          filename = default_filename;
+        }
+        
+        // 保存到本地assets目录
+        auto local_path = std::filesystem::path(SUNSHINE_ASSETS_DIR) / filename;
+        
+        // 如果文件不存在则下载
+        if (!std::filesystem::exists(local_path)) {
+          BOOST_LOG(info) << "Downloading image from URL: " << app_image_path;
+          if (!http::download_file(app_image_path, local_path.string())) {
+            BOOST_LOG(warning) << "Failed to download image from URL: " << app_image_path;
+            return DEFAULT_APP_IMAGE_PATH;
+          }
+        }
+        
+        app_image_path = local_path.string();
+      } catch (const std::exception& e) {
+        BOOST_LOG(warning) << "Error processing image URL: " << e.what();
+        return DEFAULT_APP_IMAGE_PATH;
+      }
+    }
+
     // get the image extension and convert it to lowercase
     auto image_extension = std::filesystem::path(app_image_path).extension().string();
     boost::to_lower(image_extension);
@@ -533,13 +573,6 @@ namespace proc {
       char wallpaperPath[MAX_PATH];
       SystemParametersInfo(SPI_GETDESKWALLPAPER, MAX_PATH, wallpaperPath, 0);
       BOOST_LOG(info) << "Use desktop image ["sv << wallpaperPath << ']';
-
-      // int width, height, channels;
-      // unsigned char *data = stbi_load((LPCSTR) wallpaperPath, &width, &height, &channels, 0);
-      // if (data) {
-      //   stbi_write_png(SUNSHINE_ASSETS_DIR "desktop.png", width, height, channels, data, width * channels);
-      //   stbi_image_free(data);
-      // }
       return wallpaperPath;
     }
 
