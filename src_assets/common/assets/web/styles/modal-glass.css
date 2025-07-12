@@ -1,0 +1,341 @@
+/* 统一模态框样式 */
+.modal-backdrop {
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(4px);
+}
+
+.modal-content {
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 20px;
+  backdrop-filter: blur(20px);
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+  color: #ffffff;
+}
+
+.modal-title {
+  color: #ffffff;
+  font-weight: 600;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+}
+
+.modal-body {
+  color: #ffffff;
+}
+
+.modal-footer {
+  border-top: 1px solid rgba(255, 255, 255, 0.2);
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 0 0 20px 20px;
+}
+
+.btn-close {
+  color: #ffffff;
+  opacity: 0.7;
+  filter: invert(1);
+}
+
+.btn-close:hover {
+  opacity: 1;
+}
+
+/* 模态框内的按钮样式 */
+.modal .btn-primary {
+  background: linear-gradient(135deg, #667eea, #764ba2);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  color: #ffffff;
+  backdrop-filter: blur(5px);
+}
+
+.modal .btn-primary:hover {
+  background: linear-gradient(135deg, #764ba2, #667eea);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+.modal .btn-secondary {
+  background: rgba(108, 117, 125, 0.3);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  color: #ffffff;
+  backdrop-filter: blur(5px);
+}
+
+.modal .btn-secondary:hover {
+  background: rgba(108, 117, 125, 0.5);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+.modal .btn-outline-primary {
+  background: rgba(0, 123, 255, 0.1);
+  border: 1px solid rgba(0, 123, 255, 0.5);
+  color: #ffffff;
+  backdrop-filter: blur(5px);
+}
+
+.modal .btn-outline-primary:hover {
+  background: rgba(0, 123, 255, 0.3);
+  border-color: rgba(0, 123, 255, 0.7);
+  transform: translateY(-1px);
+}
+
+.modal .btn-danger {
+  background: linear-gradient(135deg, #dc3545, #c82333);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  color: #ffffff;
+  backdrop-filter: blur(5px);
+}
+
+.modal .btn-danger:hover {
+  background: linear-gradient(135deg, #c82333, #dc3545);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(220, 53, 69, 0.4);
+}
+
+.modal .btn-success {
+  background: linear-gradient(135deg, #28a745, #20c997);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  color: #ffffff;
+  backdrop-filter: blur(5px);
+}
+
+.modal .btn-success:hover {
+  background: linear-gradient(135deg, #20c997, #28a745);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(40, 167, 69, 0.4);
+}
+
+.modal .btn-warning {
+  background: linear-gradient(135deg, #ffc107, #ff8c00);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  color: #ffffff;
+  backdrop-filter: blur(5px);
+}
+
+.modal .btn-warning:hover {
+  background: linear-gradient(135deg, #ff8c00, #ffc107);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(255, 193, 7, 0.4);
+}
+
+.modal .btn-info {
+  background: linear-gradient(135deg, #17a2b8, #138496);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  color: #ffffff;
+  backdrop-filter: blur(5px);
+}
+
+.modal .btn-info:hover {
+  background: linear-gradient(135deg, #138496, #17a2b8);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(23, 162, 184, 0.4);
+}
+
+/* 模态框内的表单元素样式 */
+.modal .form-control,
+.modal .form-select,
+.modal .form-textarea {
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  color: #ffffff;
+  backdrop-filter: blur(5px);
+}
+
+.modal .form-control:focus,
+.modal .form-select:focus,
+.modal .form-textarea:focus {
+  background: rgba(255, 255, 255, 0.2);
+  border-color: rgba(255, 255, 255, 0.5);
+  box-shadow: 0 0 0 0.2rem rgba(255, 255, 255, 0.25);
+  color: #ffffff;
+}
+
+.modal .form-control::placeholder {
+  color: rgba(255, 255, 255, 0.6);
+}
+
+.modal .form-label {
+  color: #ffffff;
+  font-weight: 600;
+}
+
+.modal .input-group-text {
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  color: #ffffff;
+  backdrop-filter: blur(5px);
+}
+
+/* 模态框内的警告框样式 */
+.modal .alert {
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 12px;
+  color: #ffffff;
+  backdrop-filter: blur(5px);
+}
+
+.modal .alert-info {
+  background: rgba(23, 162, 184, 0.2);
+  border-color: rgba(23, 162, 184, 0.5);
+}
+
+.modal .alert-warning {
+  background: rgba(255, 193, 7, 0.2);
+  border-color: rgba(255, 193, 7, 0.5);
+}
+
+.modal .alert-danger {
+  background: rgba(220, 53, 69, 0.2);
+  border-color: rgba(220, 53, 69, 0.5);
+}
+
+.modal .alert-success {
+  background: rgba(40, 167, 69, 0.2);
+  border-color: rgba(40, 167, 69, 0.5);
+}
+
+/* 模态框内的选项卡样式 */
+.modal .nav-tabs {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.3);
+}
+
+.modal .nav-tabs .nav-link {
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(5px);
+}
+
+.modal .nav-tabs .nav-link:hover {
+  background: rgba(255, 255, 255, 0.2);
+  border-color: rgba(255, 255, 255, 0.3);
+  color: #ffffff;
+}
+
+.modal .nav-tabs .nav-link.active {
+  background: rgba(255, 255, 255, 0.3);
+  border-color: rgba(255, 255, 255, 0.5);
+  color: #ffffff;
+}
+
+/* 模态框内的手风琴样式 */
+.modal .accordion-item {
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  backdrop-filter: blur(5px);
+}
+
+.modal .accordion-button {
+  background: rgba(0, 0, 0, 0.1);
+  color: #ffffff;
+  border: none;
+  backdrop-filter: blur(5px);
+}
+
+.modal .accordion-button:not(.collapsed) {
+  background: rgba(0, 0, 0, 0.2);
+  color: #ffffff;
+  box-shadow: none;
+}
+
+.modal .accordion-button:focus {
+  border-color: rgba(0, 0, 0, 0.5);
+  box-shadow: 0 0 0 0.25rem rgba(255, 255, 255, 0.25);
+}
+
+.modal .accordion-body {
+  background: rgba(0, 0, 0, 0.7);
+  color: #ffffff;
+}
+
+/* 模态框内的代码块样式 */
+.modal pre,
+.modal code {
+  background: rgba(0, 0, 0, 0.4);
+  color: #ffffff;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 8px;
+}
+
+.modal .table {
+  color: #ffffff;
+}
+
+.modal .table th {
+  background: rgba(255, 255, 255, 0.2);
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+.modal .table td {
+  border-color: rgba(255, 255, 255, 0.1);
+}
+
+/* 模态框内的下拉菜单样式 */
+.modal .dropdown-menu {
+  border-radius: 10px;
+}
+
+.modal .dropdown-item {
+  color: #ffffff;
+}
+
+.modal .dropdown-item:hover {
+  background: rgba(255, 255, 255, 0.2);
+  color: #ffffff;
+}
+
+/* 模态框内的分页样式 */
+.modal .pagination .page-link {
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  color: #ffffff;
+  backdrop-filter: blur(5px);
+}
+
+.modal .pagination .page-link:hover {
+  background: rgba(255, 255, 255, 0.2);
+  border-color: rgba(255, 255, 255, 0.5);
+  color: #ffffff;
+}
+
+.modal .pagination .page-item.active .page-link {
+  background: linear-gradient(135deg, #667eea, #764ba2);
+  border-color: rgba(255, 255, 255, 0.5);
+  color: #ffffff;
+}
+
+/* 特殊元素样式 */
+.env-var-name {
+  background: rgba(0, 0, 0, 0.3);
+  color: #ffc107;
+  padding: 4px 8px;
+  border-radius: 6px;
+  font-family: 'Courier New', monospace;
+}
+
+.code-example {
+  background: rgba(0, 0, 0, 0.3);
+  color: #ffffff;
+  padding: 15px;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  font-family: 'Courier New', monospace;
+  font-size: 0.9rem;
+}
+
+/* 响应式设计 */
+@media (max-width: 768px) {
+  .modal-content {
+    margin: 10px;
+  }
+  
+  .modal-header,
+  .modal-footer {
+    padding: 1rem;
+  }
+  
+  .modal-body {
+    padding: 1rem;
+  }
+} 
