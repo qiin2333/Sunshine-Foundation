@@ -54,7 +54,7 @@ mkdir "%DIST_DIR%"
 copy "%DRIVER_DIR%\*.*" "%DIST_DIR%"
 
 "%NEFCON%" --remove-device-node --hardware-id ROOT\MttVDD --class-guid 4d36e968-e325-11ce-bfc1-08002be10318
-echo 正在等待vdd卸载...
+echo Waiting for VDD uninstall...
 timeout /t 5 /nobreak > nul
 
 @REM write registry
