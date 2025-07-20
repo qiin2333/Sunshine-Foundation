@@ -10,8 +10,9 @@ set(CPACK_NSIS_INSTALLED_ICON_NAME "${PROJECT__DIR}\\\\${PROJECT_EXE}")
 SET(CPACK_NSIS_EXTRA_INSTALL_COMMANDS
         "${CPACK_NSIS_EXTRA_INSTALL_COMMANDS}
         IfSilent +2 0
-        CreateShortCut '\\\"$DESKTOP\\\\SunshineGUI.lnk\\\"' '\\\"$INSTDIR\\\\assets\\\\gui\\\\sunshine-gui.exe\\\"'
-        ExecShell 'startpin' '\\\"$DESKTOP\\\\SunshineGUI.lnk\\\"'
+        IfFileExists "$INSTDIR\\assets\\gui\\sunshine-gui.exe" 0 +2
+        CreateShortCut "$DESKTOP\\SunshineGUI.lnk" "$INSTDIR\\assets\\gui\\sunshine-gui.exe"
+        ExecShell 'startpin' '"$DESKTOP\\SunshineGUI.lnk"'
         ExecShell 'open' 'https://docs.qq.com/aio/DSGdQc3htbFJjSFdO'
         nsExec::ExecToLog 'icacls \\\"$INSTDIR\\\" /reset'
         nsExec::ExecToLog '\\\"$INSTDIR\\\\scripts\\\\update-path.bat\\\" add'
