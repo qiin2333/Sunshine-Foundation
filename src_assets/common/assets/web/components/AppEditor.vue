@@ -72,11 +72,10 @@
                           type="text" 
                           class="form-control form-control-enhanced monospace" 
                           id="appCmd" 
-                          v-model="formData.cmd" 
+                          v-model="formData.cmd"
                           :class="getFieldClass('cmd')"
                           @blur="validateField('cmd')"
                           :placeholder="getPlaceholderText('cmd')"
-                          required 
                         />
                         <button class="btn btn-outline-secondary" type="button" @click="selectFile('cmd')" :title="getButtonTitle('file')">
                           <i class="fas fa-folder-open"></i>
