@@ -1112,6 +1112,16 @@ namespace platf {
    */
   std::shared_ptr<display_t>
   display(mem_type_e hwdevice_type, const std::string &display_name, const video::config_t &config) {
+    if (config::video.capture == "amd" || config::video.capture.empty()) {
+      if (hwdevice_type == mem_type_e::dxgi) {
+        auto disp = std::make_shared<dxgi::display_amd_vram_t>();
+
+        if (!disp->init(config, display_name)) {
+          return disp;
+        }
+      }
+    }
+
     if (config::video.capture == "ddx" || config::video.capture.empty()) {
       if (hwdevice_type == mem_type_e::dxgi) {
         auto disp = std::make_shared<dxgi::display_ddup_vram_t>();
