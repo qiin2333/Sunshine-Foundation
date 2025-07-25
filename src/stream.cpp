@@ -48,6 +48,8 @@ extern "C" {
 #define IDX_SET_MOTION_EVENT 13
 #define IDX_SET_RGB_LED 14
 #define IDX_SET_ADAPTIVE_TRIGGERS 15
+#define IDX_MIC_DATA 16
+#define IDX_MIC_CONFIG 17
 
 static const short packetTypes[] = {
   0x0305,  // Start A
@@ -66,6 +68,8 @@ static const short packetTypes[] = {
   0x5501,  // Set motion event (Sunshine protocol extension)
   0x5502,  // Set RGB LED (Sunshine protocol extension)
   0x5503,  // Set Adaptive triggers (Sunshine protocol extension)
+  0x5504,  // Microphone data (Sunshine protocol extension)
+  0x5505,  // Microphone config (Sunshine protocol extension)
 };
 
 namespace asio = boost::asio;
@@ -80,7 +84,8 @@ namespace stream {
 
   enum class socket_e : int {
     video,  ///< Video
-    audio  ///< Audio
+    audio,  ///< Audio
+    microphone,  ///< Microphone
   };
 
 #pragma pack(push, 1)
@@ -230,15 +235,6 @@ namespace stream {
   struct audio_fec_packet_t {
     RTP_PACKET rtp;
     AUDIO_FEC_HEADER fecHeader;
-  };
-
-  // 麦克风数据包头定义
-  struct microphone_packet_header_t {
-    std::uint8_t flags;
-    std::uint8_t packetType;
-    std::uint16_t sequenceNumber;
-    std::uint32_t timestamp;
-    std::uint32_t ssrc;
   };
 
   // 麦克风数据包类型
@@ -904,7 +900,8 @@ namespace stream {
         encrypted_payload;
 
       payload = encode_control(session, util::view(plaintext), encrypted_payload);
-    } else if (msg.type == platf::gamepad_feedback_e::set_adaptive_triggers) {
+    }
+    else if (msg.type == platf::gamepad_feedback_e::set_adaptive_triggers) {
       control_adaptive_triggers_t plaintext;
       plaintext.header.type = packetTypes[IDX_SET_ADAPTIVE_TRIGGERS];
       plaintext.header.payloadLength = sizeof(plaintext) - sizeof(control_header_v2);
@@ -920,7 +917,8 @@ namespace stream {
         encrypted_payload;
 
       payload = encode_control(session, util::view(plaintext), encrypted_payload);
-    } else {
+    }
+    else {
       BOOST_LOG(error) << "Unknown gamepad feedback message type"sv;
       return -1;
     }
@@ -1232,18 +1230,6 @@ namespace stream {
     udp::endpoint peer;
     std::array<char, 2048> buffer;
 
-    auto handle_common_errors = [](const boost::system::error_code &ec) {
-      if (ec == boost::system::errc::connection_refused ||
-          ec == boost::system::errc::connection_reset) {
-        return true;
-      }
-      if (ec) {
-        BOOST_LOG(error) << "Couldn't receive data from mic socket: "sv << ec.message();
-        return true;
-      }
-      return false;
-    };
-
     // 麦克风接收处理函数
     std::function<void(const boost::system::error_code, size_t)> mic_recv_func;
     mic_recv_func = [&](const boost::system::error_code &ec, size_t bytes) {
@@ -1270,17 +1256,21 @@ namespace stream {
 
       BOOST_LOG(verbose) << "Mic Recv: "sv << peer.address().to_string() << ':' << peer.port();
 
-      if (handle_common_errors(ec) || bytes == 0) {
-        if (bytes == 0) BOOST_LOG(warning) << "Received empty mic packet";
+      if (ec == boost::system::errc::connection_refused ||
+          ec == boost::system::errc::connection_reset) {
+        return;
+      }
+      if (ec) {
+        BOOST_LOG(error) << "Couldn't receive data from mic socket: "sv << ec.message();
         return;
       }
 
       // 处理麦克风数据
       try {
-        if (bytes >= sizeof(microphone_packet_header_t)) {
-          auto *header = (microphone_packet_header_t *) buffer.data();
-          if (header->packetType == MIC_PACKET_TYPE_OPUS) {
-            size_t header_size = sizeof(microphone_packet_header_t);
+        if (bytes >= sizeof(RTP_PACKET)) {
+          auto *header = (RTP_PACKET *) buffer.data();
+          if (header->packetType == MIC_PACKET_TYPE_OPUS || header->packetType == packetTypes[IDX_MIC_DATA]) {
+            size_t header_size = sizeof(RTP_PACKET);
             if (bytes > header_size) {
               const auto *audio_data = reinterpret_cast<const uint8_t *>(buffer.data()) + header_size;
 
@@ -1355,17 +1345,6 @@ namespace stream {
     udp::endpoint peer;
     std::array<std::array<char, 2048>, 2> buffers;
     std::array<std::function<void(const boost::system::error_code, size_t)>, 2> recv_funcs;
-    auto handle_common_errors = [](const boost::system::error_code &ec) {
-      if (ec == boost::system::errc::connection_refused ||
-          ec == boost::system::errc::connection_reset) {
-        return true;
-      }
-      if (ec) {
-        BOOST_LOG(error) << "Couldn't receive data from udp socket: "sv << ec.message();
-        return true;
-      }
-      return false;
-    };
 
     // 统一处理PING包逻辑
     auto handle_ping = [](auto &session_map, auto &peer, auto &buf, size_t bytes, std::string_view type_str) {
@@ -1423,8 +1402,16 @@ namespace stream {
 
         update_session_map(message_queue_queue, peer_to_video_session, peer_to_audio_session);
 
-        if (handle_common_errors(ec) || bytes == 0) {
-          if (bytes == 0) BOOST_LOG(warning) << "Received empty packet";
+        if (ec == boost::system::errc::connection_refused ||
+            ec == boost::system::errc::connection_reset) {
+          return;
+        }
+        if (ec) {
+          BOOST_LOG(error) << "Couldn't receive data from udp socket: "sv << ec.message();
+          return;
+        }
+        if (bytes == 0) {
+          BOOST_LOG(warning) << "Received empty packet";
           return;
         }
 
