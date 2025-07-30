@@ -957,7 +957,7 @@ namespace confighttp {
     const nlohmann::json named_certs = nvhttp::get_all_clients();
     nlohmann::json output_tree;
     output_tree["named_certs"] = named_certs;
-    output_tree["status"] = true;
+    output_tree["status"] = "true";
     send_response(response, output_tree);
   }
 
