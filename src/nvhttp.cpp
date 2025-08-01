@@ -574,7 +574,7 @@ namespace nvhttp {
       }
     }
     
-    BOOST_LOG(trace) << log_stream.str();
+    BOOST_LOG(verbose) << log_stream.str();
   }
 
   template <class T>
@@ -631,7 +631,7 @@ namespace nvhttp {
         sess.client.cert = util::from_hex_vec(get_arg(args, "clientcert"), true);
         last_pair_name = get_arg(args, "clientname", "Named Zako");
 
-        BOOST_LOG(trace) << "Client cert: " << sess.client.cert.substr(0, 100) << "...";
+        BOOST_LOG(verbose) << "Client cert: " << sess.client.cert.substr(0, 100) << "...";
         auto ptr = map_id_sess.emplace(sess.client.uniqueID, std::move(sess)).first;
 
         ptr->second.async_insert_pin.salt = std::move(get_arg(args, "salt"));
