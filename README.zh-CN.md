@@ -1,20 +1,5 @@
 # Sunshine 基地版
 
-## 🌐 多语言支持 / Multi-language Support
-
-<div align="center">
-
-[![English](https://img.shields.io/badge/English-README.en.md-blue?style=for-the-badge)](README.en.md)
-[![中文简体](https://img.shields.io/badge/中文简体-README.zh--CN.md-red?style=for-the-badge)](README.zh-CN.md)
-[![Français](https://img.shields.io/badge/Français-README.fr.md-green?style=for-the-badge)](README.fr.md)
-[![Deutsch](https://img.shields.io/badge/Deutsch-README.de.md-yellow?style=for-the-badge)](README.de.md)
-[![日本語](https://img.shields.io/badge/日本語-README.ja.md-purple?style=for-the-badge)](README.ja.md)
-
-</div>
-
----
-
-
 基于LizardByte/Sunshine的分支，提供完整的文档支持 [Read the Docs](https://docs.qq.com/aio/DSGdQc3htbFJjSFdO?p=YTpMj5JNNdB5hEKJhhqlSB)。
 
 **Sunshine-Foundation**  is a self-hosted game stream host for Moonlight，本分支版本在原始Sunshine基础上进行了重大改进，专注于提高各种串流终端设备与windows主机接入的游戏串流体验：
@@ -49,98 +34,98 @@
 [![真砖家版 Moonlight-iOS](https://img.shields.io/badge/真砖家版-Moonlight--iOS-lightgrey?style=for-the-badge&logo=apple)](https://github.com/TrueZhuangJia/moonlight-ios-NativeMultiTouchPassthrough)
 
 
-### 🛠️ 其他资源 
+### 🛠️ 其他资源
 [awesome-sunshine](https://github.com/LizardByte/awesome-sunshine)
 
 ## 系统要求
 
 
-> [!WARNING] 
+> [!WARNING]
 > 这些表格正在持续更新中。请不要仅基于此信息购买硬件。
 
 
 <table>
-    <caption id="minimum_requirements">最低配置要求</caption>
-    <tr>
-        <th>组件</th>
-        <th>要求</th>
-    </tr>
-    <tr>
-        <td rowspan="3">GPU</td>
-        <td>AMD: VCE 1.0或更高版本，参见: <a href="https://github.com/obsproject/obs-amd-encoder/wiki/Hardware-Support">obs-amd硬件支持</a></td>
-    </tr>
-    <tr>
-        <td>Intel: VAAPI兼容，参见: <a href="https://www.intel.com/content/www/us/en/developer/articles/technical/linuxmedia-vaapi.html">VAAPI硬件支持</a></td>
-    </tr>
-    <tr>
-        <td>Nvidia: 支持NVENC的显卡，参见: <a href="https://developer.nvidia.com/video-encode-and-decode-gpu-support-matrix-new">nvenc支持矩阵</a></td>
-    </tr>
-    <tr>
-        <td rowspan="2">CPU</td>
-        <td>AMD: Ryzen 3或更高</td>
-    </tr>
-    <tr>
-        <td>Intel: Core i3或更高</td>
-    </tr>
-    <tr>
-        <td>RAM</td>
-        <td>4GB或更多</td>
-    </tr>
-    <tr>
-        <td rowspan="5">操作系统</td>
-        <td>Windows: 10 22H2+ (Windows Server不支持虚拟游戏手柄)</td>
-    </tr>
-    <tr>
-        <td>macOS: 12+</td>
-    </tr>
-    <tr>
-        <td>Linux/Debian: 12+ (bookworm)</td>
-    </tr>
-    <tr>
-        <td>Linux/Fedora: 39+</td>
-    </tr>
-    <tr>
-        <td>Linux/Ubuntu: 22.04+ (jammy)</td>
-    </tr>
-    <tr>
-        <td rowspan="2">网络</td>
-        <td>主机: 5GHz, 802.11ac</td>
-    </tr>
-    <tr>
-        <td>客户端: 5GHz, 802.11ac</td>
-    </tr>
+<caption id="minimum_requirements">最低配置要求</caption>
+<tr>
+<th>组件</th>
+<th>要求</th>
+</tr>
+<tr>
+<td rowspan="3">GPU</td>
+<td>AMD: VCE 1.0或更高版本，参见: <a href="https://github.com/obsproject/obs-amd-encoder/wiki/Hardware-Support">obs-amd硬件支持</a></td>
+</tr>
+<tr>
+<td>Intel: VAAPI兼容，参见: <a href="https://www.intel.com/content/www/us/en/developer/articles/technical/linuxmedia-vaapi.html">VAAPI硬件支持</a></td>
+</tr>
+<tr>
+<td>Nvidia: 支持NVENC的显卡，参见: <a href="https://developer.nvidia.com/video-encode-and-decode-gpu-support-matrix-new">nvenc支持矩阵</a></td>
+</tr>
+<tr>
+<td rowspan="2">CPU</td>
+<td>AMD: Ryzen 3或更高</td>
+</tr>
+<tr>
+<td>Intel: Core i3或更高</td>
+</tr>
+<tr>
+<td>RAM</td>
+<td>4GB或更多</td>
+</tr>
+<tr>
+<td rowspan="5">操作系统</td>
+<td>Windows: 10 22H2+ (Windows Server不支持虚拟游戏手柄)</td>
+</tr>
+<tr>
+<td>macOS: 12+</td>
+</tr>
+<tr>
+<td>Linux/Debian: 12+ (bookworm)</td>
+</tr>
+<tr>
+<td>Linux/Fedora: 39+</td>
+</tr>
+<tr>
+<td>Linux/Ubuntu: 22.04+ (jammy)</td>
+</tr>
+<tr>
+<td rowspan="2">网络</td>
+<td>主机: 5GHz, 802.11ac</td>
+</tr>
+<tr>
+<td>客户端: 5GHz, 802.11ac</td>
+</tr>
 </table>
 
 <table>
-    <caption id="4k_suggestions">4K推荐配置</caption>
-    <tr>
-        <th>组件</th>
-        <th>要求</th>
-    </tr>
-    <tr>
-        <td rowspan="3">GPU</td>
-        <td>AMD: Video Coding Engine 3.1或更高</td>
-    </tr>
-    <tr>
-        <td>Intel: HD Graphics 510或更高</td>
-    </tr>
-    <tr>
-        <td>Nvidia: GeForce GTX 1080或更高的具有多编码器的型号</td>
-    </tr>
-    <tr>
-        <td rowspan="2">CPU</td>
-        <td>AMD: Ryzen 5或更高</td>
-    </tr>
-    <tr>
-        <td>Intel: Core i5或更高</td>
-    </tr>
-    <tr>
-        <td rowspan="2">网络</td>
-        <td>主机: CAT5e以太网或更好</td>
-    </tr>
-    <tr>
-        <td>客户端: CAT5e以太网或更好</td>
-    </tr>
+<caption id="4k_suggestions">4K推荐配置</caption>
+<tr>
+<th>组件</th>
+<th>要求</th>
+</tr>
+<tr>
+<td rowspan="3">GPU</td>
+<td>AMD: Video Coding Engine 3.1或更高</td>
+</tr>
+<tr>
+<td>Intel: HD Graphics 510或更高</td>
+</tr>
+<tr>
+<td>Nvidia: GeForce GTX 1080或更高的具有多编码器的型号</td>
+</tr>
+<tr>
+<td rowspan="2">CPU</td>
+<td>AMD: Ryzen 5或更高</td>
+</tr>
+<tr>
+<td>Intel: Core i5或更高</td>
+</tr>
+<tr>
+<td rowspan="2">网络</td>
+<td>主机: CAT5e以太网或更好</td>
+</tr>
+<tr>
+<td>客户端: CAT5e以太网或更好</td>
+</tr>
 </table>
 
 ## 技术支持
@@ -153,7 +138,7 @@
 
 **问题反馈标签：**
 - `hdr-support` - HDR相关问题
-- `virtual-display` - 虚拟显示器问题  
+- `virtual-display` - 虚拟显示器问题
 - `config-help` - 配置相关问题
 
 ## 加入社区
