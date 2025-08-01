@@ -14,6 +14,7 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write
+      pull-requests: write
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -36,6 +37,62 @@ jobs:
           import os
           import re
           from googletrans import Translator
+
+          def protect_project_names(text):
+              """保护项目名称不被翻译"""
+              # 定义需要保护的项目名称
+              protected_names = [
+                  "Sunshine 基地版",
+                  "Sunshine-Foundation",
+                  "LizardByte/Sunshine",
+                  "Moonlight",
+                  "Moonlight-PC",
+                  "Moonlight-Android",
+                  "Moonlight-iOS",
+                  "awesome-sunshine",
+                  "威力加强版",
+                  "王冠版",
+                  "真砖家版",
+                  "qiin2333",
+                  "WACrown",
+                  "TrueZhuangJia",
+                  "obs-amd",
+                  "VAAPI",
+                  "NVENC",
+                  "AMD",
+                  "Intel",
+                  "Nvidia",
+                  "Ryzen",
+                  "Core i3",
+                  "Core i5",
+                  "GeForce GTX 1080",
+                  "HD Graphics 510",
+                  "Video Coding Engine",
+                  "VCE",
+                  "802.11ac",
+                  "CAT5e",
+                  "HDR",
+                  "GameStream"
+              ]
+              
+              # 创建占位符映射
+              placeholders = {}
+              protected_text = text
+              
+              for i, name in enumerate(protected_names):
+                  if name in protected_text:
+                      placeholder = f"__PROTECTED_NAME_{i}__"
+                      placeholders[placeholder] = name
+                      protected_text = protected_text.replace(name, placeholder)
+              
+              return protected_text, placeholders
+
+          def restore_project_names(text, placeholders):
+              """恢复项目名称"""
+              restored_text = text
+              for placeholder, name in placeholders.items():
+                  restored_text = restored_text.replace(placeholder, name)
+              return restored_text
 
           def translate_readme():
               # Read the original README
@@ -60,16 +117,22 @@ jobs:
                           # For English, copy the original content
                           translated_content = content
                       else:
-                          # Translate the content
-                          translated = translator.translate(content, dest=lang_code)
-                          translated_content = translated.text
+                          # Protect project names before translation
+                          protected_content, placeholders = protect_project_names(content)
+                          
+                          # Translate the protected content
+                          translated = translator.translate(protected_content, dest=lang_code)
+                          translated_text = translated.text
+                          
+                          # Restore project names after translation
+                          translated_content = restore_project_names(translated_text, placeholders)
                       
                       # Write translated file
                       filename = f'README.{lang_code}.md'
                       with open(filename, 'w', encoding='utf-8') as f:
                           f.write(translated_content)
                       
-                      print(f"✓ Translated to {lang_name} ({lang_code})")
+                      print(f"✓ Translated to {lang_name} ({lang_code}) with project names protected")
                       
                   except Exception as e:
                       print(f"✗ Failed to translate to {lang_name}: {e}")
@@ -81,21 +144,101 @@ jobs:
       - name: Run translation
         run: python translate_simple.py
 
-      - name: Commit translations
+      - name: Add language selector to README
         run: |
-          git config --local user.email "action@github.com"
-          git config --local user.name "GitHub Action"
-          
-          # Add all translated files
-          git add README.*.md
-          
-          # Commit if there are changes
-          if git diff --staged --quiet; then
-            echo "No changes to commit"
+          # Check if language selector already exists
+          if grep -q "多语言支持" README.md; then
+            echo "Language selector already exists, skipping..."
           else
-            git commit -m "docs: add multi-language README translations [skip ci]"
-            git push
+            # Create a backup of the original README
+            cp README.md README.md.backup
+            
+            # Create the language selector content
+            cat > language_selector.md << 'EOF'
+          
+          ## 🌐 多语言支持 / Multi-language Support
+
+          <div align="center">
+
+          [![English](https://img.shields.io/badge/English-README.en.md-blue?style=for-the-badge)](README.en.md)
+          [![中文简体](https://img.shields.io/badge/中文简体-README.zh--CN.md-red?style=for-the-badge)](README.zh-CN.md)
+          [![Français](https://img.shields.io/badge/Français-README.fr.md-green?style=for-the-badge)](README.fr.md)
+          [![Deutsch](https://img.shields.io/badge/Deutsch-README.de.md-yellow?style=for-the-badge)](README.de.md)
+          [![日本語](https://img.shields.io/badge/日本語-README.ja.md-purple?style=for-the-badge)](README.ja.md)
+
+          </div>
+
+          ---
+
+          EOF
+            
+            # Insert language selector after the first line (title)
+            head -n 1 README.md > README.md.new
+            cat language_selector.md >> README.md.new
+            tail -n +2 README.md >> README.md.new
+            
+            # Replace the original file
+            mv README.md.new README.md
+            
+            # Clean up
+            rm language_selector.md
+            
+            echo "✓ Added language selector to main README"
           fi
+
+      - name: Create Pull Request
+        uses: peter-evans/create-pull-request@v5
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          title: "docs: add multi-language README translations with enhanced project name protection"
+          body: |
+            ## 自动翻译更新
+            
+            此PR包含以下语言的README翻译：
+            
+            - English (en)
+            - Chinese Simplified (zh-CN)
+            - French (fr)
+            - German (de)
+            - Japanese (ja)
+            
+            ### 翻译说明
+            - 使用Google Translate API自动翻译
+            - 保持原始Markdown格式
+            - 保留所有链接和图片
+            - **项目名称保护**: 确保项目名称不被翻译
+            - 建议人工检查翻译质量
+            
+            ### 受保护的项目名称和术语
+            - Sunshine 基地版
+            - Sunshine-Foundation
+            - LizardByte/Sunshine
+            - Moonlight (各种版本)
+            - 威力加强版、王冠版、真砖家版
+            - 开发者用户名 (qiin2333, WACrown, TrueZhuangJia)
+            - 技术术语 (VAAPI, NVENC, HDR, GameStream)
+            - 硬件品牌 (AMD, Intel, Nvidia, Ryzen, GeForce)
+            - 网络标准 (802.11ac, CAT5e)
+            
+            ### 生成的文件
+            - `README.en.md` - 英语版本
+            - `README.zh-CN.md` - 简体中文版本
+            - `README.fr.md` - 法语版本
+            - `README.de.md` - 德语版本
+            - `README.ja.md` - 日语版本
+            
+            ### 新增功能
+            - 在主README文件中添加了语言选择器
+            - 用户可以通过徽章快速访问不同语言版本
+            - 支持5种语言的快速切换
+            - 项目名称保护功能，确保品牌一致性
+            
+            ---
+            
+            *此PR由CI自动生成，当README.md文件更新时触发*
+          branch: docs/translations
+          delete-branch: true
+          commit-message: "docs: add multi-language README translations [skip ci]"
 
       - name: Create summary
         run: |
@@ -108,4 +251,7 @@ jobs:
               lang=$(echo $file | sed 's/README\.\(.*\)\.md/\1/')
               echo "- $lang" >> $GITHUB_STEP_SUMMARY
             fi
-          done 
+          done
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "✓ Language selector added to main README" >> $GITHUB_STEP_SUMMARY
+          echo "✓ Enhanced project name protection applied" >> $GITHUB_STEP_SUMMARY 
