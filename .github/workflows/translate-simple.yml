@@ -74,6 +74,12 @@ jobs:
               result = resp.json()
               return result['choices'][0]['message']['content']
 
+          def remove_prefix(text):
+              # 去除 DeepSeek 返回的说明性前缀
+              import re
+              pattern = r"^Here is the [\w\s]+ translation of your Markdown content[\w\s,.:\-()]*\n+"
+              return re.sub(pattern, '', text, flags=re.IGNORECASE)
+
           def translate_readme():
               with open('README.md', 'r', encoding='utf-8') as f:
                   content = f.read()
@@ -93,6 +99,7 @@ jobs:
                           masked = mask_terms(content)
                           translated = translate_with_deepseek(masked, lang_name)
                           translated_content = unmask_terms(translated)
+                          translated_content = remove_prefix(translated_content)
 
                       filename = f'README.{lang_code}.md'
                       with open(filename, 'w', encoding='utf-8') as f:
