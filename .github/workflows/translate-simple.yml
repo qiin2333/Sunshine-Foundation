@@ -14,6 +14,7 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write
+      pull-requests: write
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -81,21 +82,88 @@ jobs:
       - name: Run translation
         run: python translate_simple.py
 
-      - name: Commit translations
+      - name: Add language selector to README
         run: |
-          git config --local user.email "action@github.com"
-          git config --local user.name "GitHub Action"
-          
-          # Add all translated files
-          git add README.*.md
-          
-          # Commit if there are changes
-          if git diff --staged --quiet; then
-            echo "No changes to commit"
+          # Check if language selector already exists
+          if grep -q "多语言支持" README.md; then
+            echo "Language selector already exists, skipping..."
           else
-            git commit -m "docs: add multi-language README translations [skip ci]"
-            git push
+            # Create a backup of the original README
+            cp README.md README.md.backup
+            
+            # Create the language selector content
+            cat > language_selector.md << 'EOF'
+          
+          ## 🌐 多语言支持 / Multi-language Support
+
+          <div align="center">
+
+          [![English](https://img.shields.io/badge/English-README.en.md-blue?style=for-the-badge)](README.en.md)
+          [![中文简体](https://img.shields.io/badge/中文简体-README.zh--CN.md-red?style=for-the-badge)](README.zh-CN.md)
+          [![Français](https://img.shields.io/badge/Français-README.fr.md-green?style=for-the-badge)](README.fr.md)
+          [![Deutsch](https://img.shields.io/badge/Deutsch-README.de.md-yellow?style=for-the-badge)](README.de.md)
+          [![日本語](https://img.shields.io/badge/日本語-README.ja.md-purple?style=for-the-badge)](README.ja.md)
+
+          </div>
+
+          ---
+
+          EOF
+            
+            # Insert language selector after the first line (title)
+            head -n 1 README.md > README.md.new
+            cat language_selector.md >> README.md.new
+            tail -n +2 README.md >> README.md.new
+            
+            # Replace the original file
+            mv README.md.new README.md
+            
+            # Clean up
+            rm language_selector.md
+            
+            echo "✓ Added language selector to main README"
           fi
+
+      - name: Create Pull Request
+        uses: peter-evans/create-pull-request@v5
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          title: "docs: add multi-language README translations with language selector"
+          body: |
+            ## 自动翻译更新
+            
+            此PR包含以下语言的README翻译：
+            
+            - English (en)
+            - Chinese Simplified (zh-CN)
+            - French (fr)
+            - German (de)
+            - Japanese (ja)
+            
+            ### 翻译说明
+            - 使用Google Translate API自动翻译
+            - 保持原始Markdown格式
+            - 保留所有链接和图片
+            - 建议人工检查翻译质量
+            
+            ### 生成的文件
+            - `README.en.md` - 英语版本
+            - `README.zh-CN.md` - 简体中文版本
+            - `README.fr.md` - 法语版本
+            - `README.de.md` - 德语版本
+            - `README.ja.md` - 日语版本
+            
+            ### 新增功能
+            - 在主README文件中添加了语言选择器
+            - 用户可以通过徽章快速访问不同语言版本
+            - 支持5种语言的快速切换
+            
+            ---
+            
+            *此PR由CI自动生成，当README.md文件更新时触发*
+          branch: docs/translations
+          delete-branch: true
+          commit-message: "docs: add multi-language README translations with language selector [skip ci]"
 
       - name: Create summary
         run: |
@@ -108,4 +176,6 @@ jobs:
               lang=$(echo $file | sed 's/README\.\(.*\)\.md/\1/')
               echo "- $lang" >> $GITHUB_STEP_SUMMARY
             fi
-          done 
+          done
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "✓ Language selector added to main README" >> $GITHUB_STEP_SUMMARY 
