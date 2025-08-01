@@ -14,6 +14,7 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write
+      pull-requests: write
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -81,21 +82,41 @@ jobs:
       - name: Run translation
         run: python translate_simple.py
 
-      - name: Commit translations
-        run: |
-          git config --local user.email "action@github.com"
-          git config --local user.name "GitHub Action"
-          
-          # Add all translated files
-          git add README.*.md
-          
-          # Commit if there are changes
-          if git diff --staged --quiet; then
-            echo "No changes to commit"
-          else
-            git commit -m "docs: add multi-language README translations [skip ci]"
-            git push
-          fi
+      - name: Create Pull Request
+        uses: peter-evans/create-pull-request@v5
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          title: "docs: add multi-language README translations"
+          body: |
+            ## 自动翻译更新
+            
+            此PR包含以下语言的README翻译：
+            
+            - English (en)
+            - Chinese Simplified (zh-CN)
+            - French (fr)
+            - German (de)
+            - Japanese (ja)
+            
+            ### 翻译说明
+            - 使用Google Translate API自动翻译
+            - 保持原始Markdown格式
+            - 保留所有链接和图片
+            - 建议人工检查翻译质量
+            
+            ### 生成的文件
+            - `README.en.md` - 英语版本
+            - `README.zh-CN.md` - 简体中文版本
+            - `README.fr.md` - 法语版本
+            - `README.de.md` - 德语版本
+            - `README.ja.md` - 日语版本
+            
+            ---
+            
+            *此PR由CI自动生成，当README.md文件更新时触发*
+          branch: docs/translations
+          delete-branch: true
+          commit-message: "docs: add multi-language README translations [skip ci]"
 
       - name: Create summary
         run: |
