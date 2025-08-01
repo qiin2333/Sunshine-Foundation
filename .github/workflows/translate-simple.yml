@@ -37,6 +37,9 @@ jobs:
           import re
           import requests
 
+          # 调试环境变量输出
+          print('DEEPSEEK_API_KEY from env:', os.getenv('DEEPSEEK_API_KEY'))
+
           # 项目名和术语保护列表
           PROTECTED_TERMS = [
               'Sunshine', 'README', 'GitHub', 'CI', 'API', 'Markdown', 'OpenAI', 'DeepL', 'Google Translate',
@@ -87,7 +90,7 @@ jobs:
 
               for lang_code, lang_name in languages:
                   try:
-                      if lang_code == 'en':
+                      if lang_code == 'zh_CN':
                           translated_content = content
                       else:
                           masked = mask_terms(content)
@@ -106,6 +109,8 @@ jobs:
           EOF
 
       - name: Run translation
+        env:
+          DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}
         run: python translate_simple.py
 
       - name: Add language selector to README
