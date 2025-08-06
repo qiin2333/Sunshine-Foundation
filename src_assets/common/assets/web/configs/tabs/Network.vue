@@ -140,6 +140,13 @@ const effectivePort = computed(() => +config.value?.port ?? defaultMoonlightPort
       <div class="form-text">{{ $t('config.wan_encryption_mode_desc') }}</div>
     </div>
 
+    <!-- CLOSE VERIFY SAFE -->
+    <div class="mb-3">
+      <label for="close_verify_safe" class="form-label">{{ $t('config.close_verify_safe') }}</label>
+      <input type="checkbox" class="form-check-input" id="close_verify_safe" v-model="config.close_verify_safe" />
+      <div class="form-text">{{ $t('config.close_verify_safe_desc') }}</div>
+    </div>
+
     <!-- Ping Timeout -->
     <div class="mb-3">
       <label for="ping_timeout" class="form-label">{{ $t('config.ping_timeout') }}</label>
