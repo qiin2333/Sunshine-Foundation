@@ -21,6 +21,7 @@ extern "C" {
 #include "cbs.h"
 #include "config.h"
 #include "display_device/display_device.h"
+#include "display_device/settings.h"
 #include "globals.h"
 #include "input.h"
 #include "logging.h"
@@ -1123,6 +1124,13 @@ namespace video {
 
     std::vector<std::optional<std::chrono::steady_clock::time_point>> imgs_used_timestamps;
     const std::chrono::seconds trim_timeot = 3s;
+    
+    // 锁屏检测相关变量
+    bool was_locked = false;
+    int original_display_index = display_p;
+    std::chrono::steady_clock::time_point last_lock_check = std::chrono::steady_clock::now();
+    const std::chrono::seconds lock_check_interval = 2s; // 每2秒检查一次锁屏状态
+    
     auto trim_imgs = [&]() {
       // count allocated and used within current pool
       size_t allocated_count = 0;
@@ -1220,6 +1228,46 @@ namespace video {
     while (capture_ctx_queue->running()) {
       bool artificial_reinit = false;
 
+      // 检查锁屏状态
+      auto now = std::chrono::steady_clock::now();
+      if (now - last_lock_check >= lock_check_interval) {
+        last_lock_check = now;
+        
+        // 检测当前是否处于锁屏状态
+        bool is_currently_locked = false;
+#ifdef _WIN32
+        // 在Windows平台上检测锁屏状态
+        is_currently_locked = display_device::settings_t().is_changing_settings_going_to_fail();
+#endif
+        
+        if (is_currently_locked && !was_locked) {
+          // 刚刚进入锁屏状态
+          BOOST_LOG(info) << "检测到系统锁屏，准备切换到备用显示器";
+          was_locked = true;
+          
+          // 尝试切换到其他显示器
+          if (display_names.size() > 1) {
+            int next_display = (display_p + 1) % display_names.size();
+            if (next_display != original_display_index) {
+              BOOST_LOG(info) << "锁屏期间切换到显示器: " << display_names[next_display];
+              display_p = next_display;
+              artificial_reinit = true;
+            }
+          }
+        }
+        else if (!is_currently_locked && was_locked) {
+          // 刚刚解锁
+          BOOST_LOG(info) << "检测到系统解锁，恢复到原始显示器";
+          was_locked = false;
+          
+          // 恢复到原始显示器
+          if (display_p != original_display_index) {
+            display_p = original_display_index;
+            artificial_reinit = true;
+          }
+        }
+      }
+
       auto push_captured_image_callback = [&](std::shared_ptr<platf::img_t> &&img, bool frame_captured) -> bool {
         KITTY_WHILE_LOOP(auto capture_ctx = std::begin(capture_ctxs), capture_ctx != std::end(capture_ctxs), {
           if (!capture_ctx->images->running()) {
@@ -1302,7 +1350,13 @@ namespace video {
 
             // Process any pending display switch with the new list of displays
             if (switch_display_event->peek()) {
-              display_p = std::clamp(*switch_display_event->pop(), 0, (int) display_names.size() - 1);
+              int new_display_p = std::clamp(*switch_display_event->pop(), 0, (int) display_names.size() - 1);
+              // 如果是手动切换，更新original_display_index
+              if (new_display_p != display_p) {
+                original_display_index = new_display_p;
+                BOOST_LOG(info) << "手动切换到显示器: " << display_names[new_display_p];
+              }
+              display_p = new_display_p;
             }
 
             // reset_display() will sleep between retries
@@ -2062,6 +2116,12 @@ namespace video {
 
     auto switch_display_event = mail::man->event<int>(mail::switch_display);
 
+    // 锁屏检测相关变量
+    bool was_locked = false;
+    int original_display_index = display_p;
+    std::chrono::steady_clock::time_point last_lock_check = std::chrono::steady_clock::now();
+    const std::chrono::seconds lock_check_interval = 2s; // 每2秒检查一次锁屏状态
+
     if (synced_session_ctxs.empty()) {
       auto ctx = encode_session_ctx_queue.pop();
       if (!ctx) {
@@ -2072,12 +2132,56 @@ namespace video {
     }
 
     while (encode_session_ctx_queue.running()) {
+      // 检查锁屏状态
+      auto now = std::chrono::steady_clock::now();
+      if (now - last_lock_check >= lock_check_interval) {
+        last_lock_check = now;
+        
+        // 检测当前是否处于锁屏状态
+        bool is_currently_locked = false;
+#ifdef _WIN32
+        // 在Windows平台上检测锁屏状态
+        is_currently_locked = display_device::settings_t().is_changing_settings_going_to_fail();
+#endif
+        
+        if (is_currently_locked && !was_locked) {
+          // 刚刚进入锁屏状态
+          BOOST_LOG(info) << "检测到系统锁屏，准备切换到备用显示器";
+          was_locked = true;
+          
+          // 尝试切换到其他显示器
+          if (display_names.size() > 1) {
+            int next_display = (display_p + 1) % display_names.size();
+            if (next_display != original_display_index) {
+              BOOST_LOG(info) << "锁屏期间切换到显示器: " << display_names[next_display];
+              display_p = next_display;
+            }
+          }
+        }
+        else if (!is_currently_locked && was_locked) {
+          // 刚刚解锁
+          BOOST_LOG(info) << "检测到系统解锁，恢复到原始显示器";
+          was_locked = false;
+          
+          // 恢复到原始显示器
+          if (display_p != original_display_index) {
+            display_p = original_display_index;
+          }
+        }
+      }
+
       // Refresh display names since a display removal might have caused the reinitialization
       refresh_displays(encoder.platform_formats->dev_type, display_names, display_p);
 
       // Process any pending display switch with the new list of displays
       if (switch_display_event->peek()) {
-        display_p = std::clamp(*switch_display_event->pop(), 0, (int) display_names.size() - 1);
+        int new_display_p = std::clamp(*switch_display_event->pop(), 0, (int) display_names.size() - 1);
+        // 如果是手动切换，更新original_display_index
+        if (new_display_p != display_p) {
+          original_display_index = new_display_p;
+          BOOST_LOG(info) << "手动切换到显示器: " << display_names[new_display_p];
+        }
+        display_p = new_display_p;
       }
 
       // reset_display() will sleep between retries
