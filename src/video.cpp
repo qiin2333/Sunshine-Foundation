@@ -33,10 +33,96 @@ extern "C" {
 extern "C" {
   #include <libavutil/hwcontext_d3d11va.h>
 }
+#include "platform/windows/display_device/windows_lock_screen.h"
 #endif
 
 using namespace std::literals;
 namespace video {
+
+#ifdef _WIN32
+  // Session state manager for handling lock/unlock events
+  class session_state_manager_t {
+  public:
+    session_state_manager_t() : was_locked_(false), original_display_index_(-1) {}
+
+    void
+    initialize(int current_display_index) {
+      original_display_index_ = current_display_index;
+      
+      // Create event-driven session listener
+      session_listener_ = display_device::w_utils::create_session_event_listener(
+        [this](bool is_locked) {
+          handle_session_state_change(is_locked);
+        });
+        
+      if (!session_listener_) {
+        BOOST_LOG(warning) << "[锁屏检测] 监听器启动失败";
+      } else {
+        BOOST_LOG(debug) << "[锁屏检测] 监听器启动成功";
+      }
+    }
+
+    void
+    cleanup() {
+      session_listener_.reset();
+    }
+
+    void
+    set_display_switch_callback(std::function<void(int)> callback) {
+      display_switch_callback_ = std::move(callback);
+    }
+
+    void
+    update_original_display_index(int new_index) {
+      original_display_index_ = new_index;
+    }
+
+    bool
+    check_manual_display_switch() {
+      // This function can be used for manual display switching
+      // The event-driven mechanism will handle automatic switching
+      return false;
+    }
+
+  private:
+    void
+    handle_session_state_change(bool is_locked) {
+      std::lock_guard<std::mutex> lock(state_mutex_);
+      
+      if (is_locked && !was_locked_) {
+        // Just entered lock state
+        BOOST_LOG(info) << "[锁屏检测] 检测到系统锁屏，准备切换到备用显示器";
+        was_locked_ = true;
+        
+        if (display_switch_callback_) {
+          display_switch_callback_(-2); // Special code for lock event
+        } else {
+          BOOST_LOG(warning) << "[锁屏检测] 没有设置显示器切换API";
+        }
+      }
+      else if (!is_locked && was_locked_) {
+        // Just unlocked
+        BOOST_LOG(info) << "[锁屏检测] 检测到系统解锁，恢复到原始显示器";
+        was_locked_ = false;
+        
+        if (display_switch_callback_) {
+          display_switch_callback_(-3); // Special code for unlock event
+        } else {
+          BOOST_LOG(warning) << "[锁屏检测] 没有设置显示器切换API";
+        }
+      }
+    }
+
+    std::unique_ptr<display_device::w_utils::session_event_listener_t> session_listener_;
+    std::function<void(int)> display_switch_callback_;
+    std::mutex state_mutex_;
+    std::atomic<bool> was_locked_;
+    std::atomic<int> original_display_index_;
+  };
+
+  // Global session manager instance
+  static std::unique_ptr<session_state_manager_t> g_session_manager;
+#endif
 
   namespace {
     /**
@@ -1123,6 +1209,52 @@ namespace video {
 
     std::vector<std::optional<std::chrono::steady_clock::time_point>> imgs_used_timestamps;
     const std::chrono::seconds trim_timeot = 3s;
+
+#ifdef _WIN32
+    // Initialize session manager for event-driven lock detection
+    if (!g_session_manager) {
+      g_session_manager = std::make_unique<session_state_manager_t>();
+    }
+    
+    bool was_locked = false;
+    int original_display_index = display_p;
+
+    // Initialize session manager
+    g_session_manager->set_display_switch_callback([&](int event_code) {
+      if (event_code == -2) {
+        // Lock event
+        if (!was_locked && display_names.size() > 1) {
+          was_locked = true;
+          int next_display = (display_p + 1) % display_names.size();
+          if (next_display != display_p) {
+            BOOST_LOG(info) << "[锁屏检测] 锁屏期间切换到显示器: " << display_names[next_display];
+            display_p = next_display;
+            reinit_event.raise(true);
+          }
+        }
+      } else if (event_code == -3) {
+        // Unlock event
+        if (was_locked) {
+          was_locked = false;
+          if (display_p != original_display_index) {
+            BOOST_LOG(info) << "[锁屏检测] 解锁后恢复到原始显示器: " << display_names[original_display_index];
+            display_p = original_display_index;
+            reinit_event.raise(true);
+          }
+        }
+      }
+    });
+    g_session_manager->initialize(display_p);
+    
+    // Cleanup function
+    auto session_cleanup = util::fail_guard([&]() {
+      if (g_session_manager) {
+        g_session_manager->cleanup();
+        BOOST_LOG(info) << "[锁屏检测] 关闭锁屏检测...";
+      }
+    });
+#endif
+
     auto trim_imgs = [&]() {
       // count allocated and used within current pool
       size_t allocated_count = 0;
@@ -1302,7 +1434,16 @@ namespace video {
 
             // Process any pending display switch with the new list of displays
             if (switch_display_event->peek()) {
-              display_p = std::clamp(*switch_display_event->pop(), 0, (int) display_names.size() - 1);
+              int new_display_p = std::clamp(*switch_display_event->pop(), 0, (int) display_names.size() - 1);
+              if (new_display_p != display_p) {
+                if (new_display_p < display_names.size()) {
+                  original_display_index = new_display_p;
+                  BOOST_LOG(info) << "创建期间,检测到手动切换到显示器: " << display_names[new_display_p];
+                  display_p = new_display_p;
+                } else {
+                  BOOST_LOG(error) << "创建期间,检测到手动切换到显示器, 检测到显示器 " << new_display_p << " 超出边界";
+                }
+              }
             }
 
             // reset_display() will sleep between retries
@@ -2077,7 +2218,15 @@ namespace video {
 
       // Process any pending display switch with the new list of displays
       if (switch_display_event->peek()) {
-        display_p = std::clamp(*switch_display_event->pop(), 0, (int) display_names.size() - 1);
+        int new_display_p = std::clamp(*switch_display_event->pop(), 0, (int) display_names.size() - 1);
+        if (new_display_p != display_p) {
+          if (new_display_p < display_names.size()) {
+            BOOST_LOG(info) << "检测到手动切换到显示器: " << display_names[new_display_p];
+            display_p = new_display_p;
+          } else {
+            BOOST_LOG(error) << "检测到手动切换到显示器, 检测到显示器 " << new_display_p << " 超出边界";
+          }
+        }
       }
 
       // reset_display() will sleep between retries

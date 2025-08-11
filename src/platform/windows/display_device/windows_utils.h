@@ -2,7 +2,6 @@
 
 // the most stupid windows include (because it needs to be first...)
 #include <windows.h>
-
 // local includes
 #include "src/display_device/display_device.h"
 
