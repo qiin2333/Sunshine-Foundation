@@ -49,6 +49,8 @@ jobs:
         uses: LizardByte/setup-release-action@v2025.426.225
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
+          release_tag: ${{ github.event.inputs.release_tag || format('v{0}', github.run_number) }}
+          release_name: ${{ github.event.inputs.release_name || format('Release {0} - {1}', github.run_number, github.sha) }}
           
   build_win:
     name: Windows
