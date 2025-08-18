@@ -942,7 +942,6 @@ namespace nvhttp {
     });
 
     try {
-      // 从查询参数中获取码率和客户端名称
       auto args = request->parse_query_string();
       auto bitrate_param = args.find("bitrate");
       auto clientname_param = args.find("clientname");
@@ -964,7 +963,6 @@ namespace nvhttp {
       int bitrate = std::stoi(bitrate_param->second);
       std::string client_name = clientname_param->second;
 
-      // 验证码率范围
       if (bitrate <= 0 || bitrate > 800000) {
         tree.put("root.bitrate", 0);
         tree.put("root.<xmlattr>.status_code", 400);
@@ -972,7 +970,6 @@ namespace nvhttp {
         return;
       }
 
-      // 通过客户端名称查找会话并发送动态码率调整事件
       bool success = stream::session::change_bitrate_for_client(client_name, bitrate);
 
       if (success) {

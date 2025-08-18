@@ -385,12 +385,21 @@ namespace video {
     void
     set_bitrate(int bitrate_kbps) override {
       if (avcodec_ctx) {
-        auto bitrate = bitrate_kbps * 1000;  // 转换为bps
+        // 考虑FEC影响，调整编码码率
+        // 当FEC百分比为X%时，实际编码码率需要调整为原始码率的(100-X)%
+        auto adjusted_bitrate_kbps = bitrate_kbps;
+        if (config::stream.fec_percentage <= 80) {
+          adjusted_bitrate_kbps = (int)(bitrate_kbps * (100 - config::stream.fec_percentage) / 100.0f);
+        }
+        
+        auto bitrate = adjusted_bitrate_kbps * 1000;  // 转换为bps
         avcodec_ctx->rc_max_rate = bitrate;
         avcodec_ctx->bit_rate = bitrate;
         avcodec_ctx->rc_min_rate = bitrate;  // Set min rate for CBR mode
         
-        BOOST_LOG(info) << "AVCodec encoder bitrate changed to: " << bitrate_kbps << " Kbps";
+        BOOST_LOG(info) << "AVCodec encoder bitrate changed to: " << adjusted_bitrate_kbps 
+                       << " Kbps (requested: " << bitrate_kbps << " Kbps, FEC: " 
+                       << config::stream.fec_percentage << "%)";
       }
     }
 
@@ -440,8 +449,17 @@ namespace video {
     void
     set_bitrate(int bitrate_kbps) override {
       if (device && device->nvenc) {
-        device->nvenc->set_bitrate(bitrate_kbps);
-        BOOST_LOG(info) << "NVENC encoder bitrate changed to: " << bitrate_kbps << " Kbps";
+        // 考虑FEC影响，调整编码码率
+        // 当FEC百分比为X%时，实际编码码率需要调整为原始码率的(100-X)%
+        auto adjusted_bitrate_kbps = bitrate_kbps;
+        if (config::stream.fec_percentage <= 80) {
+          adjusted_bitrate_kbps = (int)(bitrate_kbps * (100 - config::stream.fec_percentage) / 100.0f);
+        }
+        
+        device->nvenc->set_bitrate(adjusted_bitrate_kbps);
+        BOOST_LOG(info) << "NVENC encoder bitrate changed to: " << adjusted_bitrate_kbps 
+                       << " Kbps (requested: " << bitrate_kbps << " Kbps, FEC: " 
+                       << config::stream.fec_percentage << "%)";
       }
     }
 

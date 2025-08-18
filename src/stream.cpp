@@ -340,8 +340,6 @@ namespace stream {
     // ENet peer to session mapping for sessions with a peer connected
     sync_util::sync_t<std::map<net::peer_t, session_t *>> _peer_to_session;
 
-
-
     ENetAddress _addr;
     net::host_t _host;
   };
@@ -1014,14 +1012,16 @@ namespace stream {
       if (payload.size() >= sizeof(int)) {
         auto new_bitrate = *(int *) payload.data();
         BOOST_LOG(info) << "Dynamic bitrate change requested: " << new_bitrate << " Kbps";
-        
+
         // 验证码率范围
         if (new_bitrate > 0 && new_bitrate <= 800000) {  // 最大800Mbps
           session->video.dynamic_bitrate_change_events->raise(new_bitrate);
-        } else {
+        }
+        else {
           BOOST_LOG(warning) << "Invalid bitrate value: " << new_bitrate << " Kbps";
         }
-      } else {
+      }
+      else {
         BOOST_LOG(warning) << "Invalid payload size for dynamic bitrate change";
       }
     });
@@ -2287,7 +2287,7 @@ namespace stream {
 
       session->shutdown_event = mail->event<bool>(mail::shutdown);
       session->launch_session_id = launch_session.id;
-      
+
       // 设置客户端名称
       session->client_name = launch_session.client_name;
 
@@ -2365,12 +2365,11 @@ namespace stream {
 
       auto lg = broadcast_ref->control_server._sessions.lock();
       for (auto session_p : *broadcast_ref->control_server._sessions) {
-        if (session_p->client_name == client_name && 
+        if (session_p->client_name == client_name &&
             session_p->state.load(std::memory_order_relaxed) == state_e::RUNNING) {
-          // 找到匹配的会话，发送码率调整事件
           session_p->video.dynamic_bitrate_change_events->raise(bitrate_kbps);
-          BOOST_LOG(info) << "Sent bitrate change event to client '" << client_name 
-                         << "': " << bitrate_kbps << " Kbps";
+          BOOST_LOG(info) << "Sent bitrate change event to client '" << client_name
+                          << "': " << bitrate_kbps << " Kbps";
           return true;
         }
       }
