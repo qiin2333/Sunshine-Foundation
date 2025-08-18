@@ -383,6 +383,9 @@ namespace stream {
 
     boost::asio::ip::address localAddress;
 
+    // 添加客户端名称字段
+    std::string client_name;
+
     struct {
       std::string ping_payload;
 
@@ -2095,7 +2098,7 @@ namespace stream {
       session->video.peer.port(), platf::qos_data_type_e::video, session->config.videoQosType != 0);
 
     BOOST_LOG(debug) << "Start capturing Video"sv;
-    video::capture(session->mail, session->config.monitor, session);
+    video::capture(session->mail, session->config.monitor, session, session->video.dynamic_bitrate_change_events);
   }
 
   void
@@ -2284,6 +2287,9 @@ namespace stream {
 
       session->shutdown_event = mail->event<bool>(mail::shutdown);
       session->launch_session_id = launch_session.id;
+      
+      // 设置客户端名称
+      session->client_name = launch_session.client_name;
 
       session->config = config;
 
@@ -2297,6 +2303,7 @@ namespace stream {
 
       session->video.idr_events = mail->event<bool>(mail::idr);
       session->video.invalidate_ref_frames_events = mail->event<std::pair<int64_t, int64_t>>(mail::invalidate_ref_frames);
+      session->video.dynamic_bitrate_change_events = mail->event<int>(mail::dynamic_bitrate_change);
       session->video.lowseq = 0;
       session->video.ping_payload = launch_session.av_ping_payload;
       if (config.encryptionFlagsEnabled & SS_ENC_VIDEO) {
@@ -2346,6 +2353,30 @@ namespace stream {
       session->mail = std::move(mail);
 
       return session;
+    }
+
+    bool
+    change_bitrate_for_client(const std::string &client_name, int bitrate_kbps) {
+      auto broadcast_ref = broadcast.ref();
+      if (!broadcast_ref) {
+        BOOST_LOG(warning) << "No broadcast context available";
+        return false;
+      }
+
+      auto lg = broadcast_ref->control_server._sessions.lock();
+      for (auto session_p : *broadcast_ref->control_server._sessions) {
+        if (session_p->client_name == client_name && 
+            session_p->state.load(std::memory_order_relaxed) == state_e::RUNNING) {
+          // 找到匹配的会话，发送码率调整事件
+          session_p->video.dynamic_bitrate_change_events->raise(bitrate_kbps);
+          BOOST_LOG(info) << "Sent bitrate change event to client '" << client_name 
+                         << "': " << bitrate_kbps << " Kbps";
+          return true;
+        }
+      }
+
+      BOOST_LOG(warning) << "No active session found for client: " << client_name;
+      return false;
     }
   }  // namespace session
 }  // namespace stream
