@@ -723,14 +723,14 @@ namespace platf::dxgi {
 
       BOOST_LOG(info)
         << "Colorspace: "sv << colorspace_to_string(desc1.ColorSpace)
-        << "Bits Per Color: "sv << desc1.BitsPerColor
-        << "Red Primary: ["sv << desc1.RedPrimary[0] << ',' << desc1.RedPrimary[1] << ']'
-        << "Green Primary: ["sv << desc1.GreenPrimary[0] << ',' << desc1.GreenPrimary[1] << ']'
-        << "Blue Primary: ["sv << desc1.BluePrimary[0] << ',' << desc1.BluePrimary[1] << ']'
-        << "White Point: ["sv << desc1.WhitePoint[0] << ',' << desc1.WhitePoint[1] << ']'
-        << "Min Luminance: "sv << desc1.MinLuminance << " nits"sv
-        << "Max Luminance: "sv << desc1.MaxLuminance << " nits"sv
-        << "Max Full Luminance : "sv << desc1.MaxFullFrameLuminance << " nits"sv;
+        << ",Bits Per Color: "sv << desc1.BitsPerColor
+        << ",Red Primary: ["sv << desc1.RedPrimary[0] << ',' << desc1.RedPrimary[1] << ']'
+        << ",Green Primary: ["sv << desc1.GreenPrimary[0] << ',' << desc1.GreenPrimary[1] << ']'
+        << ",Blue Primary: ["sv << desc1.BluePrimary[0] << ',' << desc1.BluePrimary[1] << ']'
+        << ",White Point: ["sv << desc1.WhitePoint[0] << ',' << desc1.WhitePoint[1] << ']'
+        << ",Min Luminance: "sv << desc1.MinLuminance << " nits"sv
+        << ",Max Luminance: "sv << desc1.MaxLuminance << " nits"sv
+        << ",Max Full Luminance : "sv << desc1.MaxFullFrameLuminance << " nits"sv;
     }
 
     if (!timer || !*timer) {

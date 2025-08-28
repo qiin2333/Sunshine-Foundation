@@ -83,7 +83,7 @@ namespace display_device::w_utils {
     static bool class_registered = false;
     if (!class_registered) {
       if (!RegisterClassW(&wc)) {
-        BOOST_LOG(error) << "[锁屏检测] 注册窗口类失败: " << GetLastError();
+        BOOST_LOG(error) << "[ScreenLock] 注册窗口类失败: " << GetLastError();
         return false;
       }
       class_registered = true;
@@ -101,19 +101,19 @@ namespace display_device::w_utils {
         this);
 
     if (!hwnd_) {
-      BOOST_LOG(error) << "[锁屏检测] 创建窗口失败: " << GetLastError();
+      BOOST_LOG(error) << "[ScreenLock] 创建窗口失败: " << GetLastError();
       return false;
     }
 
     // Register for session notifications
     if (!WTSRegisterSessionNotification(hwnd_, NOTIFY_FOR_THIS_SESSION)) {
-      BOOST_LOG(error) << "[锁屏检测] 注册监听失败: " << GetLastError();
+      BOOST_LOG(error) << "[ScreenLock] 注册监听失败: " << GetLastError();
       DestroyWindow(hwnd_);
       hwnd_ = nullptr;
       return false;
     }
 
-    BOOST_LOG(info) << "[锁屏检测] 监听器启动成功";
+    BOOST_LOG(info) << "[ScreenLock] 监听器启动成功";
     return true;
   }
 
@@ -121,12 +121,12 @@ namespace display_device::w_utils {
   session_event_listener_t::check_current_lock_state() {
     // 检查当前的锁屏状态
     if (w_utils::is_user_session_locked()) {
-      BOOST_LOG(info) << "[锁屏检测] 初始化时检测到系统处于锁屏状态";
+      BOOST_LOG(info) << "[ScreenLock] 初始化时检测到系统处于锁屏状态";
       if (callback_) {
         callback_(true);
       }
     } else {
-      BOOST_LOG(info) << "[锁屏检测] 初始化时系统未锁屏";
+      BOOST_LOG(info) << "[ScreenLock] 初始化时系统未锁屏";
     }
   }
 
@@ -149,11 +149,11 @@ namespace display_device::w_utils {
         if (instance && instance->callback_) {
           switch (wParam) {
             case WTS_SESSION_LOCK:
-              BOOST_LOG(info) << "[锁屏检测] 检测到锁屏";
+              BOOST_LOG(info) << "[ScreenLock] 检测到锁屏";
               instance->callback_(true);
               break;
             case WTS_SESSION_UNLOCK:
-              BOOST_LOG(info) << "[锁屏检测] 检测到解锁";
+              BOOST_LOG(info) << "[ScreenLock] 检测到解锁";
               instance->callback_(false);
               break;
             default:
@@ -166,7 +166,7 @@ namespace display_device::w_utils {
       case WM_DESTROY:
         if (instance && instance->hwnd_) {
           WTSUnRegisterSessionNotification(instance->hwnd_);
-          BOOST_LOG(info) << "[锁屏检测] 监听器停止";
+          BOOST_LOG(info) << "[ScreenLock] 监听器停止";
         }
         PostQuitMessage(0);
         return 0;
@@ -194,7 +194,7 @@ namespace display_device::w_utils {
         DispatchMessage(&msg);
       }
     } catch (const std::exception& e) {
-      BOOST_LOG(error) << "[锁屏检测] 消息循环遇到错误: " << e.what();
+      BOOST_LOG(error) << "[ScreenLock] 消息循环遇到错误: " << e.what();
     }
 
     is_active_ = false;
@@ -205,7 +205,7 @@ namespace display_device::w_utils {
     auto listener = std::make_unique<session_event_listener_t>(std::move(callback));
     
     if (!listener->start()) {
-      BOOST_LOG(error) << "[锁屏检测] 启动监听器失败";
+      BOOST_LOG(error) << "[ScreenLock] 启动监听器失败";
       return nullptr;
     }
 
