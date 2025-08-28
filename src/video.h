@@ -17,6 +17,35 @@ extern "C" {
 struct AVPacket;
 namespace video {
 
+  // 动态参数调节类型
+  enum class dynamic_param_type_e : int {
+    BITRATE,           // 码率 (Kbps)
+    QP,                // 量化参数
+    FEC_PERCENTAGE,    // FEC百分比
+    PRESET,            // 编码预设
+    ADAPTIVE_QUANTIZATION, // 自适应量化
+    MULTI_PASS,        // 多遍编码
+    VBV_BUFFER_SIZE,   // VBV缓冲区大小
+    MAX_PARAM_TYPE
+  };
+
+  // 动态参数值联合体
+  union dynamic_param_value_t {
+    int int_value;
+    bool bool_value;
+    float float_value;
+  };
+
+  // 动态参数结构
+  struct dynamic_param_t {
+    dynamic_param_type_e type;
+    dynamic_param_value_t value;
+    bool valid;
+  };
+
+  // 动态参数调节事件类型
+  using dynamic_param_change_event_t = safe::mail_raw_t::event_t<dynamic_param_t>;
+
   /* Encoding configuration requested by remote client */
   struct config_t {
     int width;  // Video width in pixels
@@ -151,7 +180,7 @@ namespace video {
       option_t(const option_t &) = default;
 
       std::string name;
-      std::variant<int, int *, std::optional<int> *, std::function<int()>, std::string, std::string *> value;
+      std::variant<int, int *, std::optional<int> *, std::function<int()>, std::string, std::string *, std::function<const std::string(const config_t &)>> value;
 
       option_t(std::string &&name, decltype(value) &&value):
           name { std::move(name) }, value { std::move(value) } {}
@@ -213,6 +242,12 @@ namespace video {
 
     virtual void
     invalidate_ref_frames(int64_t first_frame, int64_t last_frame) = 0;
+
+    virtual void
+    set_bitrate(int bitrate_kbps) = 0;  // 新增：动态码率调整方法
+
+    virtual void
+    set_dynamic_param(const dynamic_param_t &param) = 0;  // 新增：通用动态参数调整方法
   };
 
   // encoders
@@ -351,7 +386,8 @@ namespace video {
   capture(
     safe::mail_t mail,
     config_t config,
-    void *channel_data);
+    void *channel_data,
+    std::optional<safe::mail_raw_t::event_t<dynamic_param_t>> dynamic_param_events = std::nullopt);
 
   bool
   validate_encoder(encoder_t &encoder, bool expect_failure);

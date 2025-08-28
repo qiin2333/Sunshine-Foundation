@@ -4,6 +4,8 @@
  */
 #pragma once
 #include <utility>
+#include <vector>
+#include <string>
 
 #include <boost/asio.hpp>
 
@@ -34,6 +36,22 @@ namespace stream {
     std::optional<int> gcmap;
   };
 
+  // Session information structure for API responses
+  struct session_info_t {
+    std::string client_name;
+    std::string client_address;
+    std::string state;
+    uint32_t session_id;
+    int width;
+    int height;
+    int fps;
+    bool host_audio;
+    bool enable_hdr;
+    bool enable_mic;
+    std::string app_name;
+    int app_id;
+  };
+
   namespace session {
     enum class state_e : int {
       STOPPED,  ///< The session is stopped
@@ -52,5 +70,23 @@ namespace stream {
     join(session_t &session);
     state_e
     state(session_t &session);
+    
+
+
+    /**
+     * @brief Send dynamic parameter change event to a specific client session.
+     * @param client_name The name of the client to target.
+     * @param param The dynamic parameter to change.
+     * @return true if the event was sent successfully, false otherwise.
+     */
+    bool
+    change_dynamic_param_for_client(const std::string &client_name, const video::dynamic_param_t &param);
+
+    /**
+     * @brief Get information about all active sessions.
+     * @return Vector of session information.
+     */
+    std::vector<session_info_t>
+    get_all_sessions_info();
   }  // namespace session
 }  // namespace stream

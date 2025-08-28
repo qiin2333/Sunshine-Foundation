@@ -50,6 +50,7 @@ extern "C" {
 #define IDX_SET_ADAPTIVE_TRIGGERS 15
 #define IDX_MIC_DATA 16
 #define IDX_MIC_CONFIG 17
+#define IDX_DYNAMIC_BITRATE_CHANGE 18  // 新增：动态码率调整消息类型
 
 static const short packetTypes[] = {
   0x0305,  // Start A
@@ -70,6 +71,7 @@ static const short packetTypes[] = {
   0x5503,  // Set Adaptive triggers (Sunshine protocol extension)
   0x5504,  // Microphone data (Sunshine protocol extension)
   0x5505,  // Microphone config (Sunshine protocol extension)
+  0x5506,  // Dynamic bitrate change (Sunshine protocol extension)
 };
 
 namespace asio = boost::asio;
@@ -379,6 +381,9 @@ namespace stream {
 
     boost::asio::ip::address localAddress;
 
+    // 添加客户端名称字段
+    std::string client_name;
+
     struct {
       std::string ping_payload;
 
@@ -390,6 +395,7 @@ namespace stream {
 
       safe::mail_raw_t::event_t<bool> idr_events;
       safe::mail_raw_t::event_t<std::pair<int64_t, int64_t>> invalidate_ref_frames_events;
+      safe::mail_raw_t::event_t<video::dynamic_param_t> dynamic_param_change_events;  // 新增：动态参数调整事件
 
       std::unique_ptr<platf::deinit_t> qos;
     } video;
@@ -1000,6 +1006,30 @@ namespace stream {
       session->video.idr_events->raise(true);
     });
 
+    server->map(packetTypes[IDX_DYNAMIC_BITRATE_CHANGE], [&](session_t *session, const std::string_view &payload) {
+      BOOST_LOG(debug) << "type [IDX_DYNAMIC_BITRATE_CHANGE]"sv;
+
+      if (payload.size() >= sizeof(int)) {
+        auto new_bitrate = *(int *) payload.data();
+        BOOST_LOG(info) << "Dynamic bitrate change requested: " << new_bitrate << " Kbps";
+
+        // 验证码率范围
+        if (new_bitrate > 0 && new_bitrate <= 800000) {  // 最大800Mbps
+          video::dynamic_param_t param;
+          param.type = video::dynamic_param_type_e::BITRATE;
+          param.value.int_value = new_bitrate;
+          param.valid = true;
+          session->video.dynamic_param_change_events->raise(param);
+        }
+        else {
+          BOOST_LOG(warning) << "Invalid bitrate value: " << new_bitrate << " Kbps";
+        }
+      }
+      else {
+        BOOST_LOG(warning) << "Invalid payload size for dynamic bitrate change";
+      }
+    });
+
     server->map(packetTypes[IDX_INVALIDATE_REF_FRAMES], [&](session_t *session, const std::string_view &payload) {
       auto frames = (std::int64_t *) payload.data();
       auto firstFrame = frames[0];
@@ -1301,11 +1331,18 @@ namespace stream {
     try {
       BOOST_LOG(debug) << "Starting microphone receive thread";
 
-      audio::init_mic_redirect_device();
+      bool mic_device_initialized = false;
 
       while (!broadcast_shutdown_event->peek()) {
         // 检查麦克风socket状态
         if (ctx.mic_socket_enabled.load()) {
+          // 延迟初始化麦克风重定向设备，直到确认需要时才初始化
+          if (!mic_device_initialized) {
+            BOOST_LOG(debug) << "Initializing microphone redirect device";
+            audio::init_mic_redirect_device();
+            mic_device_initialized = true;
+          }
+
           // 启动麦克风接收
           ctx.mic_sock.async_receive_from(asio::buffer(buffer), peer, 0, mic_recv_func);
 
@@ -1322,7 +1359,10 @@ namespace stream {
         }
       }
 
-      audio::release_mic_redirect_device();
+      // 只有在设备被初始化过的情况下才释放
+      if (mic_device_initialized) {
+        audio::release_mic_redirect_device();
+      }
     }
     catch (const std::exception &e) {
       BOOST_LOG(fatal) << "micRecvThread exception: " << e.what();
@@ -2072,7 +2112,7 @@ namespace stream {
       session->video.peer.port(), platf::qos_data_type_e::video, session->config.videoQosType != 0);
 
     BOOST_LOG(debug) << "Start capturing Video"sv;
-    video::capture(session->mail, session->config.monitor, session);
+    video::capture(session->mail, session->config.monitor, session, session->video.dynamic_param_change_events);
   }
 
   void
@@ -2262,6 +2302,9 @@ namespace stream {
       session->shutdown_event = mail->event<bool>(mail::shutdown);
       session->launch_session_id = launch_session.id;
 
+      // 设置客户端名称
+      session->client_name = launch_session.client_name;
+
       session->config = config;
 
       session->control.connect_data = launch_session.control_connect_data;
@@ -2274,6 +2317,7 @@ namespace stream {
 
       session->video.idr_events = mail->event<bool>(mail::idr);
       session->video.invalidate_ref_frames_events = mail->event<std::pair<int64_t, int64_t>>(mail::invalidate_ref_frames);
+      session->video.dynamic_param_change_events = mail->event<video::dynamic_param_t>(mail::dynamic_param_change);
       session->video.lowseq = 0;
       session->video.ping_payload = launch_session.av_ping_payload;
       if (config.encryptionFlagsEnabled & SS_ENC_VIDEO) {
@@ -2323,6 +2367,98 @@ namespace stream {
       session->mail = std::move(mail);
 
       return session;
+    }
+
+    bool
+    change_dynamic_param_for_client(const std::string &client_name, const video::dynamic_param_t &param) {
+      auto broadcast_ref = broadcast.ref();
+      if (!broadcast_ref) {
+        BOOST_LOG(warning) << "No broadcast context available";
+        return false;
+      }
+
+      auto lg = broadcast_ref->control_server._sessions.lock();
+      for (auto session_p : *broadcast_ref->control_server._sessions) {
+        if (session_p->client_name == client_name &&
+            session_p->state.load(std::memory_order_relaxed) == state_e::RUNNING) {
+          session_p->video.dynamic_param_change_events->raise(param);
+          BOOST_LOG(info) << "Sent dynamic parameter change event to client '" << client_name
+                          << "': type=" << (int) param.type;
+          return true;
+        }
+      }
+
+      BOOST_LOG(warning) << "No active session found for client: " << client_name;
+      return false;
+    }
+
+    std::vector<session_info_t>
+    get_all_sessions_info() {
+      std::vector<session_info_t> sessions_info;
+      
+      auto broadcast_ref = broadcast.ref();
+      if (!broadcast_ref) {
+        BOOST_LOG(warning) << "No broadcast context available";
+        return sessions_info;
+      }
+
+      auto lg = broadcast_ref->control_server._sessions.lock();
+      for (auto session_p : *broadcast_ref->control_server._sessions) {
+        session_info_t info;
+        
+        info.client_name = session_p->client_name;
+        info.session_id = session_p->launch_session_id;
+        
+        // Get client address
+        if (session_p->control.peer) {
+          auto peer_addr = platf::from_sockaddr((sockaddr *) &session_p->control.peer->address.address);
+          info.client_address = peer_addr;
+        } else {
+          info.client_address = session_p->control.expected_peer_address;
+        }
+        
+        // Get session state
+        auto state = session_p->state.load(std::memory_order_relaxed);
+        switch (state) {
+          case state_e::STOPPED:
+            info.state = "STOPPED";
+            break;
+          case state_e::STOPPING:
+            info.state = "STOPPING";
+            break;
+          case state_e::STARTING:
+            info.state = "STARTING";
+            break;
+          case state_e::RUNNING:
+            info.state = "RUNNING";
+            break;
+          default:
+            info.state = "UNKNOWN";
+            break;
+        }
+        
+        // Get video configuration
+        info.width = session_p->config.monitor.width;
+        info.height = session_p->config.monitor.height;
+        info.fps = session_p->config.monitor.framerate;
+        
+        // Get audio and other settings
+        info.host_audio = session_p->config.audio.flags[audio::config_t::HOST_AUDIO];
+        info.enable_hdr = session_p->config.monitor.dynamicRange > 0;
+        info.enable_mic = session_p->audio.enable_mic;
+        
+        // Get app information
+        info.app_id = proc::proc.running();
+        if (info.app_id > 0) {
+          info.app_name = proc::proc.get_last_run_app_name();
+        } else {
+          info.app_name = "None";
+        }
+        
+        sessions_info.push_back(info);
+      }
+      
+      return sessions_info;
     }
   }  // namespace session
 }  // namespace stream

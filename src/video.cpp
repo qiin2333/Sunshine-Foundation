@@ -2,7 +2,7 @@
  * @file src/video.cpp
  * @brief Definitions for video.
  */
- // standard includes
+// standard includes
 #include <atomic>
 #include <bitset>
 #include <list>
@@ -129,7 +129,8 @@ namespace video {
      * @brief Check if we can allow probing for the encoders.
      * @return True if there should be no issues with the probing, false if we should prevent it.
      */
-    bool allow_encoder_probing() {
+    bool
+    allow_encoder_probing() {
       const auto devices { display_device::enum_available_devices() };
 
       // If there are no devices, then either the API is not working correctly or OS does not support the lib.
@@ -143,8 +144,8 @@ namespace video {
       // and also the display device for Windows. So we must have at least 1 active device.
       const bool at_least_one_device_is_active = std::any_of(std::begin(devices), std::end(devices), [](const auto &device) {
         // If device has additional info, it is active.
-          return device.second.device_state == display_device::device_state_e::active ||
-                device.second.device_state == display_device::device_state_e::primary;
+        return device.second.device_state == display_device::device_state_e::active ||
+               device.second.device_state == display_device::device_state_e::primary;
       });
 
       if (at_least_one_device_is_active) {
@@ -412,6 +413,12 @@ namespace video {
 
     avcodec_encode_session_t(avcodec_encode_session_t &&other) noexcept = default;
     ~avcodec_encode_session_t() {
+      // Flush any remaining frames in the encoder
+      if (avcodec_send_frame(avcodec_ctx.get(), nullptr) == 0) {
+        packet_raw_avcodec pkt;
+        while (avcodec_receive_packet(avcodec_ctx.get(), pkt.av_packet) == 0);
+      }
+
       // Order matters here because the context relies on the hwdevice still being valid
       avcodec_ctx.reset();
       device.reset();
@@ -461,6 +468,62 @@ namespace video {
       request_idr_frame();
     }
 
+    void
+    set_bitrate(int bitrate_kbps) override {
+      if (avcodec_ctx) {
+        // 考虑FEC影响，调整编码码率
+        // 当FEC百分比为X%时，实际编码码率需要调整为原始码率的(100-X)%
+        auto adjusted_bitrate_kbps = bitrate_kbps;
+        if (config::stream.fec_percentage <= 80) {
+          adjusted_bitrate_kbps = (int)(bitrate_kbps * (100 - config::stream.fec_percentage) / 100.0f);
+        }
+        
+        auto bitrate = adjusted_bitrate_kbps * 1000;  // 转换为bps
+        avcodec_ctx->rc_max_rate = bitrate;
+        avcodec_ctx->bit_rate = bitrate;
+        avcodec_ctx->rc_min_rate = bitrate;  // Set min rate for CBR mode
+        
+        BOOST_LOG(info) << "AVCodec encoder bitrate changed to: " << adjusted_bitrate_kbps 
+                       << " Kbps (requested: " << bitrate_kbps << " Kbps, FEC: " 
+                       << config::stream.fec_percentage << "%)";
+      }
+    }
+
+    void
+    set_dynamic_param(const dynamic_param_t &param) override {
+      if (!avcodec_ctx) return;
+
+      switch (param.type) {
+        case dynamic_param_type_e::BITRATE: {
+          // 码率调整通过set_bitrate处理
+          set_bitrate(param.value.int_value);
+          break;
+        }
+        case dynamic_param_type_e::QP: {
+          // 设置量化参数
+          if (param.value.int_value >= 0 && param.value.int_value <= 51) {
+            avcodec_ctx->qmin = param.value.int_value;
+            avcodec_ctx->qmax = param.value.int_value;
+            BOOST_LOG(info) << "AVCodec encoder QP changed to: " << param.value.int_value;
+          } else {
+            BOOST_LOG(warning) << "Invalid QP value: " << param.value.int_value << " (must be 0-51)";
+          }
+          break;
+        }
+        case dynamic_param_type_e::VBV_BUFFER_SIZE: {
+          // 设置VBV缓冲区大小
+          if (param.value.int_value > 0) {
+            avcodec_ctx->rc_buffer_size = param.value.int_value * 1000;  // 转换为bps
+            BOOST_LOG(info) << "AVCodec encoder VBV buffer size changed to: " << param.value.int_value << " Kbps";
+          }
+          break;
+        }
+        default:
+          BOOST_LOG(warning) << "AVCodec encoder: Unsupported dynamic parameter type: " << (int)param.type;
+          break;
+      }
+    }
+
     avcodec_ctx_t avcodec_ctx;
     std::unique_ptr<platf::avcodec_encode_device_t> device;
 
@@ -501,6 +564,60 @@ namespace video {
 
       if (!device->nvenc->invalidate_ref_frames(first_frame, last_frame)) {
         force_idr = true;
+      }
+    }
+
+    void
+    set_bitrate(int bitrate_kbps) override {
+      if (device && device->nvenc) {
+        // 考虑FEC影响，调整编码码率
+        // 当FEC百分比为X%时，实际编码码率需要调整为原始码率的(100-X)%
+        auto adjusted_bitrate_kbps = bitrate_kbps;
+        if (config::stream.fec_percentage <= 80) {
+          adjusted_bitrate_kbps = (int)(bitrate_kbps * (100 - config::stream.fec_percentage) / 100.0f);
+        }
+        
+        device->nvenc->set_bitrate(adjusted_bitrate_kbps);
+        BOOST_LOG(info) << "NVENC encoder bitrate changed to: " << adjusted_bitrate_kbps 
+                       << " Kbps (requested: " << bitrate_kbps << " Kbps, FEC: " 
+                       << config::stream.fec_percentage << "%)";
+      }
+    }
+
+    void
+    set_dynamic_param(const dynamic_param_t &param) override {
+      if (!device || !device->nvenc) return;
+
+      switch (param.type) {
+        case dynamic_param_type_e::BITRATE: {
+          // 码率调整通过set_bitrate处理
+          set_bitrate(param.value.int_value);
+          break;
+        }
+        case dynamic_param_type_e::QP: {
+          // NVENC的QP调整需要通过重新配置编码器
+          BOOST_LOG(info) << "NVENC encoder QP change requested: " << param.value.int_value 
+                         << " (requires encoder reconfiguration)";
+          break;
+        }
+        case dynamic_param_type_e::ADAPTIVE_QUANTIZATION: {
+          // 自适应量化开关
+          BOOST_LOG(info) << "NVENC encoder adaptive quantization change requested: " << param.value.bool_value;
+          break;
+        }
+        case dynamic_param_type_e::MULTI_PASS: {
+          // 多遍编码设置
+          BOOST_LOG(info) << "NVENC encoder multi-pass change requested: " << param.value.int_value;
+          break;
+        }
+        case dynamic_param_type_e::VBV_BUFFER_SIZE: {
+          // VBV缓冲区大小
+          BOOST_LOG(info) << "NVENC encoder VBV buffer size change requested: " << param.value.int_value << " Kbps";
+          break;
+        }
+        default:
+          BOOST_LOG(warning) << "NVENC encoder: Unsupported dynamic parameter type: " << (int)param.type;
+          break;
       }
     }
 
@@ -604,7 +721,7 @@ namespace video {
       {},  // Fallback options
       "h264_nvenc"s,
     },
-    PARALLEL_ENCODING | REF_FRAMES_INVALIDATION | YUV444_SUPPORT | ASYNC_TEARDOWN // flags
+    PARALLEL_ENCODING | REF_FRAMES_INVALIDATION | YUV444_SUPPORT | ASYNC_TEARDOWN  // flags
   };
 #elif !defined(__APPLE__)
   encoder_t nvenc {
@@ -632,7 +749,7 @@ namespace video {
         { "forced-idr"s, 1 },
         { "zerolatency"s, 1 },
         { "surfaces"s, 1 },
-        { "filler_data"s, false },
+        { "cbr_padding"s, false },
         { "preset"s, &config::video.nv_legacy.preset },
         { "tune"s, NV_ENC_TUNING_INFO_ULTRA_LOW_LATENCY },
         { "rc"s, NV_ENC_PARAMS_RC_CBR },
@@ -653,6 +770,7 @@ namespace video {
         { "forced-idr"s, 1 },
         { "zerolatency"s, 1 },
         { "surfaces"s, 1 },
+        { "cbr_padding"s, false },
         { "preset"s, &config::video.nv_legacy.preset },
         { "tune"s, NV_ENC_TUNING_INFO_ULTRA_LOW_LATENCY },
         { "rc"s, NV_ENC_PARAMS_RC_CBR },
@@ -678,6 +796,7 @@ namespace video {
         { "forced-idr"s, 1 },
         { "zerolatency"s, 1 },
         { "surfaces"s, 1 },
+        { "cbr_padding"s, false },
         { "preset"s, &config::video.nv_legacy.preset },
         { "tune"s, NV_ENC_TUNING_INFO_ULTRA_LOW_LATENCY },
         { "rc"s, NV_ENC_PARAMS_RC_CBR },
@@ -816,8 +935,11 @@ namespace video {
         { "filler_data"s, false },
         { "forced_idr"s, 1 },
         { "latency"s, "lowest_latency"s },
+        { "async_depth"s, 1 },
         { "skip_frame"s, 0 },
-        { "log_to_dbg"s, []() { return config::sunshine.min_log_level < 2 ? 1 : 0; } },
+        { "log_to_dbg"s, []() {
+           return config::sunshine.min_log_level < 2 ? 1 : 0;
+         } },
         { "preencode"s, &config::video.amd.amd_preanalysis },
         { "quality"s, &config::video.amd.amd_quality_av1 },
         { "rc"s, &config::video.amd.amd_rc_av1 },
@@ -837,8 +959,11 @@ namespace video {
         { "filler_data"s, false },
         { "forced_idr"s, 1 },
         { "latency"s, 1 },
+        { "async_depth"s, 1 },
         { "skip_frame"s, 0 },
-        { "log_to_dbg"s, []() { return config::sunshine.min_log_level < 2 ? 1 : 0; } },
+        { "log_to_dbg"s, []() {
+           return config::sunshine.min_log_level < 2 ? 1 : 0;
+         } },
         { "gops_per_idr"s, 1 },
         { "header_insertion_mode"s, "idr"s },
         { "preencode"s, &config::video.amd.amd_preanalysis },
@@ -847,6 +972,19 @@ namespace video {
         { "usage"s, &config::video.amd.amd_usage_hevc },
         { "vbaq"s, &config::video.amd.amd_vbaq },
         { "enforce_hrd"s, &config::video.amd.amd_enforce_hrd },
+        { "level"s, [](const config_t &cfg) {
+           auto size = cfg.width * cfg.height;
+           // For 4K and below, try to use level 5.1 or 5.2 if possible
+           if (size <= 8912896) {
+             if (size * cfg.framerate <= 534773760) {
+               return "5.1"s;
+             }
+             else if (size * cfg.framerate <= 1069547520) {
+               return "5.2"s;
+             }
+           }
+           return "auto"s;
+         } },
       },
       {},  // SDR-specific options
       {},  // HDR-specific options
@@ -861,8 +999,11 @@ namespace video {
         { "filler_data"s, false },
         { "forced_idr"s, 1 },
         { "latency"s, 1 },
+        { "async_depth"s, 1 },
         { "frame_skipping"s, 0 },
-        { "log_to_dbg"s, []() { return config::sunshine.min_log_level < 2 ? 1 : 0; } },
+        { "log_to_dbg"s, []() {
+           return config::sunshine.min_log_level < 2 ? 1 : 0;
+         } },
         { "preencode"s, &config::video.amd.amd_preanalysis },
         { "quality"s, &config::video.amd.amd_quality_h264 },
         { "rc"s, &config::video.amd.amd_rc_h264 },
@@ -1640,23 +1781,23 @@ namespace video {
         case 0:
           // 10-bit h264 encoding is not supported by our streaming protocol
           assert(!config.dynamicRange);
-          ctx->profile = (config.chromaSamplingType == 1) ? FF_PROFILE_H264_HIGH_444_PREDICTIVE : FF_PROFILE_H264_HIGH;
+          ctx->profile = (config.chromaSamplingType == 1) ? AV_PROFILE_H264_HIGH_444_PREDICTIVE : AV_PROFILE_H264_HIGH;
           break;
 
         case 1:
           if (config.chromaSamplingType == 1) {
             // HEVC uses the same RExt profile for both 8 and 10 bit YUV 4:4:4 encoding
-            ctx->profile = FF_PROFILE_HEVC_REXT;
+            ctx->profile = AV_PROFILE_HEVC_REXT;
           }
           else {
-            ctx->profile = config.dynamicRange ? FF_PROFILE_HEVC_MAIN_10 : FF_PROFILE_HEVC_MAIN;
+            ctx->profile = config.dynamicRange ? AV_PROFILE_HEVC_MAIN_10 : AV_PROFILE_HEVC_MAIN;
           }
           break;
 
         case 2:
           // AV1 supports both 8 and 10 bit encoding with the same Main profile
           // but YUV 4:4:4 sampling requires High profile
-          ctx->profile = (config.chromaSamplingType == 1) ? FF_PROFILE_AV1_HIGH : FF_PROFILE_AV1_MAIN;
+          ctx->profile = (config.chromaSamplingType == 1) ? AV_PROFILE_AV1_HIGH : AV_PROFILE_AV1_MAIN;
           break;
       }
 
@@ -1768,15 +1909,34 @@ namespace video {
       ctx->thread_count = ctx->slices;
 
       AVDictionary *options { nullptr };
-      auto handle_option = [&options](const encoder_t::option_t &option) {
+      auto handle_option = [&options, &config](const encoder_t::option_t &option) {
         std::visit(
           util::overloaded {
-            [&](int v) { av_dict_set_int(&options, option.name.c_str(), v, 0); },
-            [&](int *v) { av_dict_set_int(&options, option.name.c_str(), *v, 0); },
-            [&](std::optional<int> *v) { if(*v) av_dict_set_int(&options, option.name.c_str(), **v, 0); },
-            [&](std::function<int()> v) { av_dict_set_int(&options, option.name.c_str(), v(), 0); },
-            [&](const std::string &v) { av_dict_set(&options, option.name.c_str(), v.c_str(), 0); },
-            [&](std::string *v) { if(!v->empty()) av_dict_set(&options, option.name.c_str(), v->c_str(), 0); } },
+            [&](int v) {
+              av_dict_set_int(&options, option.name.c_str(), v, 0);
+            },
+            [&](int *v) {
+              av_dict_set_int(&options, option.name.c_str(), *v, 0);
+            },
+            [&](std::optional<int> *v) {
+              if (*v) {
+                av_dict_set_int(&options, option.name.c_str(), **v, 0);
+              }
+            },
+            [&](const std::function<int()> &v) {
+              av_dict_set_int(&options, option.name.c_str(), v(), 0);
+            },
+            [&](const std::string &v) {
+              av_dict_set(&options, option.name.c_str(), v.c_str(), 0);
+            },
+            [&](std::string *v) {
+              if (!v->empty()) {
+                av_dict_set(&options, option.name.c_str(), v->c_str(), 0);
+              }
+            },
+            [&](const std::function<const std::string(const config_t &cfg)> &v) {
+              av_dict_set(&options, option.name.c_str(), v(config).c_str(), 0);
+            } },
           option.value);
       };
 
@@ -1970,7 +2130,8 @@ namespace video {
     std::unique_ptr<platf::encode_device_t> encode_device,
     safe::signal_t &reinit_event,
     const encoder_t &encoder,
-    void *channel_data) {
+    void *channel_data,
+    std::optional<safe::mail_raw_t::event_t<dynamic_param_t>> dynamic_param_events) {
     auto session = make_encode_session(disp.get(), encoder, config, disp->width, disp->height, std::move(encode_device));
     if (!session) {
       return;
@@ -1984,23 +2145,24 @@ namespace video {
     // streaming to continue without requiring a full restart of Sunshine.
     auto fail_guard = util::fail_guard([&encoder, &session] {
       if (encoder.flags & ASYNC_TEARDOWN) {
-        std::thread encoder_teardown_thread {[session = std::move(session)]() mutable {
+        std::thread encoder_teardown_thread { [session = std::move(session)]() mutable {
           BOOST_LOG(info) << "Starting async encoder teardown";
           session.reset();
           BOOST_LOG(info) << "Async encoder teardown complete";
-        }};
+        } };
         encoder_teardown_thread.detach();
       }
     });
 
     // set minimum frame time based on client-requested target framerate
-    std::chrono::duration<double, std::milli> minimum_frame_time {2000.0 / config.framerate};
+    std::chrono::duration<double, std::milli> minimum_frame_time { 2000.0 / config.framerate };
     BOOST_LOG(info) << "Minimum frame time set to "sv << minimum_frame_time.count() << "ms, based on client-requested target framerate "sv << config.framerate << "."sv;
 
     auto shutdown_event = mail->event<bool>(mail::shutdown);
     auto packets = mail::man->queue<packet_t>(mail::video_packets);
     auto idr_events = mail->event<bool>(mail::idr);
     auto invalidate_ref_frames_events = mail->event<std::pair<int64_t, int64_t>>(mail::invalidate_ref_frames);
+    auto dynamic_param_events_ptr = dynamic_param_events.value_or(mail::man->event<dynamic_param_t>(mail::dynamic_param_change));
 
     {
       // Load a dummy image into the AVFrame to ensure we have something to encode
@@ -2036,6 +2198,14 @@ namespace video {
       if (idr_events->peek()) {
         requested_idr_frame = true;
         idr_events->pop();
+      }
+
+      // 处理动态参数调整
+      while (dynamic_param_events_ptr->peek()) {
+        if (auto param = dynamic_param_events_ptr->pop(0ms)) {
+          BOOST_LOG(info) << "Applying dynamic parameter change: type=" << (int)param->type;
+          session->set_dynamic_param(*param);
+        }
       }
 
       if (requested_idr_frame) {
@@ -2124,7 +2294,6 @@ namespace video {
 
     {
       auto encoder_name = encoder.codec_from_config(config).name;
-
 
       auto color_coding = colorspace.colorspace == colorspace_e::bt2020    ? "HDR (Rec. 2020 + SMPTE 2084 PQ)" :
                           colorspace.colorspace == colorspace_e::rec601    ? "SDR (Rec. 601)" :
@@ -2386,7 +2555,8 @@ namespace video {
   capture_async(
     safe::mail_t mail,
     config_t &config,
-    void *channel_data) {
+    void *channel_data,
+    std::optional<safe::mail_raw_t::event_t<dynamic_param_t>> dynamic_param_events) {
     auto shutdown_event = mail->event<bool>(mail::shutdown);
 
     auto images = std::make_shared<img_event_t::element_type>();
@@ -2461,7 +2631,7 @@ namespace video {
         config, display,
         std::move(encode_device),
         ref->reinit_event, *ref->encoder_p,
-        channel_data);
+        channel_data, dynamic_param_events);
     }
   }
 
@@ -2469,12 +2639,13 @@ namespace video {
   capture(
     safe::mail_t mail,
     config_t config,
-    void *channel_data) {
+    void *channel_data,
+    std::optional<safe::mail_raw_t::event_t<dynamic_param_t>> dynamic_param_events) {
     auto idr_events = mail->event<bool>(mail::idr);
 
     idr_events->raise(true);
     if (chosen_encoder->flags & PARALLEL_ENCODING) {
-      capture_async(std::move(mail), config, channel_data);
+      capture_async(std::move(mail), config, channel_data, dynamic_param_events);
     }
     else {
       safe::signal_t join_event;

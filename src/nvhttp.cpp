@@ -31,6 +31,7 @@
 #include "platform/common.h"
 #include "process.h"
 #include "rtsp.h"
+#include "stream.h"
 #include "system_tray.h"
 #include "utility.h"
 #include "uuid.h"
@@ -929,6 +930,291 @@ namespace nvhttp {
   }
 
   void
+  changeBitrate(resp_https_t response, req_https_t request) {
+    print_req<SunshineHTTPS>(request);
+
+    pt::ptree tree;
+    auto g = util::fail_guard([&]() {
+      std::ostringstream data;
+      pt::write_xml(data, tree);
+      response->write(data.str());
+      response->close_connection_after_response = true;
+    });
+
+    try {
+      auto args = request->parse_query_string();
+      auto bitrate_param = args.find("bitrate");
+      auto clientname_param = args.find("clientname");
+
+      if (bitrate_param == args.end()) {
+        tree.put("root.bitrate", 0);
+        tree.put("root.<xmlattr>.status_code", 400);
+        tree.put("root.<xmlattr>.status_message", "Missing bitrate parameter");
+        return;
+      }
+
+      if (clientname_param == args.end()) {
+        tree.put("root.bitrate", 0);
+        tree.put("root.<xmlattr>.status_code", 400);
+        tree.put("root.<xmlattr>.status_message", "Missing clientname parameter");
+        return;
+      }
+
+      int bitrate = std::stoi(bitrate_param->second);
+      std::string client_name = clientname_param->second;
+
+      if (bitrate <= 0 || bitrate > 800000) {
+        tree.put("root.bitrate", 0);
+        tree.put("root.<xmlattr>.status_code", 400);
+        tree.put("root.<xmlattr>.status_message", "Invalid bitrate value. Must be between 1 and 800000 Kbps");
+        return;
+      }
+
+      video::dynamic_param_t param;
+      param.type = video::dynamic_param_type_e::BITRATE;
+      param.value.int_value = bitrate;
+      param.valid = true;
+      
+      bool success = stream::session::change_dynamic_param_for_client(client_name, param);
+
+      if (success) {
+        tree.put("root.bitrate", 1);
+        tree.put("root.<xmlattr>.status_code", 200);
+        tree.put("root.<xmlattr>.bitrate", bitrate);
+        tree.put("root.<xmlattr>.clientname", client_name);
+        tree.put("root.<xmlattr>.status_message", "Bitrate change request sent to client session");
+        BOOST_LOG(info) << "NVHTTP API: Dynamic bitrate change requested for client '" 
+                       << client_name << "': " << bitrate << " Kbps";
+      } else {
+        tree.put("root.bitrate", 0);
+        tree.put("root.<xmlattr>.status_code", 404);
+        tree.put("root.<xmlattr>.status_message", "No active streaming session found for client: " + client_name);
+      }
+    }
+    catch (std::exception &e) {
+      BOOST_LOG(warning) << "ChangeBitrate: "sv << e.what();
+      tree.put("root.bitrate", 0);
+      tree.put("root.<xmlattr>.status_code", 500);
+      tree.put("root.<xmlattr>.status_message", e.what());
+    }
+  }
+
+  void
+  changeDynamicParam(resp_https_t response, req_https_t request) {
+    print_req<SunshineHTTPS>(request);
+
+    pt::ptree tree;
+    auto g = util::fail_guard([&]() {
+      std::ostringstream data;
+      pt::write_xml(data, tree);
+      response->write(data.str());
+      response->close_connection_after_response = true;
+    });
+
+    try {
+      auto args = request->parse_query_string();
+      auto param_type_param = args.find("type");
+      auto param_value_param = args.find("value");
+      auto clientname_param = args.find("clientname");
+
+      if (param_type_param == args.end()) {
+        tree.put("root.success", 0);
+        tree.put("root.<xmlattr>.status_code", 400);
+        tree.put("root.<xmlattr>.status_message", "Missing param_type parameter");
+        return;
+      }
+
+      if (param_value_param == args.end()) {
+        tree.put("root.success", 0);
+        tree.put("root.<xmlattr>.status_code", 400);
+        tree.put("root.<xmlattr>.status_message", "Missing param_value parameter");
+        return;
+      }
+
+      if (clientname_param == args.end()) {
+        tree.put("root.success", 0);
+        tree.put("root.<xmlattr>.status_code", 400);
+        tree.put("root.<xmlattr>.status_message", "Missing clientname parameter");
+        return;
+      }
+
+      int param_type = std::stoi(param_type_param->second);
+      std::string param_value = param_value_param->second;
+      std::string client_name = clientname_param->second;
+
+      // 验证参数类型
+      if (param_type < 0 || param_type >= (int)video::dynamic_param_type_e::MAX_PARAM_TYPE) {
+        tree.put("root.success", 0);
+        tree.put("root.<xmlattr>.status_code", 400);
+        tree.put("root.<xmlattr>.status_message", "Invalid param_type value");
+        return;
+      }
+
+      // 创建动态参数
+      video::dynamic_param_t param;
+      param.type = static_cast<video::dynamic_param_type_e>(param_type);
+      param.valid = true;
+
+      // 根据参数类型解析值
+      switch (param.type) {
+        case video::dynamic_param_type_e::BITRATE: {
+          int bitrate = std::stoi(param_value);
+          if (bitrate <= 0 || bitrate > 800000) {
+            tree.put("root.success", 0);
+            tree.put("root.<xmlattr>.status_code", 400);
+            tree.put("root.<xmlattr>.status_message", "Invalid bitrate value. Must be between 1 and 800000 Kbps");
+            return;
+          }
+          param.value.int_value = bitrate;
+          break;
+        }
+        case video::dynamic_param_type_e::QP: {
+          int qp = std::stoi(param_value);
+          if (qp < 0 || qp > 51) {
+            tree.put("root.success", 0);
+            tree.put("root.<xmlattr>.status_code", 400);
+            tree.put("root.<xmlattr>.status_message", "Invalid QP value. Must be between 0 and 51");
+            return;
+          }
+          param.value.int_value = qp;
+          break;
+        }
+        case video::dynamic_param_type_e::FEC_PERCENTAGE: {
+          int fec = std::stoi(param_value);
+          if (fec < 0 || fec > 100) {
+            tree.put("root.success", 0);
+            tree.put("root.<xmlattr>.status_code", 400);
+            tree.put("root.<xmlattr>.status_message", "Invalid FEC percentage. Must be between 0 and 100");
+            return;
+          }
+          param.value.int_value = fec;
+          break;
+        }
+        case video::dynamic_param_type_e::ADAPTIVE_QUANTIZATION: {
+          param.value.bool_value = (param_value == "true" || param_value == "1");
+          break;
+        }
+        case video::dynamic_param_type_e::MULTI_PASS: {
+          int multi_pass = std::stoi(param_value);
+          if (multi_pass < 0 || multi_pass > 2) {
+            tree.put("root.success", 0);
+            tree.put("root.<xmlattr>.status_code", 400);
+            tree.put("root.<xmlattr>.status_message", "Invalid multi-pass value. Must be between 0 and 2");
+            return;
+          }
+          param.value.int_value = multi_pass;
+          break;
+        }
+        case video::dynamic_param_type_e::VBV_BUFFER_SIZE: {
+          int vbv = std::stoi(param_value);
+          if (vbv <= 0) {
+            tree.put("root.success", 0);
+            tree.put("root.<xmlattr>.status_code", 400);
+            tree.put("root.<xmlattr>.status_message", "Invalid VBV buffer size. Must be greater than 0");
+            return;
+          }
+          param.value.int_value = vbv;
+          break;
+        }
+        default:
+          tree.put("root.success", 0);
+          tree.put("root.<xmlattr>.status_code", 400);
+          tree.put("root.<xmlattr>.status_message", "Unsupported parameter type");
+          return;
+      }
+
+      bool success = stream::session::change_dynamic_param_for_client(client_name, param);
+
+      if (success) {
+        tree.put("root.success", 1);
+        tree.put("root.<xmlattr>.status_code", 200);
+        tree.put("root.<xmlattr>.param_type", param_type);
+        tree.put("root.<xmlattr>.param_value", param_value);
+        tree.put("root.<xmlattr>.clientname", client_name);
+        tree.put("root.<xmlattr>.status_message", "Dynamic parameter change request sent to client session");
+        BOOST_LOG(info) << "NVHTTP API: Dynamic parameter change requested for client '" 
+                       << client_name << "': type=" << param_type << ", value=" << param_value;
+      } else {
+        tree.put("root.success", 0);
+        tree.put("root.<xmlattr>.status_code", 404);
+        tree.put("root.<xmlattr>.status_message", "No active streaming session found for client: " + client_name);
+      }
+    }
+    catch (std::exception &e) {
+      BOOST_LOG(warning) << "ChangeDynamicParam: "sv << e.what();
+      tree.put("root.success", 0);
+      tree.put("root.<xmlattr>.status_code", 500);
+      tree.put("root.<xmlattr>.status_message", e.what());
+    }
+  }
+
+  void
+  getSessionsInfo(resp_https_t response, req_https_t request) {
+    print_req<SunshineHTTPS>(request);
+
+    // 检查是否为localhost请求
+    auto client_ip = request->remote_endpoint().address();
+    if (!client_ip.is_loopback() && client_ip.to_string() != "127.0.0.1" && client_ip.to_string() != "::1") {
+      json response_json;
+      response_json["success"] = false;
+      response_json["status_code"] = 403;
+      response_json["status_message"] = "Access denied. Only localhost requests are allowed.";
+      
+      response->write(response_json.dump());
+      response->close_connection_after_response = true;
+      return;
+    }
+
+    try {
+      auto sessions_info = stream::session::get_all_sessions_info();
+      
+      json response_json;
+      response_json["success"] = true;
+      response_json["status_code"] = 200;
+      response_json["status_message"] = "Success";
+      response_json["total_sessions"] = sessions_info.size();
+      
+      json sessions_array = json::array();
+      
+      for (const auto &session_info : sessions_info) {
+        json session_obj;
+        session_obj["client_name"] = session_info.client_name;
+        session_obj["client_address"] = session_info.client_address;
+        session_obj["state"] = session_info.state;
+        session_obj["session_id"] = session_info.session_id;
+        session_obj["width"] = session_info.width;
+        session_obj["height"] = session_info.height;
+        session_obj["fps"] = session_info.fps;
+        session_obj["host_audio"] = session_info.host_audio;
+        session_obj["enable_hdr"] = session_info.enable_hdr;
+        session_obj["enable_mic"] = session_info.enable_mic;
+        session_obj["app_name"] = session_info.app_name;
+        session_obj["app_id"] = session_info.app_id;
+        
+        sessions_array.push_back(session_obj);
+      }
+      
+      response_json["sessions"] = sessions_array;
+      
+      BOOST_LOG(info) << "NVHTTP API: Session info requested from localhost, returned " << sessions_info.size() << " sessions";
+      
+      response->write(response_json.dump());
+      response->close_connection_after_response = true;
+    }
+    catch (std::exception &e) {
+      BOOST_LOG(warning) << "GetSessionsInfo: "sv << e.what();
+      
+      json error_json;
+      error_json["success"] = false;
+      error_json["status_code"] = 500;
+      error_json["status_message"] = e.what();
+      
+      response->write(error_json.dump());
+      response->close_connection_after_response = true;
+    }
+  }
+
+  void
   launch(bool &host_audio, resp_https_t response, req_https_t request) {
     print_req<SunshineHTTPS>(request);
     
@@ -1314,6 +1600,9 @@ namespace nvhttp {
     https_server.resource["^/cancel$"]["GET"] = cancel;
     https_server.resource["^/pcsleep$"]["GET"] = sleep;
     https_server.resource["^/supercmd$"]["GET"] = execSuperCmd;
+    https_server.resource["^/bitrate$"]["GET"] = changeBitrate;
+    https_server.resource["^/stream/settings$"]["GET"] = changeDynamicParam;
+    https_server.resource["^/sessions$"]["GET"] = getSessionsInfo;
 
     https_server.config.reuse_address = true;
     https_server.config.address = net::af_to_any_address_string(address_family);
