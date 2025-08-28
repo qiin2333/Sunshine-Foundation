@@ -475,10 +475,9 @@ namespace platf::dxgi {
       return -1;
     }
 
-    const auto device_name = config::video.preferUseVdd ? display_device::find_device_by_friendlyname(zako_name) : config::video.output_name;
-    auto adapter_name = from_utf8(config::video.adapter_name);
-    auto output_display_name = from_utf8(display_device::get_display_name(device_name));
-
+    std::wstring output_display_name = from_utf8(display_name);
+    std::wstring adapter_name = from_utf8(config::video.adapter_name);
+    BOOST_LOG(debug) << "[Display] 初始化显示器: " << display_name;
     adapter_t::pointer adapter_p;
     for (int tries = 0; tries < 2; ++tries) {
       for (int x = 0; factory->EnumAdapters1(x, &adapter_p) != DXGI_ERROR_NOT_FOUND; ++x) {
@@ -499,10 +498,12 @@ namespace platf::dxgi {
           output_tmp->GetDesc(&desc);
 
           if (!output_display_name.empty() && desc.DeviceName != output_display_name) {
+            BOOST_LOG(debug) << "[Display] 跳过不匹配的显示器: " << to_utf8(desc.DeviceName);
             continue;
           }
 
           if (desc.AttachedToDesktop && test_dxgi_duplication(adapter_tmp, output_tmp, false)) {
+            BOOST_LOG(debug) << "[Display] 成功匹配到目标显示器: " << to_utf8(desc.DeviceName);
             output = std::move(output_tmp);
 
             offset_x = desc.DesktopCoordinates.left;
@@ -601,8 +602,8 @@ namespace platf::dxgi {
       << ", Feature Level: 0x"sv << util::hex(feature_level).to_string_view()
       << ", Capture size: "sv << width << 'x' << height
       << ", Offset: "sv << offset_x << 'x' << offset_y
-      << ", Virtual Desktop: "sv << env_width << 'x' << env_height;
-
+      << ", Virtual Desktop: "sv << env_width << 'x' << env_height
+      << ", Display Name: " << display_name;
     // Bump up thread priority
     {
       const DWORD flags = TOKEN_ADJUST_PRIVILEGES | TOKEN_QUERY;
@@ -990,9 +991,9 @@ namespace platf {
   display(mem_type_e hwdevice_type, const std::string &display_name, const video::config_t &config) {
     auto try_init = [&](auto disp) -> std::shared_ptr<display_t> {
       if (!disp->init(config, display_name)) {
-        return disp;
+        return disp;  // 初始化成功（返回0），返回显示器对象
       }
-      return nullptr;
+      return nullptr;  // 初始化失败（返回-1），返回nullptr
     };
 
     // 优先级顺序：amd > ddx > wgc
@@ -1042,30 +1043,50 @@ namespace platf {
           continue;
         }
         auto disp = std::make_shared<dxgi::display_amd_vram_t>();
-        if (auto ret = try_init(disp)) return ret;
+        if (auto ret = try_init(disp)) {
+          BOOST_LOG(debug) << "[Display] 成功创建AMD显示器: " << display_name;
+          return ret;
+        }
+        BOOST_LOG(debug) << "[Display] AMD显示器创建失败: " << display_name;
       }
       else if (type == "ddx") {
         if (hwdevice_type == mem_type_e::dxgi) {
           auto disp = std::make_shared<dxgi::display_ddup_vram_t>();
-          if (auto ret = try_init(disp)) return ret;
+          if (auto ret = try_init(disp)) {
+            BOOST_LOG(debug) << "[Display] 成功创建DDX VRAM显示器: " << display_name;
+            return ret;
+          }
+          BOOST_LOG(debug) << "[Display] DDX VRAM显示器创建失败: " << display_name;
         }
         else if (hwdevice_type == mem_type_e::system) {
           auto disp = std::make_shared<dxgi::display_ddup_ram_t>();
-          if (auto ret = try_init(disp)) return ret;
+          if (auto ret = try_init(disp)) {
+            BOOST_LOG(debug) << "[Display] 成功创建DDX RAM显示器: " << display_name;
+            return ret;
+          }
+          BOOST_LOG(debug) << "[Display] DDX RAM显示器创建失败: " << display_name;
         }
       }
       else if (type == "wgc") {
         if (hwdevice_type == mem_type_e::dxgi) {
           auto disp = std::make_shared<dxgi::display_wgc_vram_t>();
-          if (auto ret = try_init(disp)) return ret;
+          if (auto ret = try_init(disp)) {
+            BOOST_LOG(debug) << "[Display] 成功创建WGC VRAM显示器: " << display_name;
+            return ret;
+          }
+          BOOST_LOG(debug) << "[Display] WGC VRAM显示器创建失败: " << display_name;
         }
         else if (hwdevice_type == mem_type_e::system) {
           auto disp = std::make_shared<dxgi::display_wgc_ram_t>();
-          if (auto ret = try_init(disp)) return ret;
+          if (auto ret = try_init(disp)) {
+            BOOST_LOG(debug) << "[Display] 成功创建WGC RAM显示器: " << display_name;
+            return ret;
+          }
+          BOOST_LOG(debug) << "[Display] WGC RAM显示器创建失败: " << display_name;
         }
       }
     }
-
+    BOOST_LOG(error) << "[Display] 所有类型创建失败: " << display_name;
     // 所有尝试均失败
     return nullptr;
   }
@@ -1098,16 +1119,13 @@ namespace platf {
       adapter->GetDesc1(&adapter_desc);
 
       BOOST_LOG(debug)
-        << std::endl
         << "ADAPTER:"sv
-        << "Device Name: "sv << to_utf8(adapter_desc.Description)
-        << "Device Vendor ID : 0x"sv << util::hex(adapter_desc.VendorId).to_string_view()
-        << "Device Device ID : 0x"sv << util::hex(adapter_desc.DeviceId).to_string_view()
-        << "Device Video Mem : "sv << adapter_desc.DedicatedVideoMemory / 1048576 << " MiB"sv
-        << "Device Sys Mem: "sv << adapter_desc.DedicatedSystemMemory / 1048576 << " MiB"sv
-        << "Share Sys Mem: "sv << adapter_desc.SharedSystemMemory / 1048576 << " MiB"sv
-        << std::endl
-        << "    ====== OUTPUT ======"sv;
+        << ",Device Name: "sv << to_utf8(adapter_desc.Description)
+        << ",Device Vendor ID : 0x"sv << util::hex(adapter_desc.VendorId).to_string_view()
+        << ",Device Device ID : 0x"sv << util::hex(adapter_desc.DeviceId).to_string_view()
+        << ",Device Video Mem : "sv << adapter_desc.DedicatedVideoMemory / 1048576 << " MiB"sv
+        << ",Device Sys Mem: "sv << adapter_desc.DedicatedSystemMemory / 1048576 << " MiB"sv
+        << ",Share Sys Mem: "sv << adapter_desc.SharedSystemMemory / 1048576 << " MiB"sv;
 
       dxgi::output_t::pointer output_p {};
       for (int y = 0; adapter->EnumOutputs(y, &output_p) != DXGI_ERROR_NOT_FOUND; ++y) {
@@ -1129,10 +1147,15 @@ namespace platf {
         // Don't include the display in the list if we can't actually capture it
         if (desc.AttachedToDesktop && dxgi::test_dxgi_duplication(adapter, output, true)) {
           display_names.emplace_back(std::move(device_name));
+          BOOST_LOG(debug) << "[Display] 添加可用显示器: " << device_name;
+        } else if (!desc.AttachedToDesktop) {
+          BOOST_LOG(debug) << "[Display] 跳过 None AttachedToDesktop 不可用显示器: " << device_name;
+        } else {
+          BOOST_LOG(debug) << "[Display] 跳过 DXGI测试失败 不可用显示器: " << device_name;
         }
       }
     }
-
+    BOOST_LOG(debug) << "[Display] 显示器枚举完成，找到 " << display_names.size() << " 个可用显示器";
     return display_names;
   }
 
