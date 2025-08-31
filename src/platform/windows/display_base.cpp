@@ -475,9 +475,9 @@ namespace platf::dxgi {
       return -1;
     }
 
-    const auto device_name = config::video.preferUseVdd ? display_device::find_device_by_friendlyname(zako_name) : config::video.output_name;
-    auto adapter_name = from_utf8(config::video.adapter_name);
-    auto output_display_name = from_utf8(display_device::get_display_name(device_name));
+    std::wstring output_display_name = from_utf8(display_name);
+    std::wstring adapter_name = from_utf8(config::video.adapter_name);
+    BOOST_LOG(debug) << "[Display] 初始化显示器: " << display_name;
 
     adapter_t::pointer adapter_p;
     for (int tries = 0; tries < 2; ++tries) {
@@ -499,10 +499,12 @@ namespace platf::dxgi {
           output_tmp->GetDesc(&desc);
 
           if (!output_display_name.empty() && desc.DeviceName != output_display_name) {
+            BOOST_LOG(debug) << "[Display] 跳过不匹配的显示器: " << to_utf8(desc.DeviceName);
             continue;
           }
 
           if (desc.AttachedToDesktop && test_dxgi_duplication(adapter_tmp, output_tmp, false)) {
+            BOOST_LOG(debug) << "[Display] 成功匹配到目标显示器: " << to_utf8(desc.DeviceName);
             output = std::move(output_tmp);
 
             offset_x = desc.DesktopCoordinates.left;
