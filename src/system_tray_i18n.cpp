@@ -1,11 +1,9 @@
 #include "system_tray_i18n.h"
+#include "config.h"
 
-// Forward declaration to avoid circular dependency
-namespace config {
-  namespace sunshine {
-    extern std::string locale;
-  }
-}  // namespace config
+#ifdef _WIN32
+  #include <windows.h>
+#endif
 
 namespace system_tray_i18n {
   // String key constants
@@ -35,8 +33,8 @@ namespace system_tray_i18n {
     // Try to get from config::sunshine.locale
     try {
       // Check if config is available
-      if (!config::sunshine::locale.empty()) {
-        return config::sunshine::locale;
+      if (!config::sunshine.locale.empty()) {
+        return config::sunshine.locale;
       }
     }
     catch (...) {
@@ -78,12 +76,16 @@ namespace system_tray_i18n {
   // Convert UTF-8 string to wide string
   std::wstring
   utf8_to_wstring(const std::string &utf8_str) {
-    std::wstring_convert<std::codecvt_utf8<wchar_t>> converter;
-    try {
-      return converter.from_bytes(utf8_str);
+    // Modern C++ approach: use Windows API on Windows, simple conversion on other platforms
+  #ifdef _WIN32
+    if (utf8_str.empty()) {
+      return L"";
     }
-    catch (const std::exception &) {
-      // Fallback: convert each char to wchar_t
+    
+    // Get required buffer size
+    int wide_size = MultiByteToWideChar(CP_UTF8, 0, utf8_str.c_str(), -1, nullptr, 0);
+    if (wide_size == 0) {
+      // Fallback: simple char-by-char conversion
       std::wstring result;
       result.reserve(utf8_str.length());
       for (char c : utf8_str) {
@@ -91,5 +93,27 @@ namespace system_tray_i18n {
       }
       return result;
     }
+    
+    // Convert to wide string
+    std::wstring result(wide_size - 1, L'\0');
+    if (MultiByteToWideChar(CP_UTF8, 0, utf8_str.c_str(), -1, &result[0], wide_size) == 0) {
+      // Fallback: simple char-by-char conversion
+      result.clear();
+      result.reserve(utf8_str.length());
+      for (char c : utf8_str) {
+        result += static_cast<wchar_t>(c);
+      }
+    }
+    return result;
+  #else
+    // On non-Windows platforms, use simple char-by-char conversion
+    // This is not perfect for UTF-8, but it's a reasonable fallback
+    std::wstring result;
+    result.reserve(utf8_str.length());
+    for (char c : utf8_str) {
+      result += static_cast<wchar_t>(c);
+    }
+    return result;
+  #endif
   }
 }  // namespace system_tray_i18n

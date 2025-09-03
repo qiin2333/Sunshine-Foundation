@@ -2,7 +2,6 @@
 
 #include <string>
 #include <map>
-#include <codecvt>
 
 namespace system_tray_i18n {
   // String key constants

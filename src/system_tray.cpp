@@ -11,6 +11,7 @@
     #include <aclapi.h>
     #include <tlhelp32.h>
     #include <windows.h>
+    #include <shellapi.h>  // 添加 ShellExecuteW 函数声明
     #define TRAY_ICON WEB_DIR "images/sunshine.ico"
     #define TRAY_ICON_PLAYING WEB_DIR "images/sunshine-playing.ico"
     #define TRAY_ICON_PAUSING WEB_DIR "images/sunshine-pausing.ico"
@@ -168,17 +169,28 @@ namespace system_tray {
   #endif
   };
 
+  // 通用函数：使用系统默认浏览器打开URL
+  auto open_url_in_default_browser = [](const std::string &url) {
+  #ifdef _WIN32
+    // 使用 Windows ShellExecute 打开默认浏览器
+    std::wstring wide_url(url.begin(), url.end());
+    ShellExecuteW(NULL, L"open", wide_url.c_str(), NULL, NULL, SW_SHOWNORMAL);
+  #else
+    // 其他平台使用 platf::open_url
+    platf::open_url(url);
+  #endif
+  };
+
   auto tray_star_project_cb = [](struct tray_menu *item) {
-    BOOST_LOG(debug) << "Opening Sunshine-Foundation project page"sv;
-    platf::open_url("https://github.com/qiin2333/Sunshine-Foundation");
+    open_url_in_default_browser("https://github.com/qiin2333/Sunshine-Foundation");
   };
 
   auto tray_donate_doctor_cb = [](struct tray_menu *item) {
-    platf::open_url("https://www.ifdian.net/a/Yundi339");
+    open_url_in_default_browser("https://www.ifdian.net/a/Yundi339");
   };
 
   auto tray_donate_qiin_cb = [](struct tray_menu *item) {
-    platf::open_url("https://www.ifdian.net/a/qiin2333");
+    open_url_in_default_browser("https://www.ifdian.net/a/qiin2333");
   };
 
   // 菜单数组定义
@@ -187,8 +199,8 @@ namespace system_tray {
     { .text = "-" },
     { .text = "VDD Monitor Toggle", .checked = 0, .cb = tray_toggle_display_cb },
     { .text = "-" },
-    { .text = "⭐ Star Project", .cb = tray_star_project_cb },
-    { .text = "Donate",
+    { .text = "Star Project", .cb = tray_star_project_cb },
+    { .text = "Help Us",
       .submenu =
         (struct tray_menu[]) {
           { .text = "Doctor", .cb = tray_donate_doctor_cb },
@@ -435,6 +447,6 @@ namespace system_tray {
     tray_menus[2].disabled = checked ? 0 : tray_menus[2].disabled;
     tray_update(&tray);
   }
-  
+
 }  // namespace system_tray
 #endif
