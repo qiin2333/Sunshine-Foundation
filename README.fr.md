@@ -1,11 +1,11 @@
-# Sunshine Foundation
+# Sunshine Foundation Edition
 
 ## 🌐 Support multilingue / Multi-language Support
 
 <div align="center">
 
 [![English](https://img.shields.io/badge/English-README.en.md-blue?style=for-the-badge)](README.en.md)
-[![中文简体](https://img.shields.io/badge/简体中文-README.zh--CN.md-red?style=for-the-badge)](README.md)
+[![简体中文](https://img.shields.io/badge/简体中文-README.zh--CN.md-red?style=for-the-badge)](README.md)
 [![Français](https://img.shields.io/badge/Français-README.fr.md-green?style=for-the-badge)](README.fr.md)
 [![Deutsch](https://img.shields.io/badge/Deutsch-README.de.md-yellow?style=for-the-badge)](README.de.md)
 [![日本語](https://img.shields.io/badge/日本語-README.ja.md-purple?style=for-the-badge)](README.ja.md)
@@ -21,12 +21,12 @@ Fork basé sur LizardByte/Sunshine, offrant une documentation complète [Lire la
 ### 🌟 Fonctionnalités principales
 - **Support convivial HDR** - Pipeline de traitement HDR optimisé pour une véritable expérience de streaming de jeux HDR
 - **Écran virtuel** - Gestion intégrée des écrans virtuels, permettant de créer et gérer des écrans virtuels sans logiciel supplémentaire
-- **Microphone distant** - Prise en charge de la réception du microphone client, offrant une fonction de transmission vocale de haute qualité
-- **Panneau de contrôle avancé** - Interface de contrôle Web intuitive avec surveillance en temps réel et gestion de configuration
+- **Microphone distant** - Prise en charge de la réception du microphone client, offrant une transmission vocale de haute qualité
+- **Panneau de contrôle avancé** - Interface Web intuitive de contrôle, fournissant une surveillance en temps réel et une gestion de configuration
 - **Transmission à faible latence** - Traitement de codage optimisé exploitant les dernières capacités matérielles
 - **Appairage intelligent** - Gestion intelligente des profils correspondants aux appareils appairés
 
-### 🖥️ Intégration d'écran virtuel (nécessite Windows 10 22H2 ou plus récent)
+### 🖥️ Intégration d'écran virtuel (Nécessite Win10 22H2 ou système plus récent)
 - Création et destruction dynamique d'écrans virtuels
 - Prise en charge des résolutions et taux de rafraîchissement personnalisés
 - Gestion de configuration multi-écrans
@@ -83,7 +83,7 @@ Il est recommandé d'utiliser les clients Moonlight suivants optimisés pour une
     </tr>
     <tr>
         <td rowspan="5">Système d'exploitation</td>
-        <td>Windows : 10 22H2+ (Windows Server ne prend pas en charge les manettes de jeu virtuelles)</td>
+        <td>Windows : 10 22H2+ (Windows Server ne supporte pas les manettes de jeu virtuelles)</td>
     </tr>
     <tr>
         <td>macOS : 12+</td>
@@ -120,7 +120,7 @@ Il est recommandé d'utiliser les clients Moonlight suivants optimisés pour une
         <td>Intel : HD Graphics 510 ou supérieur</td>
     </tr>
     <tr>
-        <td>Nvidia : GeForce GTX 1080 ou modèles supérieurs avec encodeurs multiples</td>
+        <td>Nvidia : GeForce GTX 1080 ou modèle supérieur avec encodeurs multiples</td>
     </tr>
     <tr>
         <td rowspan="2">CPU</td>
@@ -149,7 +149,7 @@ Procédure de résolution des problèmes :
 **Étiquettes de signalement des problèmes :**
 - `hdr-support` - Problèmes liés au HDR
 - `virtual-display` - Problèmes d'écran virtuel
-- `config-help` - Problèmes de configuration
+- `config-help` - Problèmes liés à la configuration
 
 ## 📚 Documentation de développement
 
@@ -168,5 +168,5 @@ Nous accueillons favorablement les discussions et les contributions de code !
 
 ---
 
-**Sunshine Foundation - Rendre le streaming de jeux plus élégant**
+**Sunshine Foundation Edition - Rendre le streaming de jeux plus élégant**
 ```
