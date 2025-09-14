@@ -215,7 +215,7 @@
     "enable_dsu_server": "Enable DSU Server",
     "enable_dsu_server_desc": "Enable DSU server to receive client connections and send motion data",
     "dsu_server_port": "DSU Server Port",
-    "dsu_server_port_desc": "DSU server listening port (default 26760). Sunshine will act as a DSU server to receive client connections and send Switch Pro controller data.",
+    "dsu_server_port_desc": "DSU server listening port (default 26760). Sunshine will act as a DSU server to receive client connections and send motion data. Enable DSU server in your client(Yuzu,Ryujinx etc.) and set DSU server address(127.0.0.1) and port(26760)",
     "gamepad_manual": "Manual DS4 options",
     "gamepad_x360": "X360 (Xbox 360)",
     "gamepad_xone": "XOne (Xbox One)",
