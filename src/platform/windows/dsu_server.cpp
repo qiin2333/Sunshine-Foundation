@@ -433,12 +433,16 @@ namespace platf {
     data_packet_.motion.motion_timestamp = std::chrono::duration_cast<std::chrono::microseconds>(
       motion.last_update.time_since_epoch())
                                              .count();
-    data_packet_.motion.accelerometer_x = -motion.accel_x;
-    data_packet_.motion.accelerometer_y = motion.accel_z;  // 映射Z
-    data_packet_.motion.accelerometer_z = motion.accel_y;  // 映射Y
-    data_packet_.motion.gyroscope_pitch = motion.gyro_x;  // pitch对应gyro_x
-    data_packet_.motion.gyroscope_yaw = motion.gyro_y;  // yaw对应gyro_y
-    data_packet_.motion.gyroscope_roll = motion.gyro_z;  // roll对应gyro_z
+    // 坐标映射 - 匹配Ryujinx的期望转换
+    // Ryujinx: X = -AccelerometerX, Y = AccelerometerZ, Z = -AccelerometerY
+    data_packet_.motion.accelerometer_x = -motion.accel_x;  // 取反，让Ryujinx得到正确的X
+    data_packet_.motion.accelerometer_y = -motion.accel_z;  // 取反Z，让Ryujinx得到正确的Y
+    data_packet_.motion.accelerometer_z = motion.accel_y;   // 直接映射Y，让Ryujinx得到正确的Z
+    
+    // Ryujinx: X = GyroscopePitch, Y = GyroscopeRoll, Z = -GyroscopeYaw
+    data_packet_.motion.gyroscope_pitch = motion.gyro_x;    // pitch对应gyro_x
+    data_packet_.motion.gyroscope_yaw = -motion.gyro_y;     // yaw取反，让Ryujinx得到正确的Y
+    data_packet_.motion.gyroscope_roll = motion.gyro_z;     // roll对应gyro_z
 
     if (clients_.empty()) {
       BOOST_LOG(debug) << "DSU服务器没有连接的客户端，跳过运动数据发送";

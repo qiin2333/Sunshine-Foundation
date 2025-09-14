@@ -1263,6 +1263,10 @@ namespace platf {
       BOOST_LOG(info) << "Gamepad " << id.globalIndex << " will be DualShock 4 controller (auto-selected by touchpad presence)"sv;
       selectedGamepadType = DualShock4Wired;
     }
+    else if (config::input.enable_dsu_server && (metadata.capabilities & (LI_CCAP_ACCEL | LI_CCAP_GYRO))) {
+      BOOST_LOG(info) << "Gamepad " << id.globalIndex << " will be DualShock 4 controller (auto-selected by DSU server enabled and motion sensor presence)"sv;
+      selectedGamepadType = DualShock4Wired;
+    }
     else {
       BOOST_LOG(info) << "Gamepad " << id.globalIndex << " will be Xbox 360 controller (default)"sv;
       selectedGamepadType = Xbox360Wired;
@@ -1532,8 +1536,6 @@ namespace platf {
     else {
       ds4_update_state(gamepad, gamepad_state);
       ds4_update_ts_and_send(vigem, nr);
-
-      // 注意：DSU服务器只处理运动数据，不处理控制器输入数据
     }
   }
 

@@ -209,6 +209,7 @@
     "gamepad_auto": "Automatic selection options",
     "gamepad_desc": "Choose which type of gamepad to emulate on the host",
     "gamepad_ds4": "DS4 (PS4)",
+    "gamepad_ds4_manual": "DS4 Manual Options",
     "gamepad_ds5": "DS5 (PS5)",
     "gamepad_switch": "Nintendo Pro (Switch)",
     "enable_dsu_server": "Enable DSU Server",

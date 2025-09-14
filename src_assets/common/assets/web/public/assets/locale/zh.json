@@ -191,6 +191,7 @@
     "gamepad_auto": "自动选择选项",
     "gamepad_desc": "选择要在主机上模拟的游戏手柄类型",
     "gamepad_ds4": "DS4 (PS4)",
+    "gamepad_ds4_manual": "DS4 选择选项",
     "gamepad_ds5": "DS5 (PS5)",
     "gamepad_switch": "Nintendo Pro (Switch)",
     "enable_dsu_server": "启用DSU服务器",
