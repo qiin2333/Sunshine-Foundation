@@ -2,6 +2,8 @@
  * @file src/platform/windows/input.cpp
  * @brief Definitions for input handling on Windows.
  */
+#define WIN32_LEAN_AND_MEAN
+#define NOMINMAX
 #define WINVER 0x0A00
 #include <windows.h>
 
@@ -12,6 +14,7 @@
 
 #include "keylayout.h"
 #include "misc.h"
+#include "dsu_server.h"
 #include "src/config.h"
 #include "src/globals.h"
 #include "src/logging.h"
@@ -86,10 +89,10 @@ namespace platf {
 
   constexpr float EARTH_G = 9.80665f;
 
-#define MPS2_TO_DS4_ACCEL(x) (int32_t)(((x) / EARTH_G) * 8192)
-#define DPS_TO_DS4_GYRO(x) (int32_t)((x) * (1024 / 64))
+#define MPS2_TO_DS4_ACCEL(x) (int32_t) (((x) / EARTH_G) * 8192)
+#define DPS_TO_DS4_GYRO(x) (int32_t) ((x) * (1024 / 64))
 
-#define APPLY_CALIBRATION(val, bias, scale) (int32_t)(((float) (val) + (bias)) / (scale))
+#define APPLY_CALIBRATION(val, bias, scale) (int32_t) (((float) (val) + (bias)) / (scale))
 
   constexpr DS4_TOUCH ds4_touch_unused = {
     .bPacketCounter = 0,
@@ -436,9 +439,32 @@ namespace platf {
   struct input_raw_t {
     ~input_raw_t() {
       delete vigem;
+      delete dsu_server;
+    }
+
+    // 初始化DSU服务器（延迟初始化）
+    void
+    init_dsu_server() {
+      if (dsu_server != nullptr) return;
+      
+      // 检查是否启用了DSU服务器
+      if (!config::input.enable_dsu_server) {
+        BOOST_LOG(debug) << "DSU服务器已禁用，跳过初始化";
+        return;
+      }
+
+      // 获取DSU服务器端口
+      uint16_t server_port = config::input.dsu_server_port;
+
+      dsu_server = new dsu_server_t { server_port };
+      if (dsu_server->start()) {
+        delete dsu_server;
+        dsu_server = nullptr;
+      }
     }
 
     vigem_t *vigem;
+    dsu_server_t *dsu_server;
 
     decltype(CreateSyntheticPointerDevice) *fnCreateSyntheticPointerDevice;
     decltype(InjectSyntheticPointerInput) *fnInjectSyntheticPointerInput;
@@ -455,6 +481,9 @@ namespace platf {
       delete raw.vigem;
       raw.vigem = nullptr;
     }
+
+    // 初始化DSU服务器（延迟初始化，只在需要时创建）
+    raw.dsu_server = nullptr;
 
     // Get pointers to virtual touch/pen input functions (Win10 1809+)
     raw.fnCreateSyntheticPointerDevice = (decltype(CreateSyntheticPointerDevice) *) GetProcAddress(GetModuleHandleA("user32.dll"), "CreateSyntheticPointerDevice");
@@ -1219,6 +1248,14 @@ namespace platf {
       BOOST_LOG(info) << "Gamepad " << id.globalIndex << " will be DualShock 4 controller (manual selection)"sv;
       selectedGamepadType = DualShock4Wired;
     }
+    else if (config::input.gamepad == "switch"sv) {
+      BOOST_LOG(info) << "Gamepad " << id.globalIndex << " will be Switch Pro controller (manual selection)"sv;
+      // Switch Pro手柄通过Motion UDP客户端处理，但基本输入仍使用DS4模拟
+      selectedGamepadType = DualShock4Wired;
+
+      // 初始化DSU服务器
+      raw->init_dsu_server();
+    }
     else if (metadata.type == LI_CTYPE_PS) {
       BOOST_LOG(info) << "Gamepad " << id.globalIndex << " will be DualShock 4 controller (auto-selected by client-reported type)"sv;
       selectedGamepadType = DualShock4Wired;
@@ -1479,7 +1516,8 @@ namespace platf {
    */
   void
   gamepad_update(input_t &input, int nr, const gamepad_state_t &gamepad_state) {
-    auto vigem = ((input_raw_t *) input.get())->vigem;
+    auto raw = (input_raw_t *) input.get();
+    auto vigem = raw->vigem;
 
     // If there is no gamepad support
     if (!vigem) {
@@ -1503,6 +1541,8 @@ namespace platf {
     else {
       ds4_update_state(gamepad, gamepad_state);
       ds4_update_ts_and_send(vigem, nr);
+
+      // 注意：DSU服务器只处理运动数据，不处理控制器输入数据
     }
   }
 
@@ -1627,7 +1667,8 @@ namespace platf {
    */
   void
   gamepad_motion(input_t &input, const gamepad_motion_t &motion) {
-    auto vigem = ((input_raw_t *) input.get())->vigem;
+    auto raw = (input_raw_t *) input.get();
+    auto vigem = raw->vigem;
 
     // If there is no gamepad support
     if (!vigem) {
@@ -1646,6 +1687,28 @@ namespace platf {
 
     ds4_update_motion(gamepad, motion.motionType, motion.x, motion.y, motion.z);
     ds4_update_ts_and_send(vigem, motion.id.globalIndex);
+
+    if (raw->dsu_server) {
+      if (motion.motionType == LI_MOTION_TYPE_ACCEL) {
+        // 发送加速度数据
+        BOOST_LOG(debug) << "发送加速度数据到DSU服务器";
+        raw->dsu_server->send_motion_data(motion.id.globalIndex,
+          motion.x, motion.y, motion.z,
+          0.0f, 0.0f, 0.0f);
+      }
+      else if (motion.motionType == LI_MOTION_TYPE_GYRO) {
+        // 发送陀螺仪数据
+        BOOST_LOG(debug) << "发送陀螺仪数据到DSU服务器";
+        raw->dsu_server->send_motion_data(motion.id.globalIndex,
+          0.0f, 0.0f, 0.0f,
+          motion.x, motion.y, motion.z);
+      }
+      else {
+        BOOST_LOG(debug) << "未知的运动数据类型: " << (int) motion.motionType;
+      }
+    } else {
+      BOOST_LOG(warning) << "DSU服务器未初始化，无法发送运动数据";
+    }
   }
 
   /**
@@ -1737,20 +1800,25 @@ namespace platf {
         supported_gamepad_t { "auto", true, "" },
         supported_gamepad_t { "x360", false, "" },
         supported_gamepad_t { "ds4", false, "" },
+        supported_gamepad_t { "switch", true, "" },
       };
 
       return gps;
     }
 
     auto vigem = ((input_raw_t *) input)->vigem;
+    auto dsu_server = ((input_raw_t *) input)->dsu_server;
     auto enabled = vigem != nullptr;
+    auto switch_enabled = dsu_server != nullptr;
     auto reason = enabled ? "" : "gamepads.vigem-not-available";
+    auto switch_reason = switch_enabled ? "" : "gamepads.motion-server-not-available";
 
     // ds4 == ps4
     static std::vector gps {
       supported_gamepad_t { "auto", true, reason },
       supported_gamepad_t { "x360", enabled, reason },
-      supported_gamepad_t { "ds4", enabled, reason }
+      supported_gamepad_t { "ds4", enabled, reason },
+      supported_gamepad_t { "switch", switch_enabled, switch_reason }
     };
 
     for (auto &[name, is_enabled, reason_disabled] : gps) {
