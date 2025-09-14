@@ -433,8 +433,8 @@ namespace platf {
     data_packet_.motion.motion_timestamp = std::chrono::duration_cast<std::chrono::microseconds>(
       motion.last_update.time_since_epoch())
                                              .count();
-    data_packet_.motion.accelerometer_x = motion.accel_x;
-    data_packet_.motion.accelerometer_y = -motion.accel_z;  // 取反Z
+    data_packet_.motion.accelerometer_x = -motion.accel_x;
+    data_packet_.motion.accelerometer_y = motion.accel_z;  // 映射Z
     data_packet_.motion.accelerometer_z = motion.accel_y;  // 映射Y
     data_packet_.motion.gyroscope_pitch = motion.gyro_x;  // pitch对应gyro_x
     data_packet_.motion.gyroscope_yaw = motion.gyro_y;  // yaw对应gyro_y

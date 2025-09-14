@@ -12,9 +12,9 @@
 
 #include <ViGEm/Client.h>
 
+#include "dsu_server.h"
 #include "keylayout.h"
 #include "misc.h"
-#include "dsu_server.h"
 #include "src/config.h"
 #include "src/globals.h"
 #include "src/logging.h"
@@ -439,25 +439,24 @@ namespace platf {
   struct input_raw_t {
     ~input_raw_t() {
       delete vigem;
-      delete dsu_server;
+      if (dsu_server) {
+        dsu_server->stop();
+        delete dsu_server;
+        dsu_server = nullptr;
+      }
     }
 
     // 初始化DSU服务器（延迟初始化）
     void
     init_dsu_server() {
       if (dsu_server != nullptr) return;
-      
-      // 检查是否启用了DSU服务器
-      if (!config::input.enable_dsu_server) {
-        BOOST_LOG(debug) << "DSU服务器已禁用，跳过初始化";
-        return;
-      }
 
       // 获取DSU服务器端口
       uint16_t server_port = config::input.dsu_server_port;
 
       dsu_server = new dsu_server_t { server_port };
       if (dsu_server->start()) {
+        dsu_server->stop();
         delete dsu_server;
         dsu_server = nullptr;
       }
@@ -1248,14 +1247,6 @@ namespace platf {
       BOOST_LOG(info) << "Gamepad " << id.globalIndex << " will be DualShock 4 controller (manual selection)"sv;
       selectedGamepadType = DualShock4Wired;
     }
-    else if (config::input.gamepad == "switch"sv) {
-      BOOST_LOG(info) << "Gamepad " << id.globalIndex << " will be Switch Pro controller (manual selection)"sv;
-      // Switch Pro手柄通过Motion UDP客户端处理，但基本输入仍使用DS4模拟
-      selectedGamepadType = DualShock4Wired;
-
-      // 初始化DSU服务器
-      raw->init_dsu_server();
-    }
     else if (metadata.type == LI_CTYPE_PS) {
       BOOST_LOG(info) << "Gamepad " << id.globalIndex << " will be DualShock 4 controller (auto-selected by client-reported type)"sv;
       selectedGamepadType = DualShock4Wired;
@@ -1688,6 +1679,10 @@ namespace platf {
     ds4_update_motion(gamepad, motion.motionType, motion.x, motion.y, motion.z);
     ds4_update_ts_and_send(vigem, motion.id.globalIndex);
 
+    if (!raw->dsu_server && config::input.enable_dsu_server) {
+      raw->init_dsu_server();
+    }
+
     if (raw->dsu_server) {
       if (motion.motionType == LI_MOTION_TYPE_ACCEL) {
         // 发送加速度数据
@@ -1706,7 +1701,8 @@ namespace platf {
       else {
         BOOST_LOG(debug) << "未知的运动数据类型: " << (int) motion.motionType;
       }
-    } else {
+    }
+    else {
       BOOST_LOG(warning) << "DSU服务器未初始化，无法发送运动数据";
     }
   }
