@@ -476,7 +476,6 @@ namespace platf::dxgi {
     }
 
     std::wstring output_display_name = !display_name.empty() ? from_utf8(display_name) : from_utf8(config::video.output_name);
-    std::wstring output_display_name = from_utf8(display_name);
     std::wstring adapter_name = from_utf8(config::video.adapter_name);
     BOOST_LOG(debug) << "[Display] 初始化显示器: " << display_name;
 
