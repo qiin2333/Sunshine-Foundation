@@ -16,33 +16,33 @@
 
 Ein Fork basierend auf LizardByte/Sunshine, bietet vollständige Dokumentationsunterstützung [Read the Docs](https://docs.qq.com/aio/DSGdQc3htbFJjSFdO?p=YTpMj5JNNdB5hEKJhhqlSB).
 
-**Sunshine-Foundation** ist ein selbst gehosteter Game-Stream-Host für Moonlight. Diese Fork-Version hat erhebliche Verbesserungen gegenüber dem ursprünglichen Sunshine vorgenommen und konzentriert sich darauf, das Spiel-Streaming-Erlebnis für verschiedene Streaming-Endgeräte und Windows-Hosts zu verbessern:
+**Sunshine-Foundation** ist ein selbst gehosteter Game-Stream-Host für Moonlight. Diese Fork-Version hat erhebliche Verbesserungen gegenüber dem ursprünglichen Sunshine vorgenommen und konzentriert sich darauf, das Spielestreaming-Erlebnis für verschiedene Streaming-Endgeräte und deren Verbindung zum Windows-Host zu verbessern:
 
 ### 🌟 Kernfunktionen
 - **HDR-freundliche Unterstützung** - Optimierte HDR-Verarbeitungspipeline für ein echtes HDR-Game-Streaming-Erlebnis
-- **Virtuelle Anzeige** - Integriertes virtuelles Display-Management, ermöglicht das Erstellen und Verwalten virtueller Displays ohne zusätzliche Software
-- **Entferntes Mikrofon** - Unterstützt das Empfangen von Client-Mikrofonen und bietet hochwertige Sprachdurchleitung
-- **Erweiterte Systemsteuerung** - Intuitive Web-Oberfläche zur Konfiguration mit Echtzeit-Überwachung und Verwaltung
+- **Virtuelle Anzeige** - Integriertes Management virtueller Anzeigen, ermöglicht das Erstellen und Verwalten ohne zusätzliche Software
+- **Entferntes Mikrofon** - Unterstützt das Empfangen von Client-Mikrofonen mit hochwertiger Sprachdurchreichung
+- **Erweiterte Systemsteuerung** - Intuitive Web-Oberfläche zur Konfiguration mit Echtzeit-Überwachung
 - **Niedrige Latenzübertragung** - Optimierte Encoder-Verarbeitung unter Nutzung der neuesten Hardware-Fähigkeiten
 - **Intelligente Paarung** - Intelligentes Management von Profilen für gepaarte Geräte
 
-### 🖥️ Integriertes virtuelles Display (Erfordert Win10 22H2 oder neuer)
-- Dynamische Erstellung und Entfernung virtueller Displays
+### 🖥️ Integrierte virtuelle Anzeige (Benötigt win10 22H2 oder neuer)
+- Dynamisches Erstellen und Entfernen virtueller Anzeigen
 - Unterstützung für benutzerdefinierte Auflösungen und Bildwiederholraten
-- Verwaltung von Mehrfachanzeigekonfigurationen
+- Verwaltung von Mehrfachanzeige-Konfigurationen
 - Echtzeit-Konfigurationsänderungen ohne Neustart
 
 
 ## Empfohlene Moonlight-Clients
 
-Für das beste Streaming-Erlebnis wird die Verwendung der folgenden optimierten Moonlight-Clients empfohlen (aktiviert Set-Boni):
+Für das beste Streaming-Erlebnis wird die Verwendung der folgenden optimierten Moonlight-Clients empfohlen (Aktiviert Set-Boni):
 
-### 🖥️ Windows(X86_64, Arm64), MacOS, Linux Clients
+### 🖥️ Windows(X86_64, Arm64), MacOS, Linux Client
 [![Moonlight-PC](https://img.shields.io/badge/Moonlight-PC-red?style=for-the-badge&logo=windows)](https://github.com/qiin2333/moonlight-qt)
 
 ### 📱 Android Client
-[![Enhanced Edition Moonlight-Android](https://img.shields.io/badge/Enhanced_Edition-Moonlight--Android-green?style=for-the-badge&logo=android)](https://github.com/qiin2333/moonlight-android/releases/tag/shortcut)
-[![Crown Edition Moonlight-Android](https://img.shields.io/badge/Crown_Edition-Moonlight--Android-blue?style=for-the-badge&logo=android)](https://github.com/WACrown/moonlight-android)
+[![Verstärkte Edition Moonlight-Android](https://img.shields.io/badge/Verstärkte_Edition-Moonlight--Android-green?style=for-the-badge&logo=android)](https://github.com/qiin2333/moonlight-android/releases/tag/shortcut)
+[![Kronen Edition Moonlight-Android](https://img.shields.io/badge/Kronen_Edition-Moonlight--Android-blue?style=for-the-badge&logo=android)](https://github.com/WACrown/moonlight-android)
 
 ### 📱 iOS Client
 [![Voidlink Moonlight-iOS](https://img.shields.io/badge/Voidlink-Moonlight--iOS-lightgrey?style=for-the-badge&logo=apple)](https://github.com/The-Fried-Fish/VoidLink)
@@ -55,7 +55,7 @@ Für das beste Streaming-Erlebnis wird die Verwendung der folgenden optimierten 
 
 
 > [!WARNING]
-> Diese Tabellen werden kontinuierlich aktualisiert. Bitte kaufen Sie Hardware nicht nur basierend auf diesen Informationen.
+> Diese Tabellen werden kontinuierlich aktualisiert. Bitte kaufen Sie Hardware nicht allein basierend auf diesen Informationen.
 
 
 <table>
@@ -87,7 +87,7 @@ Für das beste Streaming-Erlebnis wird die Verwendung der folgenden optimierten 
     </tr>
     <tr>
         <td rowspan="5">Betriebssystem</td>
-        <td>Windows: 10 22H2+ (Windows Server unterstützt keine virtuellen Gamepads)</td>
+        <td>Windows: 10 22H2+ (Virtuelle Gamepads werden auf Windows Server nicht unterstützt)</td>
     </tr>
     <tr>
         <td>macOS: 12+</td>
@@ -152,7 +152,7 @@ Lösungsweg bei Problemen:
 
 **Problemrückmeldung-Labels:**
 - `hdr-support` - Probleme im Zusammenhang mit HDR
-- `virtual-display` - Probleme mit virtuellen Displays
+- `virtual-display` - Probleme mit virtuellen Anzeigen
 - `config-help` - Probleme im Zusammenhang mit der Konfiguration
 
 ## 📚 Entwicklerdokumentation
@@ -163,12 +163,12 @@ Lösungsweg bei Problemen:
 
 ## Community beitreten
 
-Wir begrüßen die Teilnahme an Diskussionen und Code-Beiträgen!
+Wir heißen Diskussionen und Code-Beiträge willkommen!
 [![QQ-Gruppe beitreten](https://pub.idqqimg.com/wpa/images/group.png 'QQ-Gruppe beitreten')](https://qm.qq.com/cgi-bin/qm/qr?k=WC2PSZ3Q6Hk6j8U_DG9S7522GPtItk0m&jump_from=webapi&authKey=zVDLFrS83s/0Xg3hMbkMeAqI7xoHXaM3sxZIF/u9JW7qO/D8xd0npytVBC2lOS+z)
 
-## Star-Verlauf
+## Star-Historie
 
-[![Star-Verlauf Diagramm](https://api.star-history.com/svg?repos=qiin2333/Sunshine-Foundation&type=Date)](https://www.star-history.com/#qiin2333/Sunshine-Foundation&Date)
+[![Star-Historie-Diagramm](https://api.star-history.com/svg?repos=qiin2333/Sunshine-Foundation&type=Date)](https://www.star-history.com/#qiin2333/Sunshine-Foundation&Date)
 
 ---
 
