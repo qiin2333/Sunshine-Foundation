@@ -479,6 +479,13 @@ namespace platf::dxgi {
     auto output_name = from_utf8(display_name);
     BOOST_LOG(debug) << "[Display Init] 初始化显示器: " << display_name;
 
+    // 检测RDP远程会话，自动启用VDD模式
+    bool is_rdp_session = GetSystemMetrics(SM_REMOTESESSION) != 0;
+    if (is_rdp_session && !config::video.preferUseVdd) {
+      BOOST_LOG(info) << "检测到RDP远程会话，自动启用VDD模式";
+      config::video.preferUseVdd = true;
+    }
+
     adapter_t::pointer adapter_p;
     for (int tries = 0; tries < 2; ++tries) {
       for (int x = 0; factory->EnumAdapters1(x, &adapter_p) != DXGI_ERROR_NOT_FOUND; ++x) {
