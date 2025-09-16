@@ -530,6 +530,22 @@ namespace platf::dxgi {
 
             break;
           }
+          else if (!desc.AttachedToDesktop && config::video.preferUseVdd) {
+            // VDD模式：允许非AttachedToDesktop的虚拟显示器
+            BOOST_LOG(debug) << "[Display Init] VDD模式：匹配到虚拟显示器: " << to_utf8(desc.DeviceName);
+            output = std::move(output_tmp);
+
+            // 为虚拟显示器设置默认参数
+            offset_x = 0;
+            offset_y = 0;
+            width = 1920;
+            height = 1080;
+            width_before_rotation = 1920;
+            height_before_rotation = 1080;
+            display_rotation = DXGI_MODE_ROTATION_UNSPECIFIED;
+
+            break;
+          }
         }
 
         if (output) {
@@ -549,27 +565,6 @@ namespace platf::dxgi {
       }
     }
 
-    if (!output) {
-      // 在“就是要”模式下，允许没有找到输出设备
-      if (config::video.preferUseVdd) {
-        BOOST_LOG(info) << "就是要模式：未找到输出设备，但允许继续运行";
-        // 设置默认的虚拟显示器参数
-        width = 1920;
-        height = 1080;
-        offset_x = 0;
-        offset_y = 0;
-        width_before_rotation = 1920;
-        height_before_rotation = 1080;
-        display_rotation = DXGI_MODE_ROTATION_UNSPECIFIED;
-
-        return 0;
-      }
-      else {
-        BOOST_LOG(error) << "Failed to locate an output device"sv;
-        return -1;
-      }
-    }
-
     D3D_FEATURE_LEVEL featureLevels[] {
       D3D_FEATURE_LEVEL_11_1,
       D3D_FEATURE_LEVEL_11_0,
@@ -579,6 +574,60 @@ namespace platf::dxgi {
       D3D_FEATURE_LEVEL_9_2,
       D3D_FEATURE_LEVEL_9_1
     };
+
+    if (!output) {
+      if (config::video.preferUseVdd) {
+        BOOST_LOG(info) << "VDD模式：未找到输出设备，但允许继续运行";
+
+        // 设置默认参数
+        width = 1920;
+        height = 1080;
+        offset_x = 0;
+        offset_y = 0;
+        width_before_rotation = 1920;
+        height_before_rotation = 1080;
+        display_rotation = DXGI_MODE_ROTATION_UNSPECIFIED;
+
+        // 创建虚拟D3D设备
+        if (!device) {
+          HRESULT status = D3D11CreateDevice(
+            nullptr,
+            D3D_DRIVER_TYPE_HARDWARE,
+            nullptr,
+            D3D11_CREATE_DEVICE_FLAGS,
+            featureLevels, sizeof(featureLevels) / sizeof(D3D_FEATURE_LEVEL),
+            D3D11_SDK_VERSION,
+            &device,
+            &feature_level,
+            &device_ctx);
+
+          if (FAILED(status)) {
+            // 回退到软件设备
+            status = D3D11CreateDevice(
+              nullptr,
+              D3D_DRIVER_TYPE_WARP,
+              nullptr,
+              D3D11_CREATE_DEVICE_FLAGS,
+              featureLevels, sizeof(featureLevels) / sizeof(D3D_FEATURE_LEVEL),
+              D3D11_SDK_VERSION,
+              &device,
+              &feature_level,
+              &device_ctx);
+          }
+
+          if (FAILED(status)) {
+            BOOST_LOG(error) << "VDD模式：无法创建D3D设备";
+            return -1;
+          }
+        }
+
+        return 0;
+      }
+      else {
+        BOOST_LOG(error) << "Failed to locate an output device"sv;
+        return -1;
+      }
+    }
 
     status = adapter->QueryInterface(IID_IDXGIAdapter, (void **) &adapter_p);
     if (FAILED(status)) {
@@ -1117,6 +1166,11 @@ namespace platf {
         if (desc.AttachedToDesktop && dxgi::test_dxgi_duplication(adapter, output, true)) {
           display_names.emplace_back(std::move(device_name));
           BOOST_LOG(debug) << "[Display] 添加可用显示器: " << device_name;
+        }
+        else if (!desc.AttachedToDesktop && config::video.preferUseVdd) {
+          // VDD模式：允许非AttachedToDesktop的虚拟显示器
+          display_names.emplace_back(std::move(device_name));
+          BOOST_LOG(debug) << "[Display] VDD模式：添加虚拟显示器: " << device_name;
         }
         else if (!desc.AttachedToDesktop) {
           BOOST_LOG(debug) << "[Display] 跳过 None AttachedToDesktop 不可用显示器: " << device_name;
