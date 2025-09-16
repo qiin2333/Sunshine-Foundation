@@ -1070,15 +1070,10 @@ namespace platf {
       return nullptr;
     };
 
-    // 优先级顺序：ddx > wgc > amd
-    const std::vector<std::string> capture_types = {
-      "ddx", "wgc", "amd"
-    };
-
-    // 如果capture为空，则依次尝试所有类型，否则只尝试指定类型
+    // 如果capture为空，则依次尝试ddx、wgc，否则只尝试指定类型
     std::vector<std::string> try_types;
     if (config::video.capture.empty()) {
-      try_types = capture_types;
+      try_types = { "ddx", "wgc" };
     }
     else {
       try_types.push_back(config::video.capture);
