@@ -1016,7 +1016,7 @@ namespace platf {
 
     // 优先级顺序：ddx > wgc > amd
     const std::vector<std::string> capture_types = {
-      "ddx", "wgc", "amd"
+      "ddx", "wgc"
     };
 
     // 如果capture为空，则依次尝试所有类型，否则只尝试指定类型
