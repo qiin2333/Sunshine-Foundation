@@ -550,24 +550,8 @@ namespace platf::dxgi {
     }
 
     if (!output) {
-      // 在“就是要”模式下，允许没有找到输出设备
-      if (config::video.preferUseVdd) {
-        BOOST_LOG(info) << "就是要模式：未找到输出设备，但允许继续运行";
-        // 设置默认的虚拟显示器参数
-        width = 1920;
-        height = 1080;
-        offset_x = 0;
-        offset_y = 0;
-        width_before_rotation = 1920;
-        height_before_rotation = 1080;
-        display_rotation = DXGI_MODE_ROTATION_UNSPECIFIED;
-
-        return 0;
-      }
-      else {
         BOOST_LOG(error) << "Failed to locate an output device"sv;
         return -1;
-      }
     }
 
     D3D_FEATURE_LEVEL featureLevels[] {
