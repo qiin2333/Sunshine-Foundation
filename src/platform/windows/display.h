@@ -473,6 +473,11 @@ namespace platf::dxgi {
   class display_amd_vram_t: public display_vram_t {
     amd_capture_t dup;
 
+    ps_t cursor_ps;
+    vs_t cursor_vs;
+
+    buf_t cursor_info;
+
   public:
     int
     init(const ::video::config_t &config, const std::string &display_name);
