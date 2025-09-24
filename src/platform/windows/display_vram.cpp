@@ -1639,14 +1639,21 @@ namespace platf::dxgi {
     
     auto status = device->CreateVertexShader(simple_cursor_vs_hlsl->GetBufferPointer(), simple_cursor_vs_hlsl->GetBufferSize(), nullptr, &cursor_vs);
     if (status) {
-      BOOST_LOG(error) << "Failed to create scene vertex shader [0x"sv << util::hex(status).to_string_view() << ']';
+      BOOST_LOG(error) << "Failed to create simple cursor vertex shader [0x"sv << util::hex(status).to_string_view() << ']';
       return -1;
     }
     status = device->CreatePixelShader(simple_cursor_ps_hlsl->GetBufferPointer(), simple_cursor_ps_hlsl->GetBufferSize(), nullptr, &cursor_ps);
     if (status) {
-      BOOST_LOG(error) << "Failed to create cursor blending pixel shader [0x"sv << util::hex(status).to_string_view() << ']';
+      BOOST_LOG(error) << "Failed to create simple cursor pixel shader [0x"sv << util::hex(status).to_string_view() << ']';
       return -1;
-    }      
+    }
+    
+    blend_invert = make_blend(device.get(), true, true);
+    blend_disable = make_blend(device.get(), false, false);
+
+    if (!blend_disable || !blend_invert) {
+      return -1;
+    }
     
     D3D11_BUFFER_DESC buffer_desc {
       sizeof(float[16 / sizeof(float)]),
@@ -1726,6 +1733,7 @@ namespace platf::dxgi {
       device_ctx->OMSetRenderTargets(1, &d3d_img.capture_rt, nullptr);
       device_ctx->IASetInputLayout(nullptr);
       device_ctx->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+      device_ctx->OMSetBlendState(blend_invert.get(), nullptr, 0x00FFFFFFu);
 
       device_ctx->Draw(3, 0);
 
@@ -1734,6 +1742,7 @@ namespace platf::dxgi {
       device_ctx->RSSetViewports(0, nullptr);
       ID3D11ShaderResourceView *emptyShaderResourceView = nullptr;
       device_ctx->PSSetShaderResources(0, 1, &emptyShaderResourceView);
+        device_ctx->OMSetBlendState(blend_disable.get(), nullptr, 0x00FFFFFFu);
     };
 
     auto d3d_img = std::static_pointer_cast<img_d3d_t>(img);

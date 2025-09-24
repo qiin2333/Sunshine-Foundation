@@ -473,6 +473,9 @@ namespace platf::dxgi {
   class display_amd_vram_t: public display_vram_t {
     amd_capture_t dup;
 
+    blend_t blend_invert;
+    blend_t blend_disable;
+
     ps_t cursor_ps;
     vs_t cursor_vs;
 
