@@ -177,6 +177,17 @@ if /i "!gamepad_choice!"=="Y" (
 echo.
 
 REM ================================================
+REM Create startup script (always create)
+REM ================================================
+
+call :LogInfo "%INFO_STARTING%"
+REM Create Sunshine startup script
+echo Set WshShell = CreateObject^(^"WScript.Shell^"^) > "!SUNSHINE_ROOT!start_sunshine.vbs"
+echo WshShell.Run ^"!SUNSHINE_ROOT!sunshine.exe^", 0, False >> "!SUNSHINE_ROOT!start_sunshine.vbs"
+call :LogSuccess "%SUCCESS_STARTUP_SCRIPT%"
+echo.
+
+REM ================================================
 REM Autostart configuration (optional)
 REM ================================================
 
@@ -189,7 +200,7 @@ if /i "!autostart_choice!"=="Y" (
     set "SHORTCUT_PATH=%APPDATA%\Microsoft\Windows\Start Menu\Programs\Startup\Sunshine_portable.lnk"
     echo !SHORTCUT_PATH!
     REM Use PowerShell to create shortcut
-    powershell -Command "try { $WshShell = New-Object -comObject WScript.Shell; $Shortcut = $WshShell.CreateShortcut('!SHORTCUT_PATH!'); $Shortcut.TargetPath = '!SUNSHINE_ROOT!sunshine.exe'; $Shortcut.WorkingDirectory = '!SUNSHINE_ROOT!'; $Shortcut.Description = 'Sunshine Portable'; $Shortcut.Save(); exit 0 } catch { exit 1 }"
+    powershell -Command "try { $WshShell = New-Object -comObject WScript.Shell; $Shortcut = $WshShell.CreateShortcut('!SHORTCUT_PATH!'); $Shortcut.TargetPath = '!SUNSHINE_ROOT!start_sunshine.vbs'; $Shortcut.WorkingDirectory = '!SUNSHINE_ROOT!'; $Shortcut.Description = 'Sunshine Portable'; $Shortcut.Save(); exit 0 } catch { exit 1 }"
     
     if !errorLevel! equ 0 (
         call :LogSuccess "%SUCCESS_AUTOSTART%"
@@ -216,17 +227,6 @@ echo %USAGE_1%
 echo %NOTE_FIRST%
 echo.
 
-REM ================================================
-REM Launch prompt
-REM ================================================
-
-call :LogInfo "%INFO_STARTING%"
-REM Create Sunshine startup script
-echo Set WshShell = CreateObject^(^"WScript.Shell^"^) > "!SUNSHINE_ROOT!start_sunshine.vbs"
-echo WshShell.Run ^"!SUNSHINE_ROOT!sunshine.exe^", 0, False >> "!SUNSHINE_ROOT!start_sunshine.vbs"
-call :LogSuccess "%SUCCESS_STARTUP_SCRIPT%"
-
-echo.
 echo %SCRIPT_COMPLETE_PROMPT%
 pause
 exit /b 0
