@@ -154,8 +154,8 @@ const effectivePort = computed(() => +config.value?.port ?? defaultMoonlightPort
     <div class="mb-3">
       <label for="mdns_broadcast" class="form-label">{{ $t('config.mdns_broadcast') }}</label>
       <select id="mdns_broadcast" class="form-select" v-model="config.mdns_broadcast">
-        <option value="disabled">{{ $t('_common.disabled_def') }}</option>
-        <option value="enabled">{{ $t('_common.enabled') }}</option>
+        <option value="disabled">{{ $t('_common.disabled') }}</option>
+        <option value="enabled">{{ $t('_common.enabled_def') }}</option>
       </select>
       <div class="form-text">{{ $t('config.mdns_broadcast_desc') }}</div>
     </div>
