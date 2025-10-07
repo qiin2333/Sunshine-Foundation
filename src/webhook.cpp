@@ -35,6 +35,7 @@ namespace webhook {
   static std::vector<std::chrono::system_clock::time_point> successful_sends;
   static std::mutex rate_limit_mutex;
   static const int MAX_SENDS_PER_MINUTE = 10;
+  static const int RATE_LIMIT_WINDOW_MINUTES = 1;
   static bool rate_limit_notification_sent = false;
 
   std::string generate_signature(long long timestamp, const std::string& hostname)
@@ -367,13 +368,13 @@ namespace webhook {
     std::lock_guard<std::mutex> lock(rate_limit_mutex);
     
     auto now = std::chrono::system_clock::now();
-    auto one_minute_ago = now - std::chrono::minutes(1);
+    auto window_start = now - std::chrono::minutes(RATE_LIMIT_WINDOW_MINUTES);
     
-    // Remove old entries (older than 1 minute)
+    // Remove old entries (older than rate limit window)
     successful_sends.erase(
       std::remove_if(successful_sends.begin(), successful_sends.end(),
-        [one_minute_ago](const std::chrono::system_clock::time_point& time) {
-          return time < one_minute_ago;
+        [window_start](const std::chrono::system_clock::time_point& time) {
+          return time < window_start;
         }),
       successful_sends.end()
     );
@@ -400,9 +401,9 @@ namespace webhook {
     
     rate_limit_notification_sent = true;
     
-    // Reset the flag after MAX_SENDS_PER_MINUTE minutes
+    // Reset the flag after rate limit window
     std::thread([]() {
-      std::this_thread::sleep_for(std::chrono::minutes(MAX_SENDS_PER_MINUTE));
+      std::this_thread::sleep_for(std::chrono::minutes(RATE_LIMIT_WINDOW_MINUTES));
       rate_limit_notification_sent = false;
     }).detach();
     
@@ -412,8 +413,8 @@ namespace webhook {
     std::string local_ip = get_local_ip();
     std::string ip_info = local_ip.empty() ? "" : local_ip;
     std::string message = is_chinese ? 
-      "主机: " + hostname + " " + ip_info + "\n ⚠️ Webhook 发送频率过高，已限制发送\n最近" + std::to_string(MAX_SENDS_PER_MINUTE) + "分钟内发送次数超过" + std::to_string(MAX_SENDS_PER_MINUTE) + "次\n时间: " + get_current_timestamp() :
-      "Host: " + hostname + " " + ip_info + "\n ⚠️ Webhook sending rate too high, sending limited\nExceeded " + std::to_string(MAX_SENDS_PER_MINUTE) + " sends in the last " + std::to_string(MAX_SENDS_PER_MINUTE) + " minutes\nTime: " + get_current_timestamp();
+      "主机: " + hostname + " " + ip_info + "\n ⚠️ Webhook 发送频率过高，已限制发送\n最近" + std::to_string(RATE_LIMIT_WINDOW_MINUTES) + "分钟内发送次数超过" + std::to_string(MAX_SENDS_PER_MINUTE) + "次\n时间: " + get_current_timestamp() :
+      "Host: " + hostname + " " + ip_info + "\n ⚠️ Webhook sending rate too high, sending limited\nExceeded " + std::to_string(MAX_SENDS_PER_MINUTE) + " sends in the last " + std::to_string(RATE_LIMIT_WINDOW_MINUTES) + " minute(s)\nTime: " + get_current_timestamp();
     
     std::ostringstream json_stream;
     json_stream << "{";
