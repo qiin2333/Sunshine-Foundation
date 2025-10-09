@@ -1,0 +1,93 @@
+# SignPath 代码签名工作流
+# 在构建完成后,自动提交文件到SignPath进行签名
+
+name: SignPath Code Signing
+
+on:
+  workflow_run:
+    workflows: ["Build and Release"]
+    types:
+      - completed
+  workflow_dispatch:
+
+jobs:
+  sign-artifacts:
+    name: Sign with SignPath
+    runs-on: ubuntu-latest
+    if: ${{ github.event.workflow_run.conclusion == 'success' || github.event_name == 'workflow_dispatch' }}
+    
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      
+      - name: Download Artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: sunshine-windows
+          path: artifacts
+      
+      # 使用SignPath提交签名请求
+      - name: Submit to SignPath - Installer
+        uses: signpath/github-action-submit-signing-request@v1
+        with:
+          api-token: ${{ secrets.SIGNPATH_API_TOKEN }}
+          organization-id: ${{ secrets.SIGNPATH_ORGANIZATION_ID }}
+          project-slug: sunshine-foundation
+          signing-policy-slug: test-signing
+          artifact-configuration-slug: installer
+          github-artifact-id: sunshine-windows
+          wait-for-completion: true
+          service-unavailable-timeout-in-seconds: 600
+      
+      - name: Submit to SignPath - Portable
+        uses: signpath/github-action-submit-signing-request@v1
+        with:
+          api-token: ${{ secrets.SIGNPATH_API_TOKEN }}
+          organization-id: ${{ secrets.SIGNPATH_ORGANIZATION_ID }}
+          project-slug: sunshine-foundation
+          signing-policy-slug: test-signing
+          artifact-configuration-slug: portable
+          github-artifact-id: sunshine-windows
+          wait-for-completion: true
+          service-unavailable-timeout-in-seconds: 600
+      
+      # 验证签名
+      - name: Verify Signatures
+        shell: pwsh
+        run: |
+          Write-Host "Verifying signatures..."
+          
+          # 提取并验证安装包
+          $installer = Get-Item "artifacts/signed/Sunshine-Windows-Installer-Signed.exe"
+          $signature = Get-AuthenticodeSignature $installer
+          
+          if ($signature.Status -eq "Valid") {
+            Write-Host "✓ Installer signature is valid"
+            Write-Host "  Signer: $($signature.SignerCertificate.Subject)"
+            Write-Host "  Timestamp: $($signature.TimeStamperCertificate.Subject)"
+          } else {
+            Write-Error "✗ Installer signature is invalid: $($signature.Status)"
+            exit 1
+          }
+      
+      # 上传已签名的文件
+      - name: Upload Signed Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: sunshine-windows-signed
+          path: |
+            artifacts/signed/Sunshine-Windows-Installer-Signed.exe
+            artifacts/signed/Sunshine-Windows-Portable-Signed.zip
+          if-no-files-found: error
+      
+      # 如果是发布版本,更新Release
+      - name: Update Release with Signed Files
+        if: github.event.workflow_run.event == 'push' && startsWith(github.event.workflow_run.head_branch, 'v')
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: ${{ github.event.workflow_run.head_branch }}
+          files: |
+            artifacts/signed/Sunshine-Windows-Installer-Signed.exe
+            artifacts/signed/Sunshine-Windows-Portable-Signed.zip
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
