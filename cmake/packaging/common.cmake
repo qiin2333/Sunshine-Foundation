@@ -30,9 +30,12 @@ endforeach()
 install(DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/assets/web"
         DESTINATION "${SUNSHINE_ASSETS_DIR}")
 
-# install sunshine control panel
-install(DIRECTORY "${SUNSHINE_SOURCE_ASSETS_DIR}/common/sunshine-control-panel/dist/win-unpacked/"
-        DESTINATION "${SUNSHINE_ASSETS_DIR}/gui")
+# install sunshine control panel (Tauri GUI)
+if(WIN32)
+    # Windows: 安装 Tauri 构建的 GUI
+    install(PROGRAMS "${SUNSHINE_SOURCE_ASSETS_DIR}/common/sunshine-control-panel/src-tauri/target/release/sunshine-gui.exe"
+            DESTINATION "${SUNSHINE_ASSETS_DIR}/gui")
+endif()
 
 # platform specific packaging
 if(WIN32)
