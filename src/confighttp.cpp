@@ -286,8 +286,8 @@ namespace confighttp {
 
     BOOST_LOG(debug) << "getBoxArt: Requested file: " << path;
 
-    // First try to find in SUNSHINE_ASSETS_DIR/boxart/
-    std::string imagePath = SUNSHINE_ASSETS_DIR "boxart/" + path;
+    // First try to find in SUNSHINE_ASSETS_DIR
+    std::string imagePath = SUNSHINE_ASSETS_DIR "/" + path;
     BOOST_LOG(debug) << "Checking boxart path: " << imagePath;
 
     // If not found in boxart, try covers directory
@@ -302,7 +302,7 @@ namespace confighttp {
       } else {
         // If still not found, use default image
         BOOST_LOG(debug) << "Not found in covers, using default box.png";
-        imagePath = SUNSHINE_ASSETS_DIR "box.png";
+        imagePath = SUNSHINE_ASSETS_DIR "/box.png";
       }
     } else {
       BOOST_LOG(debug) << "Found in boxart: " << imagePath;
@@ -343,7 +343,6 @@ namespace confighttp {
     SimpleWeb::CaseInsensitiveMultimap headers;
     headers.emplace("Content-Type", contentType);
     headers.emplace("Content-Length", std::to_string(fileSize));
-    headers.emplace("Cache-Control", "public, max-age=86400"); // Cache for 1 day
     
     response->write(SimpleWeb::StatusCode::success_ok, in, headers);
   }
