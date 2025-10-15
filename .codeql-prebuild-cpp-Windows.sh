@@ -40,7 +40,6 @@ dependencies=(
   "mingw-w64-ucrt-x86_64-onevpl"
   "mingw-w64-ucrt-x86_64-openssl"
   "mingw-w64-ucrt-x86_64-opus"
-  "mingw-w64-ucrt-x86_64-rust"
   "mingw-w64-ucrt-x86_64-toolchain"
 )
 
