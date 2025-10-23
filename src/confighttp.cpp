@@ -1179,6 +1179,88 @@ namespace confighttp {
   }
 
   void
+  testMenuCmd(resp_https_t response, req_https_t request) {
+    if (!authenticate(response, request)) return;
+
+    print_req(request);
+
+    std::stringstream ss;
+    ss << request->content.rdbuf();
+
+    pt::ptree inputTree, outputTree;
+
+    auto g = util::fail_guard([&]() {
+      std::ostringstream data;
+      pt::write_json(data, outputTree);
+      response->write(data.str());
+    });
+
+    try {
+      pt::read_json(ss, inputTree);
+      auto cmd = inputTree.get<std::string>("cmd");
+      auto working_dir = inputTree.get<std::string>("working_dir", "");
+      auto elevated = inputTree.get<bool>("elevated", false);
+
+      // 安全检查：命令不能为空
+      if (cmd.empty()) {
+        BOOST_LOG(warning) << "TestMenuCmd: Empty command provided";
+        outputTree.put("status", false);
+        outputTree.put("error", "Command cannot be empty");
+        return;
+      }
+
+      // 安全检查：命令长度限制（防止过长的命令）
+      if (cmd.length() > 4096) {
+        BOOST_LOG(warning) << "TestMenuCmd: Command too long (" << cmd.length() << " characters)";
+        outputTree.put("status", false);
+        outputTree.put("error", "Command exceeds maximum length");
+        return;
+      }
+
+      // 记录详细信息用于审计
+      auto address = net::addr_to_normalized_string(request->remote_endpoint().address());
+      BOOST_LOG(info) << "Testing menu command from " << address << ": [" << cmd << "]";
+
+      std::error_code ec;
+      boost::filesystem::path work_dir;
+      
+      if (!working_dir.empty()) {
+        // 验证工作目录是否存在
+        if (!boost::filesystem::exists(working_dir) || !boost::filesystem::is_directory(working_dir)) {
+          BOOST_LOG(warning) << "TestMenuCmd: Invalid working directory: " << working_dir;
+          outputTree.put("status", false);
+          outputTree.put("error", "Invalid working directory");
+          return;
+        }
+        work_dir = boost::filesystem::path(working_dir);
+      } else {
+        work_dir = boost::filesystem::current_path();
+      }
+
+      // 执行命令
+      auto child = platf::run_command(elevated, true, cmd, work_dir, proc::proc.get_env(), nullptr, ec, nullptr);
+      
+      if (ec) {
+        BOOST_LOG(warning) << "Failed to run menu command [" << cmd << "]: " << ec.message();
+        outputTree.put("status", false);
+        outputTree.put("error", "Failed to execute command: " + ec.message());
+      }
+      else {
+        BOOST_LOG(info) << "Successfully executed menu command [" << cmd << "]";
+        child.detach();
+        outputTree.put("status", true);
+        outputTree.put("message", "Command executed successfully");
+      }
+    }
+    catch (std::exception &e) {
+      BOOST_LOG(warning) << "TestMenuCmd error: " << e.what();
+      outputTree.put("status", false);
+      outputTree.put("error", e.what());
+      return;
+    }
+  }
+
+  void
   start() {
     auto shutdown_event = mail::man->event<bool>(mail::shutdown);
 
@@ -1214,6 +1296,7 @@ namespace confighttp {
     server.resource["^/api/clients/unpair$"]["POST"] = unpair;
     server.resource["^/api/apps/close$"]["POST"] = closeApp;
     server.resource["^/api/covers/upload$"]["POST"] = uploadCover;
+    server.resource["^/api/apps/test-menu-cmd$"]["POST"] = testMenuCmd;
     server.resource["^/steam-api/.+$"]["GET"] = proxySteamApi;
     server.resource["^/steam-store/.+$"]["GET"] = proxySteamStore;
     server.resource["^/images/sunshine.ico$"]["GET"] = getFaviconImage;
