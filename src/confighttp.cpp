@@ -12,6 +12,11 @@
 #include <set>
 #include <ctime>
 #include <cstdio>
+#include <iomanip>
+#include <sstream>
+#include <fstream>
+#include <openssl/evp.h>
+#include <openssl/sha.h>
 
 #include <boost/property_tree/json_parser.hpp>
 #include <boost/property_tree/ptree.hpp>
@@ -1178,9 +1183,115 @@ namespace confighttp {
     }
   }
 
+  /**
+   * @brief 计算文件的SHA256哈希值
+   * @param filepath 文件路径
+   * @return SHA256哈希字符串，如果失败返回空字符串
+   */
+  std::string
+  calculate_file_hash(const std::string &filepath) {
+    if (filepath.empty() || !boost::filesystem::exists(filepath)) {
+      return "";
+    }
+
+    std::ifstream file(filepath, std::ios::binary);
+    if (!file.is_open()) {
+      return "";
+    }
+
+    EVP_MD_CTX *mdctx = EVP_MD_CTX_new();
+    if (!mdctx) {
+      return "";
+    }
+
+    if (EVP_DigestInit_ex(mdctx, EVP_sha256(), nullptr) != 1) {
+      EVP_MD_CTX_free(mdctx);
+      return "";
+    }
+
+    char buf[1024 * 16];
+    while (file.good()) {
+      file.read(buf, sizeof(buf));
+      if (file.gcount() > 0) {
+        if (EVP_DigestUpdate(mdctx, buf, file.gcount()) != 1) {
+          EVP_MD_CTX_free(mdctx);
+          file.close();
+          return "";
+        }
+      }
+    }
+    file.close();
+
+    unsigned char hash[SHA256_DIGEST_LENGTH];
+    unsigned int hash_len = 0;
+    if (EVP_DigestFinal_ex(mdctx, hash, &hash_len) != 1) {
+      EVP_MD_CTX_free(mdctx);
+      return "";
+    }
+    EVP_MD_CTX_free(mdctx);
+
+    std::stringstream ss;
+    ss << std::hex << std::setfill('0');
+    for (unsigned int i = 0; i < hash_len; i++) {
+      ss << std::setw(2) << static_cast<int>(hash[i]);
+    }
+    return ss.str();
+  }
+
+  /**
+   * @brief 从命令字符串中提取可执行文件路径
+   * @param cmd 完整命令字符串
+   * @return 可执行文件路径
+   */
+  std::string
+  extract_executable_path(const std::string &cmd) {
+    if (cmd.empty()) {
+      return "";
+    }
+
+    std::string trimmed = cmd;
+    // 移除前导空格
+    size_t start = trimmed.find_first_not_of(" \t");
+    if (start != std::string::npos) {
+      trimmed = trimmed.substr(start);
+    }
+
+    // 处理引号包裹的路径
+    if (!trimmed.empty() && trimmed[0] == '"') {
+      size_t end = trimmed.find('"', 1);
+      if (end != std::string::npos) {
+        return trimmed.substr(1, end - 1);
+      }
+    }
+
+    // 提取第一个空格前的部分（可执行文件路径）
+    size_t space = trimmed.find(' ');
+    if (space != std::string::npos) {
+      return trimmed.substr(0, space);
+    }
+
+    return trimmed;
+  }
+
   void
   testMenuCmd(resp_https_t response, req_https_t request) {
     if (!authenticate(response, request)) return;
+
+    // 安全限制：只允许局域网访问测试命令功能
+    auto address = net::addr_to_normalized_string(request->remote_endpoint().address());
+    auto ip_type = net::from_address(address);
+    
+    if (ip_type != net::PC) {
+      BOOST_LOG(warning) << "TestMenuCmd: Access denied from non-local network: " << address;
+      pt::ptree outputTree;
+      outputTree.put("status", false);
+      outputTree.put("error", "Test command feature is only available from local network");
+      
+      std::ostringstream data;
+      pt::write_json(data, outputTree);
+      response->write(data.str());
+      return;
+    }
 
     print_req(request);
 
@@ -1217,9 +1328,35 @@ namespace confighttp {
         return;
       }
 
-      // 记录详细信息用于审计
-      auto address = net::addr_to_normalized_string(request->remote_endpoint().address());
+      // 提取可执行文件路径并计算SHA256哈希值
+      std::string executable_path = extract_executable_path(cmd);
+      std::string file_hash;
+      
+      if (!executable_path.empty()) {
+        // 如果是相对路径，尝试解析为绝对路径
+        boost::filesystem::path exec_path(executable_path);
+        if (!exec_path.is_absolute()) {
+          // 在PATH中查找或使用工作目录
+          if (!working_dir.empty()) {
+            exec_path = boost::filesystem::path(working_dir) / exec_path;
+          }
+        }
+        
+        file_hash = calculate_file_hash(exec_path.string());
+        
+        if (file_hash.empty() && boost::filesystem::exists(exec_path)) {
+          BOOST_LOG(warning) << "TestMenuCmd: Failed to calculate hash for executable: " << exec_path;
+        }
+      }
+
+      // 记录详细信息用于审计（包含文件哈希值）
       BOOST_LOG(info) << "Testing menu command from " << address << ": [" << cmd << "]";
+      if (!file_hash.empty()) {
+        BOOST_LOG(info) << "Executable SHA256: " << file_hash << " (" << executable_path << ")";
+      }
+      else if (!executable_path.empty()) {
+        BOOST_LOG(warning) << "Could not verify executable: " << executable_path;
+      }
 
       std::error_code ec;
       boost::filesystem::path work_dir;

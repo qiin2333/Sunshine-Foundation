@@ -52,6 +52,7 @@
     "test_menu_cmd_failed": "命令执行失败",
     "test_menu_cmd_executing": "正在执行命令...",
     "test_menu_cmd_empty": "命令不能为空",
+    "test_menu_cmd_local_only": "测试命令功能仅限局域网访问",
     "env_app_id": "应用 ID",
     "env_app_name": "应用名称",
     "env_client_audio_config": "客户端请求的音频配置 (2.0/5.1/7.1)",

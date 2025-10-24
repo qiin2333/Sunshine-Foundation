@@ -50,6 +50,7 @@
     "test_menu_cmd_failed": "Command execution failed",
     "test_menu_cmd_executing": "Executing command...",
     "test_menu_cmd_empty": "Command cannot be empty",
+    "test_menu_cmd_local_only": "Test command feature is only available from local network",
     "env_app_id": "App ID",
     "env_app_name": "App Name",
     "env_client_audio_config": "The Audio Configuration requested by the client (2.0/5.1/7.1)",
