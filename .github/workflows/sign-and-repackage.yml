@@ -236,26 +236,17 @@ jobs:
           cpack -G NSIS --verbose || true
           
           # 定位 cpack 暂存目录
-          STAGING_DIR="_CPack_Packages/win64/NSIS/Sunshine"
+          STAGING_DIR="cpack_artifacts/_CPack_Packages/win64/NSIS/Sunshine"
           if [ ! -d "$STAGING_DIR" ]; then
             echo "Error: CPack staging directory not found at $STAGING_DIR"
-            ls -la _CPack_Packages/win64/NSIS/ 2>/dev/null || echo "NSIS directory doesn't exist"
+            ls -la cpack_artifacts/_CPack_Packages/win64/NSIS/ 2>/dev/null || echo "NSIS directory doesn't exist"
             exit 1
           fi
           
           echo "=== Found CPack staging directory: $STAGING_DIR ==="
           
-          # 检查签名文件的目录结构
-          echo "=== Signed files structure ==="
-          ls -laR ../signed-files/
-          
-          # 确定签名文件的根目录
-          if [ -d "../signed-files/Sunshine" ]; then
-            SIGNED_SRC="../signed-files/Sunshine"
-          else
-            SIGNED_SRC="../signed-files"
-          fi
-          
+          # 使用固定的签名文件路径
+          SIGNED_SRC="../signed-files"
           echo "Using signed files from: $SIGNED_SRC"
           
           # 替换暂存目录中的签名文件
@@ -308,13 +299,12 @@ jobs:
           
           # 手动运行 makensis 重新打包
           echo "=== Re-packaging with makensis ==="
-          cd _CPack_Packages/win64/NSIS
+          cd cpack_artifacts/_CPack_Packages/win64/NSIS
           makensis project.nsi
           
           # 移动生成的安装包
           if [ -f "Sunshine.exe" ]; then
-            mkdir -p ../../../cpack_artifacts
-            mv -fv "Sunshine.exe" "../../../cpack_artifacts/Sunshine.exe"
+            mv -fv "Sunshine.exe" "../../../Sunshine.exe"
             echo "✓ Installer created successfully"
           else
             echo "Error: Sunshine.exe not created"
@@ -325,9 +315,7 @@ jobs:
 
           # 查找并移动安装包
           echo "Looking for installer..."
-          if [ -f ./cpack_artifacts/Sunshine.exe ]; then
-            INSTALLER=./cpack_artifacts/Sunshine.exe
-          elif [ -f ./Sunshine.exe ]; then
+          if [ -f ./Sunshine.exe ]; then
             INSTALLER=./Sunshine.exe
           else
             echo "Error: Cannot find Sunshine.exe"
