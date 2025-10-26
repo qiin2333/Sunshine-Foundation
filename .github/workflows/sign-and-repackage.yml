@@ -131,7 +131,14 @@ jobs:
         shell: bash
         run: |
           cd signed-files
-          VERSION=$(date +%Y.%m%d)
+          # 使用与输入一致的版本号
+          if [ -n "${{ github.event.inputs.release-tag }}" ]; then
+            VERSION="${{ github.event.inputs.release-tag }}"
+          elif [ -n "${{ github.event.release.tag_name }}" ]; then
+            VERSION="${{ github.event.release.tag_name }}"
+          else
+            VERSION="v$(date +%Y.%m%d)"
+          fi
           7z a "../Sunshine-${VERSION}-Windows-Portable-Signed.zip" *
           cd ..
           echo "Created signed portable package:"
@@ -188,6 +195,18 @@ jobs:
               exit 1
             fi
           fi
+          
+          # 安装 GNU target（MSYS2 环境需要）
+          echo "Installing Rust GNU target..."
+          rustup target add x86_64-pc-windows-gnu
+          
+          # 设置默认 target 为 GNU（避免使用 MSVC）
+          rustup default stable-x86_64-pc-windows-gnu
+          
+          # 验证配置
+          echo "Rust configuration:"
+          rustc --version --verbose
+          rustup show
 
       - name: Rebuild and package with signed files
         shell: msys2 {0}
@@ -211,61 +230,98 @@ jobs:
           # 编译（只需要生成必要的文件）
           ninja -C build-signed
 
-          # 显示签名文件结构
-          echo "=== Signed files structure ==="
-          ls -laR signed-files/
-          
-          echo "=== Build directory structure ==="
-          ls -la build-signed/
-          
-          # 检查签名文件是否有额外的目录层级
-          if [ -d "signed-files/Sunshine" ]; then
-            echo "Found Sunshine subdirectory, adjusting path..."
-            SIGNED_SRC="signed-files/Sunshine"
-          else
-            SIGNED_SRC="signed-files"
-          fi
-          
-          # 递归复制所有签名后的文件
-          echo "Replacing with signed files from: $SIGNED_SRC"
-          
-          # 复制主程序
-          [ -f "$SIGNED_SRC/sunshine.exe" ] && cp -v "$SIGNED_SRC/sunshine.exe" build-signed/ && echo "✓ Replaced sunshine.exe"
-          [ -f "$SIGNED_SRC/zlib1.dll" ] && cp -v "$SIGNED_SRC/zlib1.dll" build-signed/ && echo "✓ Replaced zlib1.dll"
-          
-          # 复制 tools 目录
-          if [ -d "$SIGNED_SRC/tools" ]; then
-            echo "Copying tools directory..."
-            mkdir -p build-signed/tools
-            cp -rv "$SIGNED_SRC/tools/"* build-signed/tools/
-          fi
-          
-          # 复制 assets 目录
-          if [ -d "$SIGNED_SRC/assets" ]; then
-            echo "Copying assets directory..."
-            find "$SIGNED_SRC/assets" -type f \( -name "*.exe" -o -name "*.dll" \) -exec sh -c 'mkdir -p "build-signed/$(dirname "$1")" && cp -v "$1" "build-signed/$1"' _ {} \;
-          fi
-          
-          # 复制 scripts 目录
-          if [ -d "$SIGNED_SRC/scripts" ]; then
-            echo "Copying scripts directory..."
-            find "$SIGNED_SRC/scripts" -type f \( -name "*.exe" -o -name "*.dll" \) -exec sh -c 'mkdir -p "build-signed/$(dirname "$1")" && cp -v "$1" "build-signed/$1"' _ {} \;
-          fi
-          
-          echo "=== Verification: Check if files were replaced ==="
-          echo "Main executable:"
-          ls -lh build-signed/sunshine.exe 2>/dev/null || echo "sunshine.exe not found"
-          echo "DLL files:"
-          find build-signed -name "*.dll" -type f -exec ls -lh {} \;
-          echo "Tool executables:"
-          find build-signed/tools -name "*.exe" -type f -exec ls -lh {} \; 2>/dev/null || echo "tools directory empty"
-          echo "GUI executable:"
-          find build-signed/assets -name "sunshine-gui.exe" -type f -exec ls -lh {} \; 2>/dev/null || echo "GUI not found"
-
-          # 创建 NSIS 安装包
-          echo "Creating NSIS installer with signed files..."
+          # 运行 cpack 生成暂存目录
+          echo "=== Running cpack to generate staging directory ==="
           cd build-signed
-          cpack -G NSIS --verbose
+          cpack -G NSIS --verbose || true
+          
+          # 定位 cpack 暂存目录
+          STAGING_DIR="_CPack_Packages/win64/NSIS/Sunshine"
+          if [ ! -d "$STAGING_DIR" ]; then
+            echo "Error: CPack staging directory not found at $STAGING_DIR"
+            ls -la _CPack_Packages/win64/NSIS/ 2>/dev/null || echo "NSIS directory doesn't exist"
+            exit 1
+          fi
+          
+          echo "=== Found CPack staging directory: $STAGING_DIR ==="
+          
+          # 检查签名文件的目录结构
+          echo "=== Signed files structure ==="
+          ls -laR ../signed-files/
+          
+          # 确定签名文件的根目录
+          if [ -d "../signed-files/Sunshine" ]; then
+            SIGNED_SRC="../signed-files/Sunshine"
+          else
+            SIGNED_SRC="../signed-files"
+          fi
+          
+          echo "Using signed files from: $SIGNED_SRC"
+          
+          # 替换暂存目录中的签名文件
+          echo "=== Replacing files in staging directory with signed versions ==="
+          
+          # 主程序 (application 组件)
+          if [ -f "$SIGNED_SRC/sunshine.exe" ]; then
+            cp -fv "$SIGNED_SRC/sunshine.exe" "$STAGING_DIR/application/sunshine.exe"
+            echo "✓ Replaced sunshine.exe"
+          fi
+          
+          if [ -f "$SIGNED_SRC/zlib1.dll" ]; then
+            cp -fv "$SIGNED_SRC/zlib1.dll" "$STAGING_DIR/application/zlib1.dll"
+            echo "✓ Replaced zlib1.dll"
+          fi
+          
+          # Tools (application/tools, audio/tools, dxgi/tools)
+          if [ -d "$SIGNED_SRC/tools" ]; then
+            for exe in "$SIGNED_SRC/tools/"*.exe; do
+              [ -f "$exe" ] || continue
+              filename=$(basename "$exe")
+              cp -fv "$exe" "$STAGING_DIR/application/tools/$filename" 2>/dev/null && echo "✓ Replaced application/tools/$filename"
+              cp -fv "$exe" "$STAGING_DIR/audio/tools/$filename" 2>/dev/null && echo "✓ Replaced audio/tools/$filename"
+              cp -fv "$exe" "$STAGING_DIR/dxgi/tools/$filename" 2>/dev/null && echo "✓ Replaced dxgi/tools/$filename"
+            done
+          fi
+          
+          # GUI (Unspecified/assets/gui)
+          if [ -f "$SIGNED_SRC/assets/gui/sunshine-gui.exe" ]; then
+            cp -fv "$SIGNED_SRC/assets/gui/sunshine-gui.exe" "$STAGING_DIR/Unspecified/assets/gui/sunshine-gui.exe"
+            echo "✓ Replaced GUI executable"
+          fi
+          
+          if [ -f "$SIGNED_SRC/assets/gui/WebView2Loader.dll" ]; then
+            cp -fv "$SIGNED_SRC/assets/gui/WebView2Loader.dll" "$STAGING_DIR/Unspecified/assets/gui/WebView2Loader.dll"
+            echo "✓ Replaced WebView2Loader.dll"
+          fi
+          
+          # 验证关键文件的签名
+          echo "=== Verifying signatures in staging directory ==="
+          powershell -Command "
+            \$mainExe = Get-AuthenticodeSignature '$STAGING_DIR/application/sunshine.exe'
+            Write-Host \"sunshine.exe signature: \$(\$mainExe.Status)\"
+            if (\$mainExe.Status -ne 'Valid') {
+              Write-Error 'Main executable signature is invalid!'
+              exit 1
+            }
+            Write-Host '✓ All signatures verified'
+          "
+          
+          # 手动运行 makensis 重新打包
+          echo "=== Re-packaging with makensis ==="
+          cd _CPack_Packages/win64/NSIS
+          makensis project.nsi
+          
+          # 移动生成的安装包
+          if [ -f "Sunshine.exe" ]; then
+            mkdir -p ../../../cpack_artifacts
+            mv -fv "Sunshine.exe" "../../../cpack_artifacts/Sunshine.exe"
+            echo "✓ Installer created successfully"
+          else
+            echo "Error: Sunshine.exe not created"
+            exit 1
+          fi
+          
+          cd ../../..
 
           # 查找并移动安装包
           echo "Looking for installer..."
@@ -279,10 +335,17 @@ jobs:
             exit 1
           fi
 
-          VERSION=$(date +%Y.%m%d)
-          mv "$INSTALLER" "../Sunshine-${VERSION}-Windows-Installer-Signed.exe"
-
+          # 使用与 Portable ZIP 一致的版本号
           cd ..
+          if [ -n "${{ github.event.inputs.release-tag }}" ]; then
+            VERSION="${{ github.event.inputs.release-tag }}"
+          elif [ -n "${{ github.event.release.tag_name }}" ]; then
+            VERSION="${{ github.event.release.tag_name }}"
+          else
+            VERSION="v$(date +%Y.%m%d)"
+          fi
+          
+          mv "build-signed/$INSTALLER" "Sunshine-${VERSION}-Windows-Installer-Signed.exe"
           echo "Created signed installer:"
           ls -lh Sunshine-*-Installer-Signed.exe
 
@@ -334,14 +397,15 @@ jobs:
 
       # 11. 发布到 GitHub Release
       - name: Create Release
-        if: github.event_name != 'workflow_dispatch'
+        if: github.event_name == 'release'
         uses: softprops/action-gh-release@v1
         with:
-          tag_name: v${{ github.run_number }}
-          name: Sunshine v${{ github.run_number }} (Signed)
+          tag_name: ${{ github.event.release.tag_name }}
+          name: ${{ github.event.release.name }} (Signed)
           files: |
             Sunshine-*-Portable-Signed.zip
             final-signed/*.exe
           draft: true
+          prerelease: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
