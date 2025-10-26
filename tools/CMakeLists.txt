@@ -28,3 +28,11 @@ target_link_libraries(sunshinesvc
         wtsapi32
         ${PLATFORM_LIBRARIES})
 target_compile_options(sunshinesvc PRIVATE ${SUNSHINE_COMPILE_OPTIONS})
+
+add_executable(virtual-keyboard virtual-keyboard.cpp)
+set_target_properties(virtual-keyboard PROPERTIES CXX_STANDARD 23)
+target_link_libraries(virtual-keyboard
+        ${CMAKE_THREAD_LIBS_INIT}
+        shell32
+        ${PLATFORM_LIBRARIES})
+target_compile_options(virtual-keyboard PRIVATE ${SUNSHINE_COMPILE_OPTIONS})
