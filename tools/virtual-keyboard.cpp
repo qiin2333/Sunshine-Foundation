@@ -125,6 +125,30 @@ bool IsDesktopModeAutoInvokeEnabled() {
 }
 
 /**
+ * 强制显示已存在的键盘窗口
+ */
+bool ForceShowKeyboardWindow() {
+  // 查找键盘窗口
+  HWND hwnd = FindWindow(L"IPTip_Main_Window", NULL);
+  if (hwnd == NULL) {
+    // Windows 11 可能使用不同的类名
+    hwnd = FindWindow(L"ApplicationFrameWindow", L"Microsoft Text Input Application");
+  }
+
+  if (hwnd != NULL) {
+    // 强制显示窗口
+    ShowWindow(hwnd, SW_SHOW);
+    SetForegroundWindow(hwnd);
+    // 设置窗口为最顶层
+    SetWindowPos(hwnd, HWND_TOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE);
+    SetWindowPos(hwnd, HWND_NOTOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_SHOWWINDOW);
+    return true;
+  }
+  
+  return false;
+}
+
+/**
  * 显示触摸键盘
  */
 bool ShowKeyboard() {
@@ -146,7 +170,23 @@ bool ShowKeyboard() {
     }
   }
 
-  // 方法1: 通过启动 TabTip.exe
+  // 首先检查窗口是否已存在但隐藏
+  HWND existingWnd = FindWindow(L"IPTip_Main_Window", NULL);
+  if (existingWnd == NULL) {
+    existingWnd = FindWindow(L"ApplicationFrameWindow", L"Microsoft Text Input Application");
+  }
+
+  if (existingWnd != NULL) {
+    std::wcout << L"检测到键盘窗口已存在，正在显示..." << std::endl;
+    if (ForceShowKeyboardWindow()) {
+      std::wcout << L"✓ 触摸键盘已显示" << std::endl;
+      return true;
+    }
+  }
+
+  // 如果窗口不存在，启动 TabTip.exe
+  std::wcout << L"正在启动 TabTip.exe..." << std::endl;
+  
   SHELLEXECUTEINFO sei = { 0 };
   sei.cbSize = sizeof(SHELLEXECUTEINFO);
   sei.fMask = SEE_MASK_NOCLOSEPROCESS | SEE_MASK_FLAG_NO_UI;
@@ -160,9 +200,17 @@ bool ShowKeyboard() {
       WaitForSingleObject(sei.hProcess, 1000);
       CloseHandle(sei.hProcess);
     }
-    std::wcout << L"触摸键盘已启动" << std::endl;
-    // 等待一下让键盘窗口显示
+    
+    // 等待窗口创建
     Sleep(500);
+    
+    // 尝试显示窗口
+    if (ForceShowKeyboardWindow()) {
+      std::wcout << L"✓ 触摸键盘已启动并显示" << std::endl;
+      return true;
+    }
+    
+    std::wcout << L"触摸键盘进程已启动" << std::endl;
     return true;
   }
 
@@ -170,11 +218,12 @@ bool ShowKeyboard() {
   DWORD error = GetLastError();
   std::wcerr << L"ShellExecuteEx 失败，错误代码: " << error << std::endl;
 
-  // 方法2: 如果方法1失败，尝试使用备用方法
+  // 备用方法
   HINSTANCE result = ShellExecute(NULL, L"open", TABTIP_PATH, NULL, NULL, SW_SHOW);
   if ((INT_PTR)result > 32) {
-    std::wcout << L"触摸键盘已启动 (备用方法)" << std::endl;
     Sleep(500);
+    ForceShowKeyboardWindow();
+    std::wcout << L"触摸键盘已启动 (备用方法)" << std::endl;
     return true;
   }
 
