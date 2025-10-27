@@ -232,102 +232,32 @@ jobs:
 
           # 运行 cpack 生成暂存目录
           echo "=== Running cpack to generate staging directory ==="
-          cd build-signed
-          cpack -G NSIS --verbose || true
-          
-          # 定位 cpack 暂存目录
-          STAGING_DIR="cpack_artifacts/_CPack_Packages/win64/NSIS/Sunshine"
-          if [ ! -d "$STAGING_DIR" ]; then
-            echo "Error: CPack staging directory not found at $STAGING_DIR"
-            ls -la cpack_artifacts/_CPack_Packages/win64/NSIS/ 2>/dev/null || echo "NSIS directory doesn't exist"
-            exit 1
-          fi
-          
-          echo "=== Found CPack staging directory: $STAGING_DIR ==="
-          
-          # 使用固定的签名文件路径
-          SIGNED_SRC="signed-files"
-          echo "Using signed files from: $SIGNED_SRC"
-          
-          # 替换暂存目录中的签名文件
-          echo "=== Replacing files in staging directory with signed versions ==="
-          
-          # 主程序 (application 组件) - 必须存在
-          cp -fv "$SIGNED_SRC/sunshine.exe" "$STAGING_DIR/application/sunshine.exe"
-          echo "✓ Replaced sunshine.exe"
-          
-          if [ -f "$SIGNED_SRC/zlib1.dll" ]; then
-            cp -fv "$SIGNED_SRC/zlib1.dll" "$STAGING_DIR/application/zlib1.dll"
-            echo "✓ Replaced zlib1.dll"
-          fi
-          
-          # Tools (application/tools, audio/tools, dxgi/tools)
-          for exe in "$SIGNED_SRC/"*.exe; do
-            [ -f "$exe" ] || continue
-            filename=$(basename "$exe")
-            # 跳过主程序，已经处理过了
-            if [ "$filename" = "sunshine.exe" ]; then
-              continue
-            fi
-            cp -fv "$exe" "$STAGING_DIR/application/tools/$filename" 2>/dev/null && echo "✓ Replaced application/tools/$filename"
-            cp -fv "$exe" "$STAGING_DIR/audio/tools/$filename" 2>/dev/null && echo "✓ Replaced audio/tools/$filename"
-            cp -fv "$exe" "$STAGING_DIR/dxgi/tools/$filename" 2>/dev/null && echo "✓ Replaced dxgi/tools/$filename"
-          done
-          
-          # GUI (Unspecified/assets/gui)
-          if [ -f "$SIGNED_SRC/assets/gui/sunshine-gui.exe" ]; then
-            cp -fv "$SIGNED_SRC/assets/gui/sunshine-gui.exe" "$STAGING_DIR/Unspecified/assets/gui/sunshine-gui.exe"
-            echo "✓ Replaced GUI executable"
-          fi
-          
-          if [ -f "$SIGNED_SRC/assets/gui/WebView2Loader.dll" ]; then
-            cp -fv "$SIGNED_SRC/assets/gui/WebView2Loader.dll" "$STAGING_DIR/Unspecified/assets/gui/WebView2Loader.dll"
-            echo "✓ Replaced WebView2Loader.dll"
-          fi
-          
-          # 验证关键文件的签名
-          echo "=== Verifying signatures in staging directory ==="
-          powershell -Command "
-            \$mainExe = Get-AuthenticodeSignature '$STAGING_DIR/application/sunshine.exe'
-            Write-Host \"sunshine.exe signature: \$(\$mainExe.Status)\"
-            if (\$mainExe.Status -eq 'NotSigned') {
-              Write-Warning 'Main executable is not signed, but continuing with build...'
-            } elseif (\$mainExe.Status -ne 'Valid') {
-              Write-Error 'Main executable signature is invalid: \$(\$mainExe.Status)'
-              exit 1
-            } else {
-              Write-Host '✓ Main executable signature is valid'
-            }
-          "
-          
+          cpack --config build-signed/CPackConfig.cmake --verbose || true
+
+          # cpack 目录
+          CPACK_DIR="build-signed/cpack_artifacts/_CPack_Packages/win64/NSIS"
+          STAGING_DIR="$CPACK_DIR/Sunshine"
+
+          # 替换签名文件
+          SIGNED_SRC="signed-files/Sunshine"
+          cp -fv "$SIGNED_SRC/sunshine.exe"       "$STAGING_DIR/application/sunshine.exe"
+          cp -fv "$SIGNED_SRC/zlib1.dll"          "$STAGING_DIR/application/zlib1.dll"
+          cp -fv "$SIGNED_SRC/sunshinesvc.exe"    "$STAGING_DIR/application/tools/sunshinesvc.exe"
+          cp -fv "$SIGNED_SRC/device-toggler.exe" "$STAGING_DIR/assets/tools/device-toggler.exe"
+          cp -fv "$SIGNED_SRC/DevManView.exe"     "$STAGING_DIR/assets/tools/DevManView.exe"
+          cp -fv "$SIGNED_SRC/qiin-tabtip.exe"    "$STAGING_DIR/assets/tools/qiin-tabtip.exe"
+          cp -fv "$SIGNED_SRC/restart64.exe"      "$STAGING_DIR/assets/tools/restart64.exe"
+          cp -fv "$SIGNED_SRC/SetDpi.exe"         "$STAGING_DIR/assets/tools/SetDpi.exe"
+          cp -fv "$SIGNED_SRC/setreg.exe"         "$STAGING_DIR/assets/tools/setreg.exe"
+          cp -fv "$SIGNED_SRC/audio-info.exe"     "$STAGING_DIR/audio/tools/audio-info.exe"
+          cp -fv "$SIGNED_SRC/dxgi-info.exe"      "$STAGING_DIR/dxgi/tools/dxgi-info.exe"
+          cp -fv "$SIGNED_SRC/assets/gui/sunshine-gui.exe" "$STAGING_DIR/assets/gui/sunshine-gui.exe"
+
           # 手动运行 makensis 重新打包
           echo "=== Re-packaging with makensis ==="
-          cd cpack_artifacts/_CPack_Packages/win64/NSIS
-          makensis project.nsi
-          
-          # 移动生成的安装包
-          if [ -f "Sunshine.exe" ]; then
-            mv -fv "Sunshine.exe" "../../../Sunshine.exe"
-            echo "✓ Installer created successfully"
-          else
-            echo "Error: Sunshine.exe not created"
-            exit 1
-          fi
-          
-          cd ../../..
-
-          # 查找并移动安装包
-          echo "Looking for installer..."
-          if [ -f ./Sunshine.exe ]; then
-            INSTALLER=./Sunshine.exe
-          else
-            echo "Error: Cannot find Sunshine.exe"
-            find . -name "*.exe" -type f
-            exit 1
-          fi
+          makensis "$CPACK_DIR/project.nsi"
 
           # 使用与 Portable ZIP 一致的版本号
-          cd ..
           if [ -n "${{ github.event.inputs.release-tag }}" ]; then
             VERSION="${{ github.event.inputs.release-tag }}"
           elif [ -n "${{ github.event.release.tag_name }}" ]; then
@@ -336,7 +266,7 @@ jobs:
             VERSION="v$(date +%Y.%m%d)"
           fi
           
-          mv "build-signed/$INSTALLER" "Sunshine-${VERSION}-Windows-Installer-Signed.exe"
+          mv -fv "$CPACK_DIR/Sunshine.exe" "Sunshine-${VERSION}-Windows-Installer-Signed.exe"
           echo "Created signed installer:"
           ls -lh Sunshine-*-Installer-Signed.exe
 
