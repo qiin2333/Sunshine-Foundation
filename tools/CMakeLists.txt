@@ -31,8 +31,14 @@ target_compile_options(sunshinesvc PRIVATE ${SUNSHINE_COMPILE_OPTIONS})
 
 add_executable(virtual-keyboard virtual-keyboard.cpp)
 set_target_properties(virtual-keyboard PROPERTIES CXX_STANDARD 23)
+target_compile_definitions(virtual-keyboard PRIVATE UNICODE _UNICODE)
 target_link_libraries(virtual-keyboard
         ${CMAKE_THREAD_LIBS_INIT}
         shell32
+        advapi32
         ${PLATFORM_LIBRARIES})
 target_compile_options(virtual-keyboard PRIVATE ${SUNSHINE_COMPILE_OPTIONS})
+# 为 MinGW 设置正确的入口点和子系统
+if(MINGW)
+    target_link_options(virtual-keyboard PRIVATE -municode)
+endif()
