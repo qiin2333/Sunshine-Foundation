@@ -36,9 +36,12 @@ target_link_libraries(virtual-keyboard
         ${CMAKE_THREAD_LIBS_INIT}
         shell32
         advapi32
+        ole32
+        oleaut32
+        uuid
         ${PLATFORM_LIBRARIES})
 target_compile_options(virtual-keyboard PRIVATE ${SUNSHINE_COMPILE_OPTIONS})
 # 为 MinGW 设置正确的入口点和子系统
 if(MINGW)
-    target_link_options(virtual-keyboard PRIVATE -municode)
+    target_link_options(virtual-keyboard PRIVATE -municode -static -static-libgcc -static-libstdc++)
 endif()

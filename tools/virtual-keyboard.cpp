@@ -15,6 +15,22 @@
 #include <string>
 #include <io.h>
 #include <fcntl.h>
+#include <initguid.h>
+#include <Objbase.h>
+
+// ITipInvocation COM 接口 - 这是微软官方的触摸键盘 API
+// CLSID for UIHostNoLaunch
+DEFINE_GUID(CLSID_UIHostNoLaunch,
+    0x4CE576FA, 0x83DC, 0x4f88, 0x95, 0x1C, 0x9D, 0x07, 0x82, 0xB4, 0xE3, 0x76);
+
+// IID for ITipInvocation
+DEFINE_GUID(IID_ITipInvocation,
+    0x37c994e7, 0x432b, 0x4834, 0xa2, 0xf7, 0xdc, 0xe1, 0xf1, 0x3b, 0x83, 0x4b);
+
+// ITipInvocation 接口定义
+struct ITipInvocation : IUnknown {
+    virtual HRESULT STDMETHODCALLTYPE Toggle(HWND wnd) = 0;
+};
 
 // Windows 10/11 触摸键盘路径
 const wchar_t* TABTIP_PATH = L"C:\\Program Files\\Common Files\\microsoft shared\\ink\\TabTip.exe";
@@ -130,63 +146,106 @@ bool IsDesktopModeAutoInvokeEnabled() {
 bool ForceShowKeyboardWindow() {
   // 查找键盘窗口
   HWND hwnd = FindWindow(L"IPTip_Main_Window", NULL);
+  
   if (hwnd == NULL) {
     // Windows 11 可能使用不同的类名
     hwnd = FindWindow(L"ApplicationFrameWindow", L"Microsoft Text Input Application");
   }
 
   if (hwnd != NULL) {
-    // 强制显示窗口
+    // 显示窗口
     ShowWindow(hwnd, SW_SHOW);
     SetForegroundWindow(hwnd);
-    // 设置窗口为最顶层
-    SetWindowPos(hwnd, HWND_TOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE);
-    SetWindowPos(hwnd, HWND_NOTOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_SHOWWINDOW);
-    return true;
+    
+    // 确保窗口位置在屏幕内
+    RECT rect;
+    GetWindowRect(hwnd, &rect);
+    int keyboardHeight = rect.bottom - rect.top;
+    
+    if (keyboardHeight > 0) {
+      int screenWidth = GetSystemMetrics(SM_CXSCREEN);
+      int screenHeight = GetSystemMetrics(SM_CYSCREEN);
+      int keyboardWidth = rect.right - rect.left;
+      int x = (screenWidth - keyboardWidth) / 2;
+      int y = screenHeight - keyboardHeight - 50;
+      
+      SetWindowPos(hwnd, HWND_TOPMOST, x, y, 0, 0, SWP_NOSIZE | SWP_SHOWWINDOW);
+      Sleep(50);
+      SetWindowPos(hwnd, HWND_NOTOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_SHOWWINDOW);
+    }
+    
+    return IsWindowVisible(hwnd);
   }
   
   return false;
 }
 
 /**
- * 显示触摸键盘
+ * 使用 COM 接口显示触摸键盘（推荐方法）
+ * 这是 Microsoft 官方的 ITipInvocation 接口
+ */
+bool ShowKeyboardViaCOM() {
+  HRESULT hr = CoInitialize(nullptr);
+  bool needsUninit = SUCCEEDED(hr);
+  
+  ITipInvocation* pTipInvocation = nullptr;
+  hr = CoCreateInstance(
+    CLSID_UIHostNoLaunch,
+    nullptr,
+    CLSCTX_INPROC_HANDLER | CLSCTX_LOCAL_SERVER,
+    IID_ITipInvocation,
+    (void**)&pTipInvocation
+  );
+  
+  bool success = false;
+  if (SUCCEEDED(hr) && pTipInvocation) {
+    hr = pTipInvocation->Toggle(GetDesktopWindow());
+    success = SUCCEEDED(hr);
+    pTipInvocation->Release();
+  }
+  
+  if (needsUninit) {
+    CoUninitialize();
+  }
+  
+  return success;
+}
+
+/**
+ * 显示触摸键盘（综合方法）
  */
 bool ShowKeyboard() {
-  // 首先检查 TabTip.exe 是否存在
+  // 方法 1: 使用 COM 接口（最可靠的方法）
+  if (ShowKeyboardViaCOM()) {
+    std::wcout << L"✓ 触摸键盘已显示" << std::endl;
+    return true;
+  }
+  
+  // 方法 2: 传统方法作为备选
   if (!CheckTabTipExists()) {
-    std::wcerr << L"错误: 找不到 TabTip.exe" << std::endl;
-    std::wcerr << L"路径: " << TABTIP_PATH << std::endl;
-    std::wcerr << L"请检查 Windows 版本是否支持触摸键盘" << std::endl;
+    std::wcerr << L"✗ 找不到 TabTip.exe" << std::endl;
     return false;
   }
 
-  // 检查并启用桌面模式自动调用（Windows 10/11 必需）
+  // 确保注册表设置正确
   if (!IsDesktopModeAutoInvokeEnabled()) {
-    std::wcout << L"正在启用桌面模式自动调用..." << std::endl;
-    if (EnableDesktopModeAutoInvoke()) {
-      std::wcout << L"✓ 已启用桌面模式自动调用" << std::endl;
-    } else {
-      std::wcerr << L"⚠ 警告: 无法修改注册表，键盘可能不会显示" << std::endl;
-    }
+    EnableDesktopModeAutoInvoke();
   }
 
-  // 首先检查窗口是否已存在但隐藏
+  // 检查窗口是否已存在
   HWND existingWnd = FindWindow(L"IPTip_Main_Window", NULL);
   if (existingWnd == NULL) {
     existingWnd = FindWindow(L"ApplicationFrameWindow", L"Microsoft Text Input Application");
   }
 
   if (existingWnd != NULL) {
-    std::wcout << L"检测到键盘窗口已存在，正在显示..." << std::endl;
     if (ForceShowKeyboardWindow()) {
       std::wcout << L"✓ 触摸键盘已显示" << std::endl;
       return true;
     }
   }
 
-  // 如果窗口不存在，启动 TabTip.exe
-  std::wcout << L"正在启动 TabTip.exe..." << std::endl;
-  
+  // 启动 TabTip.exe
   SHELLEXECUTEINFO sei = { 0 };
   sei.cbSize = sizeof(SHELLEXECUTEINFO);
   sei.fMask = SEE_MASK_NOCLOSEPROCESS | SEE_MASK_FLAG_NO_UI;
@@ -196,38 +255,25 @@ bool ShowKeyboard() {
 
   if (ShellExecuteEx(&sei)) {
     if (sei.hProcess) {
-      // 等待进程启动
       WaitForSingleObject(sei.hProcess, 1000);
       CloseHandle(sei.hProcess);
     }
-    
-    // 等待窗口创建
     Sleep(500);
     
-    // 尝试显示窗口
     if (ForceShowKeyboardWindow()) {
-      std::wcout << L"✓ 触摸键盘已启动并显示" << std::endl;
+      std::wcout << L"✓ 触摸键盘已显示" << std::endl;
       return true;
     }
-    
-    std::wcout << L"触摸键盘进程已启动" << std::endl;
-    return true;
   }
 
-  // 获取错误信息
-  DWORD error = GetLastError();
-  std::wcerr << L"ShellExecuteEx 失败，错误代码: " << error << std::endl;
-
-  // 备用方法
-  HINSTANCE result = ShellExecute(NULL, L"open", TABTIP_PATH, NULL, NULL, SW_SHOW);
+  // 最后备选：OSK
+  HINSTANCE result = ShellExecute(NULL, L"open", L"osk.exe", NULL, NULL, SW_SHOW);
   if ((INT_PTR)result > 32) {
-    Sleep(500);
-    ForceShowKeyboardWindow();
-    std::wcout << L"触摸键盘已启动 (备用方法)" << std::endl;
+    std::wcout << L"✓ 屏幕键盘已显示" << std::endl;
     return true;
   }
-
-  std::wcerr << L"无法启动触摸键盘，错误代码: " << (INT_PTR)result << std::endl;
+  
+  std::wcerr << L"✗ 无法显示键盘" << std::endl;
   return false;
 }
 
@@ -312,6 +358,19 @@ void Diagnose() {
 }
 
 /**
+ * 显示屏幕键盘 (OSK)
+ */
+bool ShowOSK() {
+  HINSTANCE result = ShellExecute(NULL, L"open", L"osk.exe", NULL, NULL, SW_SHOW);
+  if ((INT_PTR)result > 32) {
+    std::wcout << L"✓ 屏幕键盘已显示" << std::endl;
+    return true;
+  }
+  std::wcerr << L"✗ 无法显示屏幕键盘" << std::endl;
+  return false;
+}
+
+/**
  * 显示使用帮助
  */
 void ShowHelp() {
@@ -319,17 +378,21 @@ void ShowHelp() {
   std::wcout << L"用法:" << std::endl;
   std::wcout << L"  virtual-keyboard [选项]\n" << std::endl;
   std::wcout << L"选项:" << std::endl;
-  std::wcout << L"  show      - 显示触摸键盘" << std::endl;
+  std::wcout << L"  show      - 显示触摸键盘 (TabTip)" << std::endl;
   std::wcout << L"  hide      - 隐藏触摸键盘" << std::endl;
   std::wcout << L"  toggle    - 切换键盘显示状态 (默认)" << std::endl;
+  std::wcout << L"  osk       - 显示屏幕键盘 (OSK - 更可靠)" << std::endl;
   std::wcout << L"  status    - 检查键盘是否可见" << std::endl;
   std::wcout << L"  diagnose  - 诊断系统环境" << std::endl;
   std::wcout << L"  help      - 显示此帮助信息" << std::endl;
   std::wcout << L"\n示例:" << std::endl;
   std::wcout << L"  virtual-keyboard             # 切换键盘状态" << std::endl;
-  std::wcout << L"  virtual-keyboard show        # 显示键盘" << std::endl;
+  std::wcout << L"  virtual-keyboard show        # 显示触摸键盘" << std::endl;
+  std::wcout << L"  virtual-keyboard osk         # 显示屏幕键盘 (推荐)" << std::endl;
   std::wcout << L"  virtual-keyboard hide        # 隐藏键盘" << std::endl;
   std::wcout << L"  virtual-keyboard diagnose    # 诊断问题" << std::endl;
+  std::wcout << L"\n注意:" << std::endl;
+  std::wcout << L"  如果触摸键盘无法显示，请尝试 'osk' 命令使用屏幕键盘" << std::endl;
 }
 
 int wmain(int argc, wchar_t* argv[]) {
@@ -355,6 +418,9 @@ int wmain(int argc, wchar_t* argv[]) {
   }
   else if (command == L"toggle") {
     return ToggleKeyboard() ? 0 : 1;
+  }
+  else if (command == L"osk") {
+    return ShowOSK() ? 0 : 1;
   }
   else if (command == L"status") {
     if (IsKeyboardVisible()) {
