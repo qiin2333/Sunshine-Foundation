@@ -29,10 +29,10 @@ target_link_libraries(sunshinesvc
         ${PLATFORM_LIBRARIES})
 target_compile_options(sunshinesvc PRIVATE ${SUNSHINE_COMPILE_OPTIONS})
 
-add_executable(virtual-keyboard virtual-keyboard.cpp)
-set_target_properties(virtual-keyboard PROPERTIES CXX_STANDARD 23)
-target_compile_definitions(virtual-keyboard PRIVATE UNICODE _UNICODE)
-target_link_libraries(virtual-keyboard
+add_executable(qiin-taptip qiin-taptip.cpp)
+set_target_properties(qiin-taptip PROPERTIES CXX_STANDARD 23)
+target_compile_definitions(qiin-taptip PRIVATE UNICODE _UNICODE)
+target_link_libraries(qiin-taptip
         ${CMAKE_THREAD_LIBS_INIT}
         shell32
         advapi32
@@ -40,8 +40,14 @@ target_link_libraries(virtual-keyboard
         oleaut32
         uuid
         ${PLATFORM_LIBRARIES})
-target_compile_options(virtual-keyboard PRIVATE ${SUNSHINE_COMPILE_OPTIONS})
+target_compile_options(qiin-taptip PRIVATE ${SUNSHINE_COMPILE_OPTIONS})
 # 为 MinGW 设置正确的入口点和子系统
 if(MINGW)
-    target_link_options(virtual-keyboard PRIVATE -municode -static -static-libgcc -static-libstdc++)
+    # 优化大小：-Os 优化大小, -s 移除调试符号
+    target_compile_options(qiin-taptip PRIVATE -Os)
+    target_link_options(qiin-taptip PRIVATE 
+        -municode 
+        -s  # Strip symbols
+        -Wl,--gc-sections  # 移除未使用的section
+    )
 endif()

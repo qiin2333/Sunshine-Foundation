@@ -1,6 +1,7 @@
 /**
- * @file tools/virtual-keyboard.cpp
+ * @file tools/qiin-taptip.cpp
  * @brief 调出或隐藏 Windows 触摸虚拟键盘的工具
+ * @note 优化版本 - 不使用 C++ 标准库以减小文件大小
  */
 #ifndef UNICODE
 #define UNICODE
@@ -11,12 +12,28 @@
 #define WIN32_LEAN_AND_MEAN
 #include <Windows.h>
 #include <shellapi.h>
-#include <iostream>
-#include <string>
-#include <io.h>
-#include <fcntl.h>
 #include <initguid.h>
 #include <Objbase.h>
+
+// 简单的控制台输出函数（替代 iostream）
+static void Print(const wchar_t* msg) {
+  DWORD written;
+  HANDLE hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
+  WriteConsoleW(hConsole, msg, lstrlenW(msg), &written, NULL);
+  WriteConsoleW(hConsole, L"\r\n", 2, &written, NULL);
+}
+
+static void PrintError(const wchar_t* msg) {
+  DWORD written;
+  HANDLE hConsole = GetStdHandle(STD_ERROR_HANDLE);
+  WriteConsoleW(hConsole, msg, lstrlenW(msg), &written, NULL);
+  WriteConsoleW(hConsole, L"\r\n", 2, &written, NULL);
+}
+
+// 字符串比较（不区分大小写）
+static bool StrEqualI(const wchar_t* str1, const wchar_t* str2) {
+  return lstrcmpiW(str1, str2) == 0;
+}
 
 // ITipInvocation COM 接口 - 这是微软官方的触摸键盘 API
 // CLSID for UIHostNoLaunch
@@ -185,13 +202,13 @@ bool ForceShowKeyboardWindow() {
  * 这是 Microsoft 官方的 ITipInvocation 接口
  */
 bool ShowKeyboardViaCOM() {
-  HRESULT hr = CoInitialize(nullptr);
+  HRESULT hr = CoInitialize(NULL);
   bool needsUninit = SUCCEEDED(hr);
   
-  ITipInvocation* pTipInvocation = nullptr;
+  ITipInvocation* pTipInvocation = NULL;
   hr = CoCreateInstance(
     CLSID_UIHostNoLaunch,
-    nullptr,
+    NULL,
     CLSCTX_INPROC_HANDLER | CLSCTX_LOCAL_SERVER,
     IID_ITipInvocation,
     (void**)&pTipInvocation
@@ -217,13 +234,13 @@ bool ShowKeyboardViaCOM() {
 bool ShowKeyboard() {
   // 方法 1: 使用 COM 接口（最可靠的方法）
   if (ShowKeyboardViaCOM()) {
-    std::wcout << L"✓ 触摸键盘已显示" << std::endl;
+    Print(L"✓ 触摸键盘已显示");
     return true;
   }
   
   // 方法 2: 传统方法作为备选
   if (!CheckTabTipExists()) {
-    std::wcerr << L"✗ 找不到 TabTip.exe" << std::endl;
+    PrintError(L"✗ 找不到 TabTip.exe");
     return false;
   }
 
@@ -240,7 +257,7 @@ bool ShowKeyboard() {
 
   if (existingWnd != NULL) {
     if (ForceShowKeyboardWindow()) {
-      std::wcout << L"✓ 触摸键盘已显示" << std::endl;
+      Print(L"✓ 触摸键盘已显示");
       return true;
     }
   }
@@ -261,7 +278,7 @@ bool ShowKeyboard() {
     Sleep(500);
     
     if (ForceShowKeyboardWindow()) {
-      std::wcout << L"✓ 触摸键盘已显示" << std::endl;
+      Print(L"✓ 触摸键盘已显示");
       return true;
     }
   }
@@ -269,11 +286,11 @@ bool ShowKeyboard() {
   // 最后备选：OSK
   HINSTANCE result = ShellExecute(NULL, L"open", L"osk.exe", NULL, NULL, SW_SHOW);
   if ((INT_PTR)result > 32) {
-    std::wcout << L"✓ 屏幕键盘已显示" << std::endl;
+    Print(L"✓ 屏幕键盘已显示");
     return true;
   }
   
-  std::wcerr << L"✗ 无法显示键盘" << std::endl;
+  PrintError(L"✗ 无法显示键盘");
   return false;
 }
 
@@ -290,11 +307,11 @@ bool HideKeyboard() {
 
   if (hwnd != NULL && IsWindowVisible(hwnd)) {
     PostMessage(hwnd, WM_SYSCOMMAND, SC_CLOSE, 0);
-    std::wcout << L"触摸键盘已关闭" << std::endl;
+    Print(L"✓ 触摸键盘已隐藏");
     return true;
   }
   
-  std::wcout << L"触摸键盘未运行或已隐藏" << std::endl;
+  Print(L"触摸键盘未运行或已隐藏");
   return false;
 }
 
@@ -313,7 +330,10 @@ bool ToggleKeyboard() {
  * 诊断系统环境
  */
 void Diagnose() {
-  std::wcout << L"=== 系统诊断信息 ===" << std::endl;
+  wchar_t buffer[256];
+  
+  Print(L"=== 系统诊断信息 ===");
+  Print(L"");
   
   // 检查 Windows 版本
   OSVERSIONINFOEX osvi = { 0 };
@@ -322,39 +342,43 @@ void Diagnose() {
   #pragma warning(disable: 4996)
   GetVersionEx((LPOSVERSIONINFO)&osvi);
   #pragma warning(pop)
-  std::wcout << L"Windows 版本: " << osvi.dwMajorVersion << L"." << osvi.dwMinorVersion << std::endl;
+  wsprintfW(buffer, L"Windows 版本: %d.%d", osvi.dwMajorVersion, osvi.dwMinorVersion);
+  Print(buffer);
   
   // 检查 TabTip.exe
-  std::wcout << L"\nTabTip 路径: " << TABTIP_PATH << std::endl;
-  if (CheckTabTipExists()) {
-    std::wcout << L"TabTip.exe: ✓ 存在" << std::endl;
-  } else {
-    std::wcout << L"TabTip.exe: ✗ 不存在" << std::endl;
-  }
+  Print(L"");
+  wsprintfW(buffer, L"TabTip 路径: %s", TABTIP_PATH);
+  Print(buffer);
+  Print(CheckTabTipExists() ? L"TabTip.exe: ✓ 存在" : L"TabTip.exe: ✗ 不存在");
   
   // 检查注册表设置
-  std::wcout << L"\n注册表设置:" << std::endl;
-  std::wcout << L"  EnableDesktopModeAutoInvoke: " << (IsDesktopModeAutoInvokeEnabled() ? L"✓ 已启用" : L"✗ 未启用") << std::endl;
+  Print(L"");
+  Print(L"注册表设置:");
+  Print(IsDesktopModeAutoInvokeEnabled() ? 
+        L"  EnableDesktopModeAutoInvoke: ✓ 已启用" : 
+        L"  EnableDesktopModeAutoInvoke: ✗ 未启用");
   
   // 检查键盘窗口
-  std::wcout << L"\n检查键盘窗口:" << std::endl;
+  Print(L"");
+  Print(L"检查键盘窗口:");
   HWND hwnd = FindWindow(L"IPTip_Main_Window", NULL);
   if (hwnd) {
-    std::wcout << L"  IPTip_Main_Window: ✓ 找到 (Windows 10)" << std::endl;
-    std::wcout << L"  可见性: " << (IsWindowVisible(hwnd) ? L"可见" : L"隐藏") << std::endl;
+    Print(L"  IPTip_Main_Window: ✓ 找到 (Windows 10)");
+    Print(IsWindowVisible(hwnd) ? L"  可见性: 可见" : L"  可见性: 隐藏");
   } else {
-    std::wcout << L"  IPTip_Main_Window: ✗ 未找到" << std::endl;
+    Print(L"  IPTip_Main_Window: ✗ 未找到");
   }
   
   hwnd = FindWindow(L"ApplicationFrameWindow", L"Microsoft Text Input Application");
   if (hwnd) {
-    std::wcout << L"  ApplicationFrameWindow: ✓ 找到 (Windows 11)" << std::endl;
-    std::wcout << L"  可见性: " << (IsWindowVisible(hwnd) ? L"可见" : L"隐藏") << std::endl;
+    Print(L"  ApplicationFrameWindow: ✓ 找到 (Windows 11)");
+    Print(IsWindowVisible(hwnd) ? L"  可见性: 可见" : L"  可见性: 隐藏");
   } else {
-    std::wcout << L"  ApplicationFrameWindow: ✗ 未找到" << std::endl;
+    Print(L"  ApplicationFrameWindow: ✗ 未找到");
   }
   
-  std::wcout << L"\n当前键盘状态: " << (IsKeyboardVisible() ? L"可见" : L"隐藏") << std::endl;
+  Print(L"");
+  Print(IsKeyboardVisible() ? L"当前键盘状态: 可见" : L"当前键盘状态: 隐藏");
 }
 
 /**
@@ -363,10 +387,10 @@ void Diagnose() {
 bool ShowOSK() {
   HINSTANCE result = ShellExecute(NULL, L"open", L"osk.exe", NULL, NULL, SW_SHOW);
   if ((INT_PTR)result > 32) {
-    std::wcout << L"✓ 屏幕键盘已显示" << std::endl;
+    Print(L"✓ 屏幕键盘已显示");
     return true;
   }
-  std::wcerr << L"✗ 无法显示屏幕键盘" << std::endl;
+  PrintError(L"✗ 无法显示屏幕键盘");
   return false;
 }
 
@@ -374,74 +398,77 @@ bool ShowOSK() {
  * 显示使用帮助
  */
 void ShowHelp() {
-  std::wcout << L"Windows 虚拟触摸键盘工具\n" << std::endl;
-  std::wcout << L"用法:" << std::endl;
-  std::wcout << L"  virtual-keyboard [选项]\n" << std::endl;
-  std::wcout << L"选项:" << std::endl;
-  std::wcout << L"  show      - 显示触摸键盘 (TabTip)" << std::endl;
-  std::wcout << L"  hide      - 隐藏触摸键盘" << std::endl;
-  std::wcout << L"  toggle    - 切换键盘显示状态 (默认)" << std::endl;
-  std::wcout << L"  osk       - 显示屏幕键盘 (OSK - 更可靠)" << std::endl;
-  std::wcout << L"  status    - 检查键盘是否可见" << std::endl;
-  std::wcout << L"  diagnose  - 诊断系统环境" << std::endl;
-  std::wcout << L"  help      - 显示此帮助信息" << std::endl;
-  std::wcout << L"\n示例:" << std::endl;
-  std::wcout << L"  virtual-keyboard             # 切换键盘状态" << std::endl;
-  std::wcout << L"  virtual-keyboard show        # 显示触摸键盘" << std::endl;
-  std::wcout << L"  virtual-keyboard osk         # 显示屏幕键盘 (推荐)" << std::endl;
-  std::wcout << L"  virtual-keyboard hide        # 隐藏键盘" << std::endl;
-  std::wcout << L"  virtual-keyboard diagnose    # 诊断问题" << std::endl;
-  std::wcout << L"\n注意:" << std::endl;
-  std::wcout << L"  如果触摸键盘无法显示，请尝试 'osk' 命令使用屏幕键盘" << std::endl;
+  Print(L"Windows 虚拟触摸键盘工具");
+  Print(L"");
+  Print(L"用法:");
+  Print(L"  qiin-taptip [选项]");
+  Print(L"");
+  Print(L"选项:");
+  Print(L"  show      - 显示触摸键盘 (TabTip)");
+  Print(L"  hide      - 隐藏触摸键盘");
+  Print(L"  toggle    - 切换键盘显示状态 (默认)");
+  Print(L"  osk       - 显示屏幕键盘 (OSK)");
+  Print(L"  status    - 检查键盘是否可见");
+  Print(L"  diagnose  - 诊断系统环境");
+  Print(L"  help      - 显示此帮助信息");
+  Print(L"");
+  Print(L"示例:");
+  Print(L"  qiin-taptip              # 切换键盘状态");
+  Print(L"  qiin-taptip show         # 显示触摸键盘");
+  Print(L"  qiin-taptip osk          # 显示屏幕键盘");
+  Print(L"  qiin-taptip diagnose     # 诊断问题");
 }
 
 int wmain(int argc, wchar_t* argv[]) {
-  // 设置控制台输出为 UTF-16
-  _setmode(_fileno(stdout), _O_U16TEXT);
-  _setmode(_fileno(stderr), _O_U16TEXT);
+  // 设置控制台 UTF-8 输出
+  SetConsoleOutputCP(CP_UTF8);
 
-  std::wstring command = L"toggle";
+  const wchar_t* command = L"toggle";
+  wchar_t cmdLower[256] = {0};
   
   if (argc > 1) {
     command = argv[1];
-    // 转换为小写
-    for (auto& c : command) {
-      c = towlower(c);
-    }
+    // 转换为小写用于比较
+    lstrcpynW(cmdLower, command, 255);
+    CharLowerW(cmdLower);
+    command = cmdLower;
   }
 
-  if (command == L"show") {
+  if (StrEqualI(command, L"show")) {
     return ShowKeyboard() ? 0 : 1;
   }
-  else if (command == L"hide") {
+  else if (StrEqualI(command, L"hide")) {
     return HideKeyboard() ? 0 : 1;
   }
-  else if (command == L"toggle") {
+  else if (StrEqualI(command, L"toggle")) {
     return ToggleKeyboard() ? 0 : 1;
   }
-  else if (command == L"osk") {
+  else if (StrEqualI(command, L"osk")) {
     return ShowOSK() ? 0 : 1;
   }
-  else if (command == L"status") {
+  else if (StrEqualI(command, L"status")) {
     if (IsKeyboardVisible()) {
-      std::wcout << L"触摸键盘当前: 可见" << std::endl;
+      Print(L"触摸键盘当前: 可见");
       return 0;
     } else {
-      std::wcout << L"触摸键盘当前: 隐藏" << std::endl;
+      Print(L"触摸键盘当前: 隐藏");
       return 1;
     }
   }
-  else if (command == L"diagnose" || command == L"diag") {
+  else if (StrEqualI(command, L"diagnose") || StrEqualI(command, L"diag")) {
     Diagnose();
     return 0;
   }
-  else if (command == L"help" || command == L"--help" || command == L"-h" || command == L"/?") {
+  else if (StrEqualI(command, L"help") || StrEqualI(command, L"--help") || 
+           StrEqualI(command, L"-h") || StrEqualI(command, L"/?")) {
     ShowHelp();
     return 0;
   }
   else {
-    std::wcerr << L"未知命令: " << command << std::endl;
-    std::wcerr << L"使用 'virtual-keyboard help' 查看帮助" << std::endl;
+    wchar_t errMsg[512];
+    wsprintfW(errMsg, L"未知命令: %s", command);
+    PrintError(errMsg);
+    PrintError(L"使用 'qiin-taptip help' 查看帮助");
     return 1;
   }
 
@@ -457,7 +484,7 @@ int main(int argc, char* argv[]) {
   
   szArglist = CommandLineToArgvW(GetCommandLineW(), &nArgs);
   if (szArglist == NULL) {
-    std::cerr << "CommandLineToArgvW failed" << std::endl;
+    PrintError(L"CommandLineToArgvW failed");
     return 1;
   }
   
