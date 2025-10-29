@@ -84,8 +84,8 @@ namespace system_tray {
   static std::string s_japanese;
   static std::string s_star_project;
   static std::string s_help_us;
-  static std::string s_doctor;
-  static std::string s_qiin;
+  static std::string s_developer_yundi339;
+  static std::string s_developer_qiin;
   static std::string s_reset_display_device_config;
   static std::string s_restart;
   static std::string s_quit;
@@ -105,8 +105,8 @@ namespace system_tray {
     s_japanese = system_tray_i18n::get_localized_string(system_tray_i18n::KEY_JAPANESE);
     s_star_project = system_tray_i18n::get_localized_string(system_tray_i18n::KEY_STAR_PROJECT);
     s_help_us = system_tray_i18n::get_localized_string(system_tray_i18n::KEY_HELP_US);
-    s_doctor = system_tray_i18n::get_localized_string(system_tray_i18n::KEY_DOCTOR);
-    s_qiin = system_tray_i18n::get_localized_string(system_tray_i18n::KEY_QIIN);
+    s_developer_yundi339 = system_tray_i18n::get_localized_string(system_tray_i18n::KEY_DEVELOPER_YUNDI339);
+    s_developer_qiin = system_tray_i18n::get_localized_string(system_tray_i18n::KEY_DEVELOPER_QIIN);
     s_reset_display_device_config = system_tray_i18n::get_localized_string(system_tray_i18n::KEY_RESET_DISPLAY_DEVICE_CONFIG);
     s_restart = system_tray_i18n::get_localized_string(system_tray_i18n::KEY_RESTART);
     s_quit = system_tray_i18n::get_localized_string(system_tray_i18n::KEY_QUIT);
@@ -128,8 +128,8 @@ namespace system_tray {
     tray_menus[6].submenu[2].text = s_japanese.c_str();
     tray_menus[8].text = s_star_project.c_str();
     tray_menus[9].text = s_help_us.c_str();
-    tray_menus[9].submenu[0].text = s_doctor.c_str();
-    tray_menus[9].submenu[1].text = s_qiin.c_str();
+    tray_menus[9].submenu[0].text = s_developer_yundi339.c_str();
+    tray_menus[9].submenu[1].text = s_developer_qiin.c_str();
   #ifdef _WIN32
     tray_menus[11].text = s_reset_display_device_config.c_str();
     tray_menus[12].text = s_restart.c_str();
@@ -263,7 +263,7 @@ namespace system_tray {
     open_url_in_default_browser("https://github.com/qiin2333/Sunshine-Foundation");
   };
 
-  auto tray_donate_doctor_cb = [](struct tray_menu *item) {
+  auto tray_donate_yundi339_cb = [](struct tray_menu *item) {
     open_url_in_default_browser("https://www.ifdian.net/a/Yundi339");
   };
 
@@ -660,8 +660,8 @@ namespace system_tray {
     { .text = "Help Us",
       .submenu =
         (struct tray_menu[]) {
-          { .text = "Doctor", .cb = tray_donate_doctor_cb },
-          { .text = "Qiin", .cb = tray_donate_qiin_cb },
+          { .text = "Developer: Yundi339", .cb = tray_donate_yundi339_cb },
+          { .text = "Developer: Qiin", .cb = tray_donate_qiin_cb },
           { .text = nullptr } } },
     { .text = "-" },
   #ifdef _WIN32
