@@ -794,9 +794,13 @@ namespace system_tray {
     static char msg[256];
     snprintf(msg, std::size(msg), msg_template.c_str(), app_name.c_str());
     
-    tray.notification_title = title.c_str();
-    tray.notification_text = msg;
-    tray.tooltip = msg;
+    // 转换为宽字符串用于 Windows 通知
+    static std::wstring wtitle = system_tray_i18n::utf8_to_wstring(title);
+    static std::wstring wmsg = system_tray_i18n::utf8_to_wstring(msg);
+    
+    tray.notification_title = (char*)wtitle.c_str();
+    tray.notification_text = (char*)wmsg.c_str();
+    tray.tooltip = (char*)wmsg.c_str();
     tray.notification_icon = TRAY_ICON_PLAYING;
     tray_update(&tray);
   }
@@ -820,10 +824,14 @@ namespace system_tray {
     static char msg[256];
     snprintf(msg, std::size(msg), msg_template.c_str(), app_name.c_str());
     
+    // 转换为宽字符串用于 Windows 通知
+    static std::wstring wtitle = system_tray_i18n::utf8_to_wstring(title);
+    static std::wstring wmsg = system_tray_i18n::utf8_to_wstring(msg);
+    
     tray.icon = TRAY_ICON_PAUSING;
-    tray.notification_title = title.c_str();
-    tray.notification_text = msg;
-    tray.tooltip = msg;
+    tray.notification_title = (char*)wtitle.c_str();
+    tray.notification_text = (char*)wmsg.c_str();
+    tray.tooltip = (char*)wmsg.c_str();
     tray.notification_icon = TRAY_ICON_PAUSING;
     tray_update(&tray);
   }
@@ -847,10 +855,14 @@ namespace system_tray {
     static char msg[256];
     snprintf(msg, std::size(msg), msg_template.c_str(), app_name.c_str());
     
+    // 转换为宽字符串用于 Windows 通知
+    static std::wstring wtitle = system_tray_i18n::utf8_to_wstring(title);
+    static std::wstring wmsg = system_tray_i18n::utf8_to_wstring(msg);
+    
     tray.icon = TRAY_ICON;
     tray.notification_icon = TRAY_ICON;
-    tray.notification_title = title.c_str();
-    tray.notification_text = msg;
+    tray.notification_title = (char*)wtitle.c_str();
+    tray.notification_text = (char*)wmsg.c_str();
     tray.tooltip = PROJECT_NAME;
     tray_update(&tray);
   }
@@ -875,10 +887,15 @@ namespace system_tray {
     static char title[256];
     snprintf(title, std::size(title), title_template.c_str(), pin_name.c_str());
     
-    tray.notification_title = title;
-    tray.notification_text = notification_text.c_str();
+    // 转换为宽字符串用于 Windows 通知
+    static std::wstring wtitle = system_tray_i18n::utf8_to_wstring(title);
+    static std::wstring wnotification_text = system_tray_i18n::utf8_to_wstring(notification_text);
+    static std::wstring wtooltip = system_tray_i18n::utf8_to_wstring(pin_name);
+    
+    tray.notification_title = (char*)wtitle.c_str();
+    tray.notification_text = (char*)wnotification_text.c_str();
     tray.notification_icon = TRAY_ICON_LOCKED;
-    tray.tooltip = pin_name.c_str();
+    tray.tooltip = (char*)wtooltip.c_str();
     tray.notification_cb = []() {
       launch_ui_with_path("/pin");
     };
