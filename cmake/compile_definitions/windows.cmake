@@ -2,13 +2,6 @@
 
 add_compile_definitions(SUNSHINE_PLATFORM="windows")
 
-# 设置字符编码为 UTF-8，确保中文字符正确编译
-if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
-    list(APPEND SUNSHINE_COMPILE_OPTIONS -finput-charset=UTF-8)
-    list(APPEND SUNSHINE_COMPILE_OPTIONS -fexec-charset=UTF-8)
-    list(APPEND SUNSHINE_COMPILE_OPTIONS -fwide-exec-charset=UTF-8)
-endif()
-
 enable_language(RC)
 set(CMAKE_RC_COMPILER windres)
 set(CMAKE_RC_FLAGS "${CMAKE_RC_FLAGS} --use-temp-file")
