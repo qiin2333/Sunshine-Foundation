@@ -450,6 +450,13 @@ namespace config {
     { 60, 90, 120, 144 },  // supported fps
   };
 
+  webhook_t webhook {
+    false,  // enabled
+    {},     // url
+    false,  // skip_ssl_verify
+    1000ms, // timeout
+  };
+
   input_t input {
     {
       { 0x10, 0xA0 },
@@ -481,6 +488,7 @@ namespace config {
 
   sunshine_t sunshine {
     "en",  // locale
+    "en",  // tray_locale (托盘菜单语言)
     2,  // min_log_level
     0,  // flags
     {},  // User file
@@ -492,6 +500,7 @@ namespace config {
     47989,  // Base port number
     "ipv4",  // Address family
     platf::appdata().string() + "/sunshine.log",  // log file
+    false,  // restore_log - 默认不恢复日志文件
     false,  // notify_pre_releases
     {},  // prep commands
   };
@@ -1030,6 +1039,11 @@ namespace config {
     // TODO: Android can possibly support this
     if (!fs::exists(stream.file_apps.c_str())) {
       fs::copy_file(SUNSHINE_ASSETS_DIR "/apps.json", stream.file_apps);
+      fs::permissions(
+        stream.file_apps,
+        fs::perms::owner_read | fs::perms::owner_write,
+        fs::perm_options::add
+      );
     }
 #endif
 
@@ -1236,6 +1250,17 @@ namespace config {
       config::sunshine.flags[config::flag::MDNS_BROADCAST].flip();
     }
 
+    bool_f(vars, "restore_log"s, sunshine.restore_log);
+
+    // Webhook configuration
+    bool_f(vars, "webhook_enabled"s, webhook.enabled);
+    string_f(vars, "webhook_url"s, webhook.url);
+    bool_f(vars, "webhook_skip_ssl_verify"s, webhook.skip_ssl_verify);
+    
+    int webhook_timeout = 1000;
+    int_between_f(vars, "webhook_timeout"s, webhook_timeout, { 100, 5000 });
+    webhook.timeout = std::chrono::milliseconds(webhook_timeout);
+
     string_restricted_f(vars, "locale", config::sunshine.locale, {
                                                                    "bg"sv,  // Bulgarian
                                                                    "cs"sv,  // Czech
@@ -1253,6 +1278,13 @@ namespace config {
                                                                    "tr"sv,  // Turkish
                                                                    "zh"sv,  // Chinese
                                                                    "zh_TW"sv,  // Chinese (Traditional)
+                                                                 });
+
+    // 托盘菜单语言设置
+    string_restricted_f(vars, "tray_locale", config::sunshine.tray_locale, {
+                                                                   "en"sv,  // English
+                                                                   "zh"sv,  // Chinese (Simplified)
+                                                                   "ja"sv,  // Japanese
                                                                  });
 
     std::string log_level_string;

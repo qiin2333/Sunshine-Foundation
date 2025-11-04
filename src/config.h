@@ -142,6 +142,13 @@ namespace config {
     std::vector<int> fps;
   };
 
+  struct webhook_t {
+    bool enabled;
+    std::string url;
+    bool skip_ssl_verify;
+    std::chrono::milliseconds timeout;
+  };
+
   struct input_t {
     std::unordered_map<int, int> keybindings;
 
@@ -191,6 +198,7 @@ namespace config {
   };
   struct sunshine_t {
     std::string locale;
+    std::string tray_locale;
     int min_log_level;
     std::bitset<flag::FLAG_SIZE> flags;
     std::string credentials_file;
@@ -211,6 +219,7 @@ namespace config {
     std::string address_family;
 
     std::string log_file;
+    bool restore_log;  // 是否恢复日志文件（true=恢复，false=覆盖）
     bool notify_pre_releases;
     std::vector<prep_cmd_t> prep_cmds;
   };
@@ -219,6 +228,7 @@ namespace config {
   extern audio_t audio;
   extern stream_t stream;
   extern nvhttp_t nvhttp;
+  extern webhook_t webhook;
   extern input_t input;
   extern sunshine_t sunshine;
 

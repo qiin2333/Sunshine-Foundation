@@ -1,8 +1,8 @@
 <template>
   <nav class="navbar navbar-light navbar-expand-lg navbar-background header">
     <div class="container-fluid">
-      <a class="navbar-brand" href="/" title="Sunshine">
-        <img src="/images/logo-sunshine-45.png" height="45" alt="Sunshine" />
+      <a class="navbar-brand brand-enhanced" href="/" title="这里不可以">
+        <img src="/images/logo-sunshine-45.png" height="50" alt="Sunshine-Foundation" class="brand-logo" />
       </a>
       <button
         class="navbar-toggler"
@@ -52,17 +52,22 @@
 import { onMounted, onUnmounted } from 'vue'
 import ThemeToggle from './ThemeToggle.vue'
 
-// 背景处理逻辑
-const loadBackground = () => {
-  const savedBg =
-    localStorage.getItem('customBackground') ??
-    'https://raw.gitmirror.com/qiin2333/qiin.github.io/assets/img/sunshine-bg0.webp'
-  if (savedBg) {
-    document.body.style.background = `url(${savedBg}) center/cover fixed no-repeat`
-  }
+const DEFAULT_BACKGROUND = 'https://raw.gitmirror.com/qiin2333/qiin.github.io/assets/img/sunshine-bg0.webp'
+const STORAGE_KEY = 'customBackground'
+
+/**
+ * 设置背景图片
+ * @param {string} imageUrl - 图片URL或base64
+ */
+const setBackground = (imageUrl) => {
+  document.body.style.background = `url(${imageUrl}) center/cover fixed no-repeat`
 }
 
-// 拖拽事件处理
+const loadBackground = () => {
+  const savedBg = localStorage.getItem(STORAGE_KEY) ?? DEFAULT_BACKGROUND
+  setBackground(savedBg)
+}
+
 const handleDragOver = (e) => {
   e.preventDefault()
   document.body.classList.add('dragover')
@@ -76,43 +81,59 @@ const handleDrop = (e) => {
   e.preventDefault()
   document.body.classList.remove('dragover')
 
-  const file = e.dataTransfer.files[0]
-  if (file?.type.startsWith('image/')) {
-    const reader = new FileReader()
-    reader.onload = (event) => {
-      const bg = `url(${event.target.result})`
-      document.body.style.background = `${bg} center/cover fixed no-repeat`
-      localStorage.setItem('customBackground', bg)
-    }
-    reader.readAsDataURL(file)
+  const file = e.dataTransfer?.files?.[0]
+  if (!file?.type.startsWith('image/')) return
+
+  const reader = new FileReader()
+  reader.onload = (event) => {
+    const imageData = event.target.result
+    setBackground(imageData)
+    localStorage.setItem(STORAGE_KEY, imageData)
   }
+  reader.readAsDataURL(file)
 }
 
-// 生命周期
-onMounted(() => {
-  loadBackground()
+const highlightCurrentRoute = () => {
+  const currentLink = document.querySelector(`a[href="${location.pathname}"]`)
+  currentLink?.classList.add('active')
+}
 
-  // 当前路由高亮
-  const el = document.querySelector(`a[href="${location.pathname}"]`)
-  if (el) el.classList.add('active')
-
-  // 添加事件监听
+const addDragListeners = () => {
   document.addEventListener('dragover', handleDragOver)
   document.addEventListener('dragleave', handleDragLeave)
   document.addEventListener('drop', handleDrop)
-})
+}
 
-onUnmounted(() => {
-  // 清理事件监听
+const removeDragListeners = () => {
   document.removeEventListener('dragover', handleDragOver)
   document.removeEventListener('dragleave', handleDragLeave)
   document.removeEventListener('drop', handleDrop)
+}
+
+onMounted(() => {
+  loadBackground()
+  highlightCurrentRoute()
+  addDragListeners()
+})
+
+onUnmounted(() => {
+  removeDragListeners()
 })
 </script>
 
 <style>
 .navbar-background {
-  background-color: #ffc400;
+  background-color: #f9d86bad;
+  backdrop-filter: blur(3px);
+}
+
+.brand-enhanced {
+  transition: all 0.3s ease;
+}
+
+.brand-enhanced:hover {
+  transform: translateY(-2px);
+  transform: scale(1.05) rotate(-5deg);
 }
 
 .header .nav-link {
