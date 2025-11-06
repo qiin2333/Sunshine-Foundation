@@ -122,8 +122,9 @@
         try {
           let config = await fetch('/api/config').then((r) => r.json())
           
-          // 检查是否是首次使用（没有配置显卡适配器）
-          const isFirstTime = !config.adapter_name || config.adapter_name === ''
+          // 检查是否是首次使用（adapter_name 配置项不存在，而不是为空）
+          // 注意：adapter_name 为空字符串表示自动模式，是有效的配置
+          const isFirstTime = !('adapter_name' in config)
           
           if (isFirstTime) {
             // 首次使用，显示设置向导

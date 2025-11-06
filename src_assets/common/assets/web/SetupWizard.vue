@@ -111,7 +111,7 @@
               <select id="adapterSelect" 
                       class="form-select form-select-large" 
                       v-model="selectedAdapter">
-                <option value="">{{ $t('setup.choose_adapter') }}</option>
+                <option value="auto">{{ $t('setup.auto_adapter') }}</option>
                 <option v-for="adapter in adapters" :key="adapter.name" :value="adapter.name">
                   {{ adapter.name }}
                 </option>
@@ -123,7 +123,9 @@
                   <i class="fas fa-info-circle"></i>
                   {{ $t('setup.adapter_info') }}
                 </h5>
-                <p><strong>{{ $t('setup.selected_adapter') }}:</strong> {{ selectedAdapter }}</p>
+                <p><strong>{{ $t('setup.selected_adapter') }}:</strong> 
+                  {{ selectedAdapter === 'auto' ? $t('setup.auto_adapter') : selectedAdapter }}
+                </p>
                 <p><strong>{{ $t('setup.selected_display') }}:</strong> 
                   {{ isVirtualDisplay ? $t('setup.virtual_display') : selectedDisplay }}
                 </p>
@@ -280,7 +282,7 @@ export default {
       currentStep: 1,
       selectedLocale: 'zh', // 默认中文
       selectedDisplay: null, // 选择的显示器（虚拟或物理）
-      selectedAdapter: '',
+      selectedAdapter: 'auto', // 默认自动选择显卡
       displayDevicePrep: 'ensure_only_display', // 默认选择：确保唯一显示器
       saveSuccess: false,
       saveError: null,
@@ -372,7 +374,8 @@ export default {
         const currentConfig = await fetch('/api/config').then(r => r.json())
         
         const config = {
-          adapter_name: this.selectedAdapter,
+          // 如果选择自动，则保存为空字符串，让系统自动处理
+          adapter_name: this.selectedAdapter === 'auto' ? '' : this.selectedAdapter,
         }
 
         // 保留已有的 locale 设置
