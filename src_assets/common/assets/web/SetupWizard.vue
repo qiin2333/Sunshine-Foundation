@@ -234,6 +234,13 @@
             <i class="fas fa-arrow-left"></i>
             {{ $t('setup.previous') }}
           </button>
+          <button class="btn btn-setup btn-setup-link" 
+                  @click="skipWizard" 
+                  v-if="currentStep < 5"
+                  :disabled="saving">
+            <i class="fas fa-times"></i>
+            {{ $t('setup.skip') }}
+          </button>
           <div v-else></div>
 
           <button class="btn btn-setup btn-setup-primary" 
@@ -373,8 +380,6 @@ export default {
         
         // 从完整配置中复制所有字段，避免覆盖其他配置
         const config = { ...currentConfig }
-        delete config.adapters
-        delete config.display_devices
 
         // 标记新手引导已完成
         config.setup_wizard_completed = true
@@ -428,6 +433,59 @@ export default {
       } catch (error) {
         console.error('Failed to save configuration:', error)
         this.saveError = `${this.$t('setup.save_error')}: ${error.message}`
+      } finally {
+        this.saving = false
+      }
+    },
+    async skipWizard() {
+      if (this.saving) return
+      
+      // 确认对话框
+      if (!confirm(this.$t('setup.skip_confirm'))) {
+        return
+      }
+
+      this.saving = true
+      this.saveError = null
+
+      try {
+        // 先获取当前完整配置，保留所有已有设置
+        const currentConfig = await fetch('/api/config').then(r => r.json())
+        
+        // 从完整配置中复制所有字段，避免覆盖其他配置
+        const config = { ...currentConfig }
+        // 标记新手引导已完成
+        config.setup_wizard_completed = true
+        console.log('跳过新手引导，保存配置:', config)
+        const response = await fetch('/api/config', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(config),
+        })
+
+        if (response.ok) {
+          // 记录跳过事件
+          trackEvents.userAction('setup_wizard_skipped', {
+            from_step: this.currentStep
+          })
+          
+          // 触发完成事件，让父组件知道设置向导已完成
+          this.$emit('setup-complete', config)
+          
+          // 重新加载页面以隐藏设置向导
+          window.location.reload()
+        } else {
+          const errorText = await response.text()
+          this.saveError = `${this.$t('setup.skip_error')}: ${errorText}`
+          
+          // 记录跳过失败
+          trackEvents.errorOccurred('setup_wizard_skip_failed', errorText)
+        }
+      } catch (error) {
+        console.error('Failed to skip wizard:', error)
+        this.saveError = `${this.$t('setup.skip_error')}: ${error.message}`
       } finally {
         this.saving = false
       }
