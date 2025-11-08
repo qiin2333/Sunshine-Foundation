@@ -421,7 +421,7 @@
     "state_inactive": "未激活",
     "state_unknown": "未知",
     "unknown_display": "未知显示器",
-    "choose_adapter": "-- 请选择显卡适配器 --",
+    "choose_adapter": "自动",
     "adapter_info": "配置摘要",
     "selected_adapter": "已选择的显卡",
     "stream_mode": "串流方式",

@@ -422,7 +422,7 @@
     "state_inactive": "Inactive",
     "state_unknown": "Unknown",
     "unknown_display": "Unknown Display",
-    "choose_adapter": "-- Please select a graphics adapter --",
+    "choose_adapter": "Auto",
     "adapter_info": "Configuration Summary",
     "selected_adapter": "Selected Adapter",
     "stream_mode": "Stream Mode",
