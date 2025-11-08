@@ -318,7 +318,7 @@ export default {
       } else if (this.currentStep === 2) {
         return this.selectedDisplay !== null
       } else if (this.currentStep === 3) {
-        return this.selectedAdapter !== ''
+        return this.selectedAdapter !== null
       } else if (this.currentStep === 4) {
         return this.displayDevicePrep !== null
       }
@@ -368,20 +368,26 @@ export default {
       this.saveError = null
 
       try {
-        // 先获取当前配置，保留已有的设置（如 locale）
+        // 先获取当前完整配置，保留所有已有设置
         const currentConfig = await fetch('/api/config').then(r => r.json())
         
-        const config = {
-          adapter_name: this.selectedAdapter,
-        }
+        // 从完整配置中复制所有字段，避免覆盖其他配置
+        const config = { ...currentConfig }
+        delete config.adapters
+        delete config.display_devices
 
-        // 标记引导流程已完成，避免重复进入
-        config.setup_completed = true
-
-        // 保留已有的 locale 设置
-        if (currentConfig.locale) {
+        // 标记新手引导已完成
+        config.setup_wizard_completed = true
+        
+        // 确保 locale 被保存（如果用户在步骤1选择了语言，或者已有配置中有 locale）
+        if (this.selectedLocale) {
+          config.locale = this.selectedLocale
+        } else if (currentConfig.locale) {
           config.locale = currentConfig.locale
         }
+        
+        // 设置 adapter_name
+        config.adapter_name = this.selectedAdapter || ''
 
         // 设置选择的显示器
         config.output_name = this.selectedDisplay
@@ -389,7 +395,7 @@ export default {
         // 添加显示器组合策略
         config.display_device_prep = this.displayDevicePrep
 
-        console.log('保存配置（包含 locale 和 display_device_prep）:', config)
+        console.log('保存配置:', config)
 
         const response = await fetch('/api/config', {
           method: 'POST',
