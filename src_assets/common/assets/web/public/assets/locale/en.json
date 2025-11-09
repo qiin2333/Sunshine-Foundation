@@ -447,6 +447,7 @@
     "android_client": "Android Client",
     "ios_client": "iOS Client",
     "skip": "Skip Setup Wizard",
+    "skip_confirm_title": "Skip Setup Wizard",
     "skip_confirm": "Are you sure you want to skip the setup wizard? You can configure these options later in the settings page.",
     "skip_error": "Failed to skip"
   },

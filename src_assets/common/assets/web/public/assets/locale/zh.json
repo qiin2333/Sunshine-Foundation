@@ -446,6 +446,7 @@
     "android_client": "安卓客户端",
     "ios_client": "iOS 客户端",
     "skip": "跳过新手引导",
+    "skip_confirm_title": "跳过新手引导",
     "skip_confirm": "确定要跳过新手引导吗？稍后可以在设置页面中配置这些选项。",
     "skip_error": "跳过失败"
   },

@@ -234,11 +234,12 @@
             <i class="fas fa-arrow-left"></i>
             {{ $t('setup.previous') }}
           </button>
-          <button class="btn btn-setup btn-setup-link" 
+          <button class="btn btn-setup btn-setup-skip" 
                   @click="skipWizard" 
                   v-if="currentStep < 5"
-                  :disabled="saving">
-            <i class="fas fa-times"></i>
+                  :disabled="saving"
+                  type="button">
+            <i class="fas fa-forward"></i>
             {{ $t('setup.skip') }}
           </button>
           <div v-else></div>
@@ -257,6 +258,21 @@
             {{ $t('setup.go_to_apps') }}
             <i class="fas fa-arrow-right"></i>
           </button>
+        </div>
+      </div>
+    </div>
+    <div id="skipWizardModal" class="modal">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5>{{ $t('setup.skip_confirm_title')}}</h5>
+          <span class="close" @click="closeSkipModal">&times;</span>
+        </div>
+        <div class="modal-body">
+          <p>{{ $t('setup.skip_confirm') }}</p>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" @click="closeSkipModal">{{ $t('_common.cancel') }}</button>
+          <button type="button" class="btn btn-warning" @click="confirmSkipWizard">{{ $t('setup.skip') }}</button>
         </div>
       </div>
     </div>
@@ -437,13 +453,33 @@ export default {
         this.saving = false
       }
     },
-    async skipWizard() {
+    skipWizard(event) {
+      if (event) {
+        event.preventDefault()
+        event.stopPropagation()
+      }
+      
       if (this.saving) return
       
-      // 确认对话框
-      if (!confirm(this.$t('setup.skip_confirm'))) {
-        return
+      this.showSkipModal()
+    },
+    showSkipModal() {
+      const modal = document.getElementById('skipWizardModal')
+      if (modal) {
+        modal.classList.add('show')
       }
+    },
+    closeSkipModal() {
+      const modal = document.getElementById('skipWizardModal')
+      if (modal) {
+        modal.classList.remove('show')
+      }
+    },
+    async confirmSkipWizard() {
+      // 关闭模态框
+      this.closeSkipModal()
+      
+      if (this.saving) return
 
       this.saving = true
       this.saveError = null
@@ -750,6 +786,24 @@ export default {
   color: var(--bs-body-color);
 }
 
+.btn-setup-secondary:hover:not(:disabled) {
+  background: var(--bs-tertiary-bg);
+  transform: translateY(-1px);
+}
+
+.btn-setup-skip {
+  background: transparent;
+  border: 1.5px solid rgba(102, 126, 234, 0.3);
+  color: rgba(102, 126, 234, 0.8);
+}
+
+.btn-setup-skip:hover:not(:disabled) {
+  background: rgba(102, 126, 234, 0.1);
+  border-color: rgba(102, 126, 234, 0.5);
+  color: rgba(102, 126, 234, 1);
+  transform: translateY(-1px);
+}
+
 .adapter-info {
   background: var(--bs-secondary-bg);
   padding: 0.8em;
@@ -859,6 +913,91 @@ export default {
 .my-3 {
   margin-top: 1rem;
   margin-bottom: 1rem;
+}
+
+/* 模态框样式 */
+.modal {
+  position: fixed;
+  z-index: 1000;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  overflow: auto;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  display: none;
+}
+
+.modal.show {
+  display: flex;
+}
+
+.modal-content {
+  background-color: #ffffff !important;
+  margin: auto;
+  padding: 20px;
+  border: 1px solid #ddd;
+  max-height: 500px;
+  max-width: 500px;
+  width: 70% !important;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  position: relative;
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.modal-header h5 {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 800;
+}
+
+.close {
+  color: #aaa;
+  font-size: 24px;
+  font-weight: bold;
+  cursor: pointer;
+  line-height: 1;
+  padding: 0 2px;
+  position: absolute;
+  right: 12px;
+  top: 8px;
+}
+
+.close:hover,
+.close:focus {
+  color: black;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.modal-body {
+  margin: 8px 0;
+  font-size: 0.95rem;
+  line-height: 1.4;
+}
+
+.modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 8px;
+  padding-top: 10px;
+  border-top: 1px solid #eee;
+}
+
+.modal-footer button {
+  padding: 4px 12px;
+  font-size: 0.9rem;
 }
 </style>
 
