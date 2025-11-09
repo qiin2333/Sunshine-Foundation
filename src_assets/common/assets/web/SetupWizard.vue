@@ -792,16 +792,18 @@ export default {
 }
 
 .btn-setup-skip {
-  background: transparent;
-  border: 1.5px solid rgba(102, 126, 234, 0.3);
-  color: rgba(102, 126, 234, 0.8);
+  background: rgba(255, 255, 255, 0.95);
+  border: 2px solid rgba(102, 126, 234, 0.7);
+  color: rgba(70, 90, 200, 1);
+  font-weight: 500;
 }
 
 .btn-setup-skip:hover:not(:disabled) {
-  background: rgba(102, 126, 234, 0.1);
-  border-color: rgba(102, 126, 234, 0.5);
-  color: rgba(102, 126, 234, 1);
+  background: rgba(255, 255, 255, 1);
+  border-color: rgba(102, 126, 234, 0.9);
+  color: rgba(50, 70, 180, 1);
   transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
 }
 
 .adapter-info {
