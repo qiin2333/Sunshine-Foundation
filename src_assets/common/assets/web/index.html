@@ -121,11 +121,9 @@
 
         try {
           let config = await fetch('/api/config').then((r) => r.json())
-          
-          // 检查是否是首次使用（没有配置显卡适配器）
-          const isFirstTime = !config.adapter_name || config.adapter_name === ''
-          
-          if (isFirstTime) {
+          // 检查是否是首次使用
+          const isFirstTime = config.setup_wizard_completed == true || config.setup_wizard_completed == 'true'
+          if (!isFirstTime) {
             // 首次使用，显示设置向导
             console.log('首次使用检测：显示设置向导')
             this.showSetupWizard = true
