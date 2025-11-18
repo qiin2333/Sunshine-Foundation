@@ -1686,7 +1686,6 @@ namespace platf::dxgi {
 
     CURSORINFO pt;
     pt.cbSize = sizeof(CURSORINFO);
-    GetCursorInfo(&pt);
 
     // Check for display configuration change
     auto capture_status = dup.next_frame(timeout, (amf::AMFData **) &output);
@@ -1750,9 +1749,13 @@ namespace platf::dxgi {
       texture_lock_helper lock_helper(d3d_img->capture_mutex.get());
       if (lock_helper.lock()) {
         device_ctx->CopyResource(d3d_img->capture_texture.get(), src.get());
-        if (pt.flags == CURSOR_SHOWING) {
-          blend_cursor(*d3d_img);
+        if (config::input.amf_draw_mouse_cursor) {
+          GetCursorInfo(&pt);
+          if (pt.flags == CURSOR_SHOWING) {
+            blend_cursor(*d3d_img);
+          }
         }
+      
       }
       else {
         return capture_e::error;
