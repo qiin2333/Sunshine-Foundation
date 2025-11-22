@@ -2481,7 +2481,20 @@ namespace stream {
         info.width = session_p->config.monitor.width;
         info.height = session_p->config.monitor.height;
         info.fps = session_p->config.monitor.framerate;
-        info.bitrate = session_p->config.monitor.bitrate;  // Current bitrate in Kbps
+
+        // Convert encoding bitrate to total bitrate (including FEC overhead)
+        // The stored bitrate is the encoding bitrate, which was adjusted for FEC.
+        // To get the total bitrate (what the user configured), we need to reverse this adjustment.
+        int encoding_bitrate = session_p->config.monitor.bitrate;
+        int fec_percentage = config::stream.fec_percentage;
+        if (fec_percentage > 0 && fec_percentage <= 80) {
+          // Reverse the adjustment: total_bitrate = encoding_bitrate * 100 / (100 - fec_percentage)
+          info.bitrate = (int) (encoding_bitrate * 100.f / (100 - fec_percentage));
+        }
+        else {
+          // If FEC percentage is 0 or > 80%, encoding bitrate equals total bitrate
+          info.bitrate = encoding_bitrate;
+        }
 
         // Get audio and other settings
         info.host_audio = session_p->config.audio.flags[audio::config_t::HOST_AUDIO];
