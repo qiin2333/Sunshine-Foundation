@@ -156,7 +156,16 @@ onMounted(async () => {
   trackEvents.pageView('home')
 
   try {
-    const config = await fetch('/api/config').then((r) => r.json())
+    const response = await fetch('/api/config')
+    // 检查响应内容类型，确保是 JSON
+    const contentType = response.headers.get('content-type')
+    if (!contentType || !contentType.includes('application/json')) {
+      // 在预览模式下，API 不可用是正常的
+      console.warn('API not available in preview mode, skipping initialization')
+      return
+    }
+    
+    const config = await response.json()
     
     // 上报显卡信息
     reportGPUInfo(config)
@@ -177,8 +186,13 @@ onMounted(async () => {
       document.title += ` Ver ${version.value.version}`
     }
   } catch (e) {
-    console.error('Failed to initialize:', e)
-    trackEvents.errorOccurred('home_initialization', e.message)
+    // 在预览模式下，API 不可用是正常的，只记录警告
+    if (e?.message?.includes('JSON') || e?.message?.includes('<!DOCTYPE')) {
+      console.warn('API not available in preview mode:', e.message)
+    } else {
+      console.error('Failed to initialize:', e)
+      trackEvents.errorOccurred('home_initialization', e.message)
+    }
   }
 })
 </script>
