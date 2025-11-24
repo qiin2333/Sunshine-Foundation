@@ -249,6 +249,12 @@ namespace audio {
     return control_shared.ref();
   }
 
+  // 检查音频上下文是否有活动的引用，不触发构造
+  bool has_audio_ctx_ref() {
+    static auto control_shared {safe::make_shared<audio_ctx_t>(start_audio_control, stop_audio_control)};
+    return control_shared.has_ref();
+  }
+
   bool is_audio_ctx_sink_available(const audio_ctx_t &ctx) {
     if (!ctx.control) {
       return false;
@@ -324,6 +330,13 @@ namespace audio {
   }
 
   int init_mic_redirect_device() {
+    // 关键修复：先检查是否有活动的引用，避免触发 start_audio_control
+    // 如果没有活动的引用，说明音频上下文没有启动，不应该初始化麦克风设备
+    if (!has_audio_ctx_ref()) {
+      BOOST_LOG(debug) << "Audio context not active, skipping microphone device initialization";
+      return -1;
+    }
+    
     auto ref = get_audio_ctx_ref();
     if (!ref || !ref->control) {
       BOOST_LOG(error) << "Audio context not available for microphone data writing";
@@ -333,6 +346,13 @@ namespace audio {
   }
 
   void release_mic_redirect_device() {
+    // 关键修复：先检查是否有活动的引用，避免触发 start_audio_control
+    // 如果没有活动的引用，说明音频上下文没有启动，不需要释放
+    if (!has_audio_ctx_ref()) {
+      BOOST_LOG(debug) << "Audio context not active, skipping microphone device release";
+      return;
+    }
+    
     auto ref = get_audio_ctx_ref();
     if (!ref || !ref->control) {
       BOOST_LOG(error) << "Audio context not available for microphone data writing";
@@ -342,6 +362,13 @@ namespace audio {
   }
 
   int write_mic_data(const std::uint8_t *data, size_t size) {
+    // 关键修复：先检查是否有活动的引用，避免触发 start_audio_control
+    // 如果没有活动的引用，说明音频上下文没有启动，不应该写入数据
+    if (!has_audio_ctx_ref()) {
+      BOOST_LOG(debug) << "Audio context not active, skipping microphone data write";
+      return -1;
+    }
+    
     auto ref = get_audio_ctx_ref();
     if (!ref || !ref->control) {
       BOOST_LOG(error) << "Audio context not available for microphone data writing";
