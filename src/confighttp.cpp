@@ -1098,12 +1098,17 @@ namespace confighttp {
     print_req(request);
 
     // 限制只允许 localhost 访问（增强安全性）
-    auto client_ip = request->remote_endpoint().address();
-    if (!client_ip.is_loopback() && client_ip.to_string() != "127.0.0.1" && client_ip.to_string() != "::1") {
+    auto client_address = request->remote_endpoint().address();
+    auto address = net::addr_to_normalized_string(client_address);
+    auto ip_type = net::from_address(address);
+    
+    if (ip_type != net::PC) {
       json error_json;
       error_json["success"] = false;
       error_json["status_code"] = 403;
-      error_json["status_message"] = "Access denied. Only localhost requests are allowed.";
+      std::ostringstream msg_stream;
+      msg_stream << "Access denied. Only localhost requests are allowed. Client IP: " << client_address.to_string();
+      error_json["status_message"] = msg_stream.str();
       
       response->write(error_json.dump());
       response->close_connection_after_response = true;
@@ -1168,12 +1173,17 @@ namespace confighttp {
     print_req(request);
 
     // 限制只允许 localhost 访问
-    auto client_ip = request->remote_endpoint().address();
-    if (!client_ip.is_loopback() && client_ip.to_string() != "127.0.0.1" && client_ip.to_string() != "::1") {
+    auto client_address = request->remote_endpoint().address();
+    auto address = net::addr_to_normalized_string(client_address);
+    auto ip_type = net::from_address(address);
+    
+    if (ip_type != net::PC) {
       json error_json;
       error_json["success"] = false;
       error_json["status_code"] = 403;
-      error_json["status_message"] = "Access denied. Only localhost requests are allowed.";
+      std::ostringstream msg_stream;
+      msg_stream << "Access denied. Only localhost requests are allowed. Client IP: " << client_address.to_string();
+      error_json["status_message"] = msg_stream.str();
       
       response->write(error_json.dump());
       response->close_connection_after_response = true;
