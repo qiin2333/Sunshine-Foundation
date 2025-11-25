@@ -4,9 +4,13 @@
 
 #include <boost/filesystem.hpp>
 #include <boost/process.hpp>
+#include <boost/uuid/name_generator_sha1.hpp>
+#include <boost/uuid/uuid.hpp>
+#include <boost/uuid/uuid_io.hpp>
 #include <filesystem>
 #include <sstream>
 #include <thread>
+#include <vector>
 
 #include "src/confighttp.h"
 #include "src/globals.h"
@@ -160,16 +164,56 @@ namespace display_device {
     }
 
     bool
-    create_vdd_monitor() {
+    create_vdd_monitor(const std::string &client_name) {
       std::string response;
+
+      // 构建命令：驱动期望格式为 "CREATEMONITOR {GUID}" 或 "CREATEMONITOR {GUID1} {GUID2} ..."
+      std::wstring command = L"CREATEMONITOR";
+
+      if (!client_name.empty()) {
+        // 将client_name转换为GUID格式（使用SHA1 name generator确保相同名称生成相同GUID）
+        static constexpr boost::uuids::uuid ns_id {};  // null namespace
+        const auto boost_uuid = boost::uuids::name_generator_sha1 { ns_id }(
+          reinterpret_cast<const unsigned char *>(client_name.c_str()),
+          client_name.size());
+
+        // 转换为带大括号的GUID字符串格式: {xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx}
+        std::string guid_str = "{" + boost::uuids::to_string(boost_uuid) + "}";
+
+        // 将GUID字符串转换为宽字符并添加到命令中（使用空格分隔）
+        int size_needed = MultiByteToWideChar(CP_UTF8, 0, guid_str.c_str(), -1, NULL, 0);
+        if (size_needed > 0) {
+          std::vector<wchar_t> guid_wide(size_needed);
+          MultiByteToWideChar(CP_UTF8, 0, guid_str.c_str(), -1, guid_wide.data(), size_needed);
+          command += L" ";
+          command += guid_wide.data();
+
+          BOOST_LOG(info) << "创建虚拟显示器，客户端名称: " << client_name << ", GUID: " << guid_str;
+
+          // 尝试发送带GUID的命令
+          if (execute_pipe_command(kVddPipeName, command.c_str(), &response)) {
+#if defined SUNSHINE_TRAY && SUNSHINE_TRAY >= 1
+            system_tray::update_tray_vmonitor_checked(1);
+#endif
+            BOOST_LOG(info) << "创建虚拟显示器完成（使用GUID），响应: " << response;
+            return true;
+          }
+
+          // 如果带GUID的命令失败，可能是旧版驱动不支持，尝试降级为不带GUID的命令
+          BOOST_LOG(warning) << "带GUID的命令失败，可能是旧版驱动不支持，尝试降级为不带GUID的命令";
+        }
+      }
+
+      // 降级方案：发送不带GUID的命令（兼容旧版驱动或client_name为空）
       if (!execute_pipe_command(kVddPipeName, L"CREATEMONITOR", &response)) {
-        BOOST_LOG(error) << "创建虚拟显示器失败";
+        BOOST_LOG(error) << "创建虚拟显示器失败（包括降级方案）";
         return false;
       }
+
 #if defined SUNSHINE_TRAY && SUNSHINE_TRAY >= 1
       system_tray::update_tray_vmonitor_checked(1);
 #endif
-      BOOST_LOG(info) << "创建虚拟显示器完成，响应: " << response;
+      BOOST_LOG(info) << "创建虚拟显示器完成" << (!client_name.empty() ? "（使用降级方案，旧版驱动）" : "") << "，响应: " << response;
       return true;
     }
 

@@ -12,6 +12,10 @@
 #include <thread>
 #include <windows.h>
 
+#include <boost/uuid/name_generator_sha1.hpp>
+#include <boost/uuid/uuid.hpp>
+#include <boost/uuid/uuid_io.hpp>
+
 #include "parsed_config.h"
 #include "src/config.h"
 #include "src/display_device/display_device.h"
@@ -51,8 +55,9 @@ namespace display_device {
     reload_driver();
 
     // 创建VDD监视器
+    // @param client_name 客户端名称，用于驱动识别客户端并启动对应的显示器
     bool
-    create_vdd_monitor();
+    create_vdd_monitor(const std::string &client_name = "");
 
     // 销毁VDD监视器
     bool
