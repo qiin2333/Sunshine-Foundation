@@ -188,8 +188,8 @@ namespace display_device {
   }
 
   bool
-  session_t::create_vdd_monitor() {
-    return vdd_utils::create_vdd_monitor();
+  session_t::create_vdd_monitor(const std::string &client_name) {
+    return vdd_utils::create_vdd_monitor(client_name);
   }
 
   bool
@@ -259,7 +259,7 @@ namespace display_device {
     auto device_zako = display_device::find_device_by_friendlyname(ZAKO_NAME);
     if (device_zako.empty()) {
       BOOST_LOG(info) << "没有找到VDD设备，开始创建虚拟显示器...";
-      create_vdd_monitor();
+      create_vdd_monitor(session.client_name);
       std::this_thread::sleep_for(233ms);
     }
 
@@ -282,7 +282,7 @@ namespace display_device {
       for (int retry = 1; retry <= 3; ++retry) {
         BOOST_LOG(info) << "正在执行第" << retry << "次VDD恢复尝试...";
 
-        if (!create_vdd_monitor()) {
+        if (!create_vdd_monitor(session.client_name)) {
           BOOST_LOG(error) << "创建虚拟显示器失败，尝试" << retry << "/3";
           if (retry < 3) {
             std::this_thread::sleep_for(std::chrono::seconds(1 << retry));
