@@ -1992,6 +1992,33 @@ namespace video {
   }
 
   /**
+   * @brief Get NTSC framerate for a given integer framerate.
+   * @details NTSC framerates are slightly lower than integer framerates:
+   *          120 -> 119.88 (120000/1001)
+   *          60 -> 59.94 (60000/1001)
+   *          30 -> 29.97 (30000/1001)
+   *          24 -> 23.976 (24000/1001)
+   * @param fps Integer framerate
+   * @param num Output numerator
+   * @param den Output denominator
+   * @return true if NTSC framerate is available for this fps
+   */
+  bool
+  get_ntsc_framerate(int fps, int &num, int &den) {
+    // NTSC framerate pattern: fps * 1000 / 1001
+    // Only support common framerates that have NTSC equivalents
+    static const int supported_fps[] = { 24, 30, 48, 60, 120, 144, 240 };
+    for (int supported : supported_fps) {
+      if (fps == supported) {
+        num = fps * 1000;
+        den = 1001;
+        return true;
+      }
+    }
+    return false;
+  }
+
+  /**
    * @brief Create encode session with NTSC framerate fallback.
    * @details If the initial framerate fails, try NTSC framerate (e.g., 120 -> 119.88fps).
    * @param disp Display device
@@ -2630,76 +2657,6 @@ namespace video {
     VUI_PARAMS = 0x01,  ///< VUI parameters
   };
 
-  /**
-   * @brief Get NTSC framerate for a given integer framerate.
-   * @details NTSC framerates are slightly lower than integer framerates:
-   *          120 -> 119.88 (120000/1001)
-   *          60 -> 59.94 (60000/1001)
-   *          30 -> 29.97 (30000/1001)
-   *          24 -> 23.976 (24000/1001)
-   * @param fps Integer framerate
-   * @param num Output numerator
-   * @param den Output denominator
-   * @return true if NTSC framerate is available for this fps
-   */
-  bool
-  get_ntsc_framerate(int fps, int &num, int &den) {
-    // NTSC framerate pattern: fps * 1000 / 1001
-    // Only support common framerates that have NTSC equivalents
-    static const int supported_fps[] = { 24, 30, 48, 60, 120, 144, 240 };
-    for (int supported : supported_fps) {
-      if (fps == supported) {
-        num = fps * 1000;
-        den = 1001;
-        return true;
-      }
-    }
-    return false;
-  }
-
-  /**
-   * @brief Validate encoder configuration, with optional NTSC framerate fallback.
-   * @details If the integer framerate fails, try NTSC framerate (e.g., 120 -> 119.88fps).
-   * @param disp Display device
-   * @param encoder Encoder to test
-   * @param config Configuration to test
-   * @param try_ntsc_fallback Whether to try NTSC framerate if integer framerate fails
-   * @return Validation flags on success, -1 on failure
-   */
-  int
-  validate_config_with_fallback(std::shared_ptr<platf::display_t> disp, const encoder_t &encoder, config_t &config, bool try_ntsc_fallback = true) {
-    // First try with the original framerate
-    auto result = validate_config(disp, encoder, config);
-    if (result >= 0) {
-      return result;
-    }
-
-    // If failed and NTSC fallback is enabled, try NTSC framerate
-    if (try_ntsc_fallback) {
-      int ntsc_num, ntsc_den;
-      if (get_ntsc_framerate(config.framerate, ntsc_num, ntsc_den)) {
-        BOOST_LOG(info) << "Integer framerate " << config.framerate << "fps failed, trying NTSC framerate "
-                        << ntsc_num << "/" << ntsc_den << " (" << (double) ntsc_num / ntsc_den << "fps)";
-
-        config.frameRateNum = ntsc_num;
-        config.frameRateDen = ntsc_den;
-
-        result = validate_config(disp, encoder, config);
-        if (result >= 0) {
-          BOOST_LOG(info) << "NTSC framerate " << (double) ntsc_num / ntsc_den << "fps succeeded";
-          return result;
-        }
-
-        // Reset to integer framerate if NTSC also failed
-        config.frameRateNum = 0;
-        config.frameRateDen = 1;
-        BOOST_LOG(warning) << "NTSC framerate fallback also failed";
-      }
-    }
-
-    return -1;
-  }
-
   int
   validate_config(std::shared_ptr<platf::display_t> disp, const encoder_t &encoder, const config_t &config) {
     auto encode_device = make_encode_device(*disp, encoder, config);
@@ -2752,6 +2709,49 @@ namespace video {
     }
 
     return flag;
+  }
+
+  /**
+   * @brief Validate encoder configuration, with optional NTSC framerate fallback.
+   * @details If the integer framerate fails, try NTSC framerate (e.g., 120 -> 119.88fps).
+   * @param disp Display device
+   * @param encoder Encoder to test
+   * @param config Configuration to test
+   * @param try_ntsc_fallback Whether to try NTSC framerate if integer framerate fails
+   * @return Validation flags on success, -1 on failure
+   */
+  int
+  validate_config_with_fallback(std::shared_ptr<platf::display_t> disp, const encoder_t &encoder, config_t &config, bool try_ntsc_fallback = true) {
+    // First try with the original framerate
+    auto result = validate_config(disp, encoder, config);
+    if (result >= 0) {
+      return result;
+    }
+
+    // If failed and NTSC fallback is enabled, try NTSC framerate
+    if (try_ntsc_fallback) {
+      int ntsc_num, ntsc_den;
+      if (get_ntsc_framerate(config.framerate, ntsc_num, ntsc_den)) {
+        BOOST_LOG(info) << "Integer framerate " << config.framerate << "fps failed, trying NTSC framerate "
+                        << ntsc_num << "/" << ntsc_den << " (" << (double) ntsc_num / ntsc_den << "fps)";
+
+        config.frameRateNum = ntsc_num;
+        config.frameRateDen = ntsc_den;
+
+        result = validate_config(disp, encoder, config);
+        if (result >= 0) {
+          BOOST_LOG(info) << "NTSC framerate " << (double) ntsc_num / ntsc_den << "fps succeeded";
+          return result;
+        }
+
+        // Reset to integer framerate if NTSC also failed
+        config.frameRateNum = 0;
+        config.frameRateDen = 1;
+        BOOST_LOG(warning) << "NTSC framerate fallback also failed";
+      }
+    }
+
+    return -1;
   }
 
   bool
