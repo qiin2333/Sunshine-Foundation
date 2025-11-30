@@ -69,6 +69,20 @@ namespace video {
     int chromaSamplingType;  // 0 - 4:2:0, 1 - 4:4:4
 
     int enableIntraRefresh;  // 0 - disabled, 1 - enabled
+
+    // NTSC framerate support: use frameRateNum/frameRateDen for precise framerate
+    // e.g., 120000/1001 = 119.88fps (NTSC), 60000/1001 = 59.94fps
+    // When frameRateDen is 0 or 1, use integer framerate
+    int frameRateNum = 0;  // Framerate numerator (0 = use integer framerate)
+    int frameRateDen = 1;  // Framerate denominator
+
+    // Helper to get effective framerate as double
+    double get_effective_framerate() const {
+      if (frameRateNum > 0 && frameRateDen > 0) {
+        return static_cast<double>(frameRateNum) / frameRateDen;
+      }
+      return static_cast<double>(framerate);
+    }
   };
 
   platf::mem_type_e

@@ -5,6 +5,7 @@
 // standard includes
 #include <atomic>
 #include <bitset>
+#include <functional>
 #include <list>
 #include <thread>
 
@@ -1631,8 +1632,18 @@ namespace video {
       ctx.reset(avcodec_alloc_context3(codec));
       ctx->width = config.width;
       ctx->height = config.height;
-      ctx->time_base = AVRational { 1, config.framerate };
-      ctx->framerate = AVRational { config.framerate, 1 };
+
+      // Use fractional framerate if available (for NTSC support)
+      if (config.frameRateNum > 0 && config.frameRateDen > 0) {
+        ctx->time_base = AVRational { config.frameRateDen, config.frameRateNum };
+        ctx->framerate = AVRational { config.frameRateNum, config.frameRateDen };
+        BOOST_LOG(debug) << "Using fractional framerate: " << config.frameRateNum << "/" << config.frameRateDen
+                         << " (" << config.get_effective_framerate() << "fps)";
+      }
+      else {
+        ctx->time_base = AVRational { 1, config.framerate };
+        ctx->framerate = AVRational { config.framerate, 1 };
+      }
 
       switch (config.videoFormat) {
         case 0:
@@ -1833,15 +1844,18 @@ namespace video {
       }
 
       if (!(encoder.flags & NO_RC_BUF_LIMIT)) {
+        // Use effective framerate for VBV buffer calculation (supports NTSC fractional framerates)
+        double effective_fps = config.get_effective_framerate();
+
         if (!hardware && (ctx->slices > 1 || config.videoFormat == 1)) {
           // Use a larger rc_buffer_size for software encoding when slices are enabled,
           // because libx264 can severely degrade quality if the buffer is too small.
           // libx265 encounters this issue more frequently, so always scale the
           // buffer by 1.5x for software HEVC encoding.
-          ctx->rc_buffer_size = bitrate / ((config.framerate * 10) / 15);
+          ctx->rc_buffer_size = static_cast<int>(bitrate / (effective_fps * 10 / 15));
         }
         else {
-          ctx->rc_buffer_size = bitrate / config.framerate;
+          ctx->rc_buffer_size = static_cast<int>(bitrate / effective_fps);
 
 #ifndef __APPLE__
           if (encoder.name == "nvenc" && config::video.nv_legacy.vbv_percentage_increase > 0) {
@@ -1972,6 +1986,72 @@ namespace video {
     else if (dynamic_cast<platf::nvenc_encode_device_t *>(encode_device.get())) {
       auto nvenc_encode_device = boost::dynamic_pointer_cast<platf::nvenc_encode_device_t>(std::move(encode_device));
       return make_nvenc_encode_session(config, std::move(nvenc_encode_device));
+    }
+
+    return nullptr;
+  }
+
+  /**
+   * @brief Create encode session with NTSC framerate fallback.
+   * @details If the initial framerate fails, try NTSC framerate (e.g., 120 -> 119.88fps).
+   * @param disp Display device
+   * @param encoder Encoder to use
+   * @param config Configuration (may be modified if NTSC fallback is used)
+   * @param width Frame width
+   * @param height Frame height
+   * @param make_encode_device_func Function to create encode device
+   * @return Encode session or nullptr on failure
+   */
+  std::unique_ptr<encode_session_t>
+  make_encode_session_with_ntsc_fallback(
+    platf::display_t *disp,
+    const encoder_t &encoder,
+    config_t &config,
+    int width,
+    int height,
+    std::function<std::unique_ptr<platf::encode_device_t>()> make_encode_device_func) {
+    // First try with original framerate
+    auto encode_device = make_encode_device_func();
+    if (!encode_device) {
+      return nullptr;
+    }
+
+    auto session = make_encode_session(disp, encoder, config, width, height, std::move(encode_device));
+    if (session) {
+      return session;
+    }
+
+    // If failed, try NTSC framerate fallback
+    int ntsc_num, ntsc_den;
+    if (get_ntsc_framerate(config.framerate, ntsc_num, ntsc_den)) {
+      BOOST_LOG(info) << "Encoder initialization failed at " << config.framerate << "fps, "
+                      << "trying NTSC framerate " << ntsc_num << "/" << ntsc_den
+                      << " (" << (double) ntsc_num / ntsc_den << "fps)";
+
+      config.frameRateNum = ntsc_num;
+      config.frameRateDen = ntsc_den;
+
+      // Create new encode device with NTSC framerate
+      encode_device = make_encode_device_func();
+      if (!encode_device) {
+        BOOST_LOG(warning) << "Failed to create encode device with NTSC framerate";
+        // Reset to integer framerate
+        config.frameRateNum = 0;
+        config.frameRateDen = 1;
+        return nullptr;
+      }
+
+      session = make_encode_session(disp, encoder, config, width, height, std::move(encode_device));
+      if (session) {
+        BOOST_LOG(info) << "Successfully initialized encoder with NTSC framerate "
+                        << (double) ntsc_num / ntsc_den << "fps";
+        return session;
+      }
+
+      // Reset to integer framerate if NTSC also failed
+      config.frameRateNum = 0;
+      config.frameRateDen = 1;
+      BOOST_LOG(warning) << "NTSC framerate fallback also failed";
     }
 
     return nullptr;
@@ -2207,13 +2287,25 @@ namespace video {
 
     encode_session.ctx = &ctx;
 
+    // absolute mouse coordinates require that the dimensions of the screen are known
+    ctx.touch_port_events->raise(make_port(disp, ctx.config));
+
+    // Create encode device with NTSC framerate fallback support
+    auto make_encode_device_func = [&]() {
+      return make_encode_device(*disp, encoder, ctx.config);
+    };
+
+    auto session = make_encode_session_with_ntsc_fallback(
+      disp, encoder, ctx.config, img.width, img.height, make_encode_device_func);
+    if (!session) {
+      return std::nullopt;
+    }
+
+    // Get encode device colorspace for HDR metadata (need to create a temporary device)
     auto encode_device = make_encode_device(*disp, encoder, ctx.config);
     if (!encode_device) {
       return std::nullopt;
     }
-
-    // absolute mouse coordinates require that the dimensions of the screen are known
-    ctx.touch_port_events->raise(make_port(disp, ctx.config));
 
     // Update client with our current HDR display state
     hdr_info_t hdr_info = std::make_unique<hdr_info_raw_t>(false);
@@ -2226,11 +2318,6 @@ namespace video {
       }
     }
     ctx.hdr_events->raise(std::move(hdr_info));
-
-    auto session = make_encode_session(disp, encoder, ctx.config, img.width, img.height, std::move(encode_device));
-    if (!session) {
-      return std::nullopt;
-    }
 
     // Load the initial image to prepare for encoding
     if (session->convert(img)) {
@@ -2542,6 +2629,76 @@ namespace video {
   enum validate_flag_e {
     VUI_PARAMS = 0x01,  ///< VUI parameters
   };
+
+  /**
+   * @brief Get NTSC framerate for a given integer framerate.
+   * @details NTSC framerates are slightly lower than integer framerates:
+   *          120 -> 119.88 (120000/1001)
+   *          60 -> 59.94 (60000/1001)
+   *          30 -> 29.97 (30000/1001)
+   *          24 -> 23.976 (24000/1001)
+   * @param fps Integer framerate
+   * @param num Output numerator
+   * @param den Output denominator
+   * @return true if NTSC framerate is available for this fps
+   */
+  bool
+  get_ntsc_framerate(int fps, int &num, int &den) {
+    // NTSC framerate pattern: fps * 1000 / 1001
+    // Only support common framerates that have NTSC equivalents
+    static const int supported_fps[] = { 24, 30, 48, 60, 120, 144, 240 };
+    for (int supported : supported_fps) {
+      if (fps == supported) {
+        num = fps * 1000;
+        den = 1001;
+        return true;
+      }
+    }
+    return false;
+  }
+
+  /**
+   * @brief Validate encoder configuration, with optional NTSC framerate fallback.
+   * @details If the integer framerate fails, try NTSC framerate (e.g., 120 -> 119.88fps).
+   * @param disp Display device
+   * @param encoder Encoder to test
+   * @param config Configuration to test
+   * @param try_ntsc_fallback Whether to try NTSC framerate if integer framerate fails
+   * @return Validation flags on success, -1 on failure
+   */
+  int
+  validate_config_with_fallback(std::shared_ptr<platf::display_t> disp, const encoder_t &encoder, config_t &config, bool try_ntsc_fallback = true) {
+    // First try with the original framerate
+    auto result = validate_config(disp, encoder, config);
+    if (result >= 0) {
+      return result;
+    }
+
+    // If failed and NTSC fallback is enabled, try NTSC framerate
+    if (try_ntsc_fallback) {
+      int ntsc_num, ntsc_den;
+      if (get_ntsc_framerate(config.framerate, ntsc_num, ntsc_den)) {
+        BOOST_LOG(info) << "Integer framerate " << config.framerate << "fps failed, trying NTSC framerate "
+                        << ntsc_num << "/" << ntsc_den << " (" << (double) ntsc_num / ntsc_den << "fps)";
+
+        config.frameRateNum = ntsc_num;
+        config.frameRateDen = ntsc_den;
+
+        result = validate_config(disp, encoder, config);
+        if (result >= 0) {
+          BOOST_LOG(info) << "NTSC framerate " << (double) ntsc_num / ntsc_den << "fps succeeded";
+          return result;
+        }
+
+        // Reset to integer framerate if NTSC also failed
+        config.frameRateNum = 0;
+        config.frameRateDen = 1;
+        BOOST_LOG(warning) << "NTSC framerate fallback also failed";
+      }
+    }
+
+    return -1;
+  }
 
   int
   validate_config(std::shared_ptr<platf::display_t> disp, const encoder_t &encoder, const config_t &config) {
