@@ -218,7 +218,7 @@ namespace system_tray {
       CloseHandle(snapshot);
     }
   #else
-    // For non-Windows platforms, this is a no-op
+    // 对于非 Windows 平台，这是空操作
     BOOST_LOG(debug) << "GUI process termination not implemented for this platform"sv;
   #endif
   };
@@ -241,13 +241,13 @@ namespace system_tray {
       // First, terminate sunshine-gui.exe if it's running
       terminate_gui_processes();
 
-      // Stop the Windows service by sending special exit code
-      // This will terminate both the GUI program and the service
+      // 通过发送特殊退出代码停止 Windows 服务
+      // 这将终止 GUI 程序和服务
       lifetime::exit_sunshine(ERROR_SHUTDOWN_IN_PROGRESS, true);
       return;
     }
   #else
-    // For non-Windows platforms, just exit normally
+    // 对于非 Windows 平台，正常退出
     lifetime::exit_sunshine(0, true);
   #endif
   };
@@ -560,7 +560,6 @@ namespace system_tray {
       // 更新或添加 tray_locale 配置项
       vars["tray_locale"] = locale;
       // 同时更新 web UI 的 locale 设置，使两者保持同步
-      // Also update web UI locale setting to keep them in sync
       vars["locale"] = locale;
       // 更新内存中的配置
       config::sunshine.locale = locale;
@@ -646,7 +645,6 @@ namespace system_tray {
   };
 
   // 菜单数组定义 - 初始值使用英文，会在 init_tray() 中通过 update_menu_texts() 更新为当前语言
-  // Menu array definition - Initial values in English, will be updated to current language via update_menu_texts() in init_tray()
   struct tray_menu tray_menus[] = {
     { .text = "Open Sunshine", .cb = tray_open_ui_cb },
     { .text = "-" },
@@ -698,10 +696,10 @@ namespace system_tray {
     update_menu_texts();
 
   #ifdef _WIN32
-    // If we're running as SYSTEM, Explorer.exe will not have permission to open our thread handle
-    // to monitor for thread termination. If Explorer fails to open our thread, our tray icon
-    // will persist forever if we terminate unexpectedly. To avoid this, we will modify our thread
-    // DACL to add an ACE that allows SYNCHRONIZE access to Everyone.
+    // 如果以 SYSTEM 身份运行，Explorer.exe 将没有权限打开我们的线程句柄
+    // 来监控线程终止。如果 Explorer 无法打开我们的线程，托盘图标
+    // 将在意外终止时永久保留。为避免此问题，我们将修改线程
+    // DACL 以添加允许所有人 SYNCHRONIZE 访问的 ACE。
     {
       PACL old_dacl;
       PSECURITY_DESCRIPTOR sd;
@@ -765,8 +763,8 @@ namespace system_tray {
       }
     }
 
-    // Wait for the shell to be initialized before registering the tray icon.
-    // This ensures the tray icon works reliably after a logoff/logon cycle.
+    // 在注册托盘图标之前等待 shell 初始化。
+    // 这确保了托盘图标在注销/登录周期后可靠工作。
     while (GetShellWindow() == nullptr) {
       Sleep(1000);
     }
@@ -794,7 +792,7 @@ namespace system_tray {
       return 1;
     }
 
-    // Process one iteration of the tray loop with non-blocking mode (0)
+    // 处理一次托盘循环迭代（非阻塞模式，参数为 0）
     if (const int result = tray_loop(0); result != 0) {
       BOOST_LOG(warning) << "System tray loop failed"sv;
       return result;

@@ -1,16 +1,16 @@
 import { APP_CONSTANTS } from './constants.js';
 
 /**
- * Unified error handler class
+ * 统一错误处理类
  * Note: This class is not currently used but is prepared for future use with i18n support
  */
 export class ErrorHandler {
   /**
-   * Handle network errors
-   * @param {Error} error Error object
-   * @param {string} context Error context (will be translated via i18n)
-   * @param {Function} t Translation function (optional, for i18n support)
-   * @returns {string} User-friendly error message
+   * 处理网络错误
+   * @param {Error} error 错误对象
+   * @param {string} context 错误上下文（将通过 i18n 翻译）
+   * @param {Function} t 翻译函数（可选，用于 i18n 支持）
+   * @returns {string} 用户友好的错误信息
    */
   static handleNetworkError(error, context = '', t = null) {
     const getText = (key, fallback) => t ? t(key) : fallback;
@@ -37,10 +37,10 @@ export class ErrorHandler {
   }
 
   /**
-   * Handle validation errors
-   * @param {Array} errors Error array
-   * @param {Function} t Translation function (optional)
-   * @returns {string} Formatted error message
+   * 处理验证错误
+   * @param {Array} errors 错误数组
+   * @param {Function} t 翻译函数（可选）
+   * @returns {string} 格式化的错误信息
    */
   static handleValidationErrors(errors, t = null) {
     const getText = (key, fallback) => t ? t(key) : fallback;
@@ -53,12 +53,12 @@ export class ErrorHandler {
   }
 
   /**
-   * Handle application operation errors
-   * @param {Error} error Error object
-   * @param {string} operation Operation type
-   * @param {string} appName Application name
-   * @param {Function} t Translation function (optional)
-   * @returns {string} Formatted error message
+   * 处理应用操作错误
+   * @param {Error} error 错误对象
+   * @param {string} operation 操作类型
+   * @param {string} appName 应用名称
+   * @param {Function} t 翻译函数（可选）
+   * @returns {string} 格式化的错误信息
    */
   static handleAppError(error, operation, appName = '', t = null) {
     const appContext = appName ? `"${appName}"` : '';
@@ -77,25 +77,25 @@ export class ErrorHandler {
   }
 
   /**
-   * Show error dialog
-   * @param {string} message Error message
-   * @param {string} title Title
-   * @param {Function} t Translation function (optional)
+   * 创建错误弹窗
+   * @param {string} message 错误信息
+   * @param {string} title 标题
+   * @param {Function} t 翻译函数（可选）
    */
   static showErrorDialog(message, title = null, t = null) {
     const getText = (key, fallback) => t ? t(key) : fallback;
     const dialogTitle = title || getText('_common.error', 'Error');
-    // If a more complex error dialog is needed, implement it here
-    // Currently using simple alert
+    // 如果需要更复杂的错误弹窗，可以在这里实现
+    // 目前使用简单的 alert
     alert(`${dialogTitle}\n\n${message}`);
   }
 
   /**
-   * Show confirmation dialog
-   * @param {string} message Confirmation message
-   * @param {string} title Title
-   * @param {Function} t Translation function (optional)
-   * @returns {boolean} Whether user confirmed
+   * 创建确认弹窗
+   * @param {string} message 确认信息
+   * @param {string} title 标题
+   * @param {Function} t 翻译函数（可选）
+   * @returns {boolean} 用户是否确认
    */
   static showConfirmDialog(message, title = null, t = null) {
     const getText = (key, fallback) => t ? t(key) : fallback;

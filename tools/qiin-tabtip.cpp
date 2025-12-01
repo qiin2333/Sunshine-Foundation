@@ -1,7 +1,7 @@
 /**
  * @file tools/qiin-tabtip.cpp
- * @brief Tool to show or hide Windows touch virtual keyboard
- * @note Optimized version - does not use C++ standard library to reduce file size
+ * @brief 调出或隐藏 Windows 触摸虚拟键盘的工具
+ * @note 优化版本 - 不使用 C++ 标准库以减小文件大小
  */
 #ifndef UNICODE
 #define UNICODE
@@ -16,7 +16,7 @@
 #include <Objbase.h>
 #include "qiin-tabtip_i18n.h"
 
-// Simple console output functions (replacement for iostream)
+// 简单的控制台输出函数（替代 iostream）
 static void Print(const wchar_t* msg) {
   DWORD written;
   HANDLE hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
@@ -233,13 +233,13 @@ bool ShowKeyboardViaCOM() {
  * 显示触摸键盘（综合方法）
  */
 bool ShowKeyboard() {
-  // Method 1: Use COM interface (most reliable method)
+  // 方法 1: 使用 COM 接口（最可靠的方法）
   if (ShowKeyboardViaCOM()) {
     Print(qiin_tabtip_i18n::get_localized_string(qiin_tabtip_i18n::KEY_TOUCH_KEYBOARD_DISPLAYED).c_str());
     return true;
   }
   
-  // Method 2: Traditional method as fallback
+  // 方法 2: 传统方法作为备选
   if (!CheckTabTipExists()) {
     PrintError(qiin_tabtip_i18n::get_localized_string(qiin_tabtip_i18n::KEY_TABTIP_NOT_FOUND).c_str());
     return false;
@@ -263,7 +263,7 @@ bool ShowKeyboard() {
     }
   }
 
-  // Launch TabTip.exe
+  // 启动 TabTip.exe
   SHELLEXECUTEINFO sei = { 0 };
   sei.cbSize = sizeof(SHELLEXECUTEINFO);
   sei.fMask = SEE_MASK_NOCLOSEPROCESS | SEE_MASK_FLAG_NO_UI;
@@ -284,7 +284,7 @@ bool ShowKeyboard() {
     }
   }
 
-  // Final fallback: OSK
+  // 最后备选：OSK
   HINSTANCE result = ShellExecute(NULL, L"open", L"osk.exe", NULL, NULL, SW_SHOW);
   if ((INT_PTR)result > 32) {
     Print(qiin_tabtip_i18n::get_localized_string(qiin_tabtip_i18n::KEY_ONSCREEN_KEYBOARD_DISPLAYED).c_str());
@@ -335,7 +335,7 @@ void Diagnose() {
   Print(qiin_tabtip_i18n::get_localized_string(qiin_tabtip_i18n::KEY_SYSTEM_DIAGNOSTIC_INFO).c_str());
   Print(L"");
   
-  // Check Windows version
+  // 检查 Windows 版本
   OSVERSIONINFOEX osvi = { 0 };
   osvi.dwOSVersionInfoSize = sizeof(OSVERSIONINFOEX);
   #if defined(_MSC_VER)
@@ -348,12 +348,12 @@ void Diagnose() {
   #endif
   Print(qiin_tabtip_i18n::get_localized_string_fmt(qiin_tabtip_i18n::KEY_WINDOWS_VERSION, osvi.dwMajorVersion, osvi.dwMinorVersion).c_str());
   
-  // Check TabTip.exe
+  // 检查 TabTip.exe
   Print(L"");
   Print(qiin_tabtip_i18n::get_localized_string_fmt(qiin_tabtip_i18n::KEY_TABTIP_PATH, TABTIP_PATH).c_str());
   Print(CheckTabTipExists() ? qiin_tabtip_i18n::get_localized_string(qiin_tabtip_i18n::KEY_TABTIP_EXISTS).c_str() : qiin_tabtip_i18n::get_localized_string(qiin_tabtip_i18n::KEY_TABTIP_NOT_EXISTS).c_str());
   
-  // Check registry settings
+  // 检查注册表设置
   Print(L"");
   Print(qiin_tabtip_i18n::get_localized_string(qiin_tabtip_i18n::KEY_REGISTRY_SETTINGS).c_str());
   std::wstring enableMsg = L"  EnableDesktopModeAutoInvoke: ";
@@ -362,7 +362,7 @@ void Diagnose() {
       L"✗ " + qiin_tabtip_i18n::get_localized_string(qiin_tabtip_i18n::KEY_DISABLED);
   Print(enableMsg.c_str());
   
-  // Check keyboard window
+  // 检查键盘窗口
   Print(L"");
   Print(qiin_tabtip_i18n::get_localized_string(qiin_tabtip_i18n::KEY_CHECKING_KEYBOARD_WINDOW).c_str());
   HWND hwnd = FindWindow(L"IPTip_Main_Window", NULL);
