@@ -15,7 +15,7 @@
         <div class="resource-group mb-4">
           <h6 class="resource-group-title">
             <i class="fas fa-rocket text-success me-2"></i>
-            快速入门
+            {{ $t('apps.quick_start') }}
           </h6>
           <div class="row g-3">
             <div class="col-md-6">
@@ -28,8 +28,8 @@
                   <i class="fas fa-file-alt"></i>
                 </div>
                 <div class="resource-content">
-                  <span class="resource-title">使用教程</span>
-                  <span class="resource-desc">详细的配置与使用指南</span>
+                  <span class="resource-title">{{ $t('apps.tutorial') }}</span>
+                  <span class="resource-desc">{{ $t('apps.tutorial_desc') }}</span>
                 </div>
                 <i class="fas fa-external-link-alt resource-arrow"></i>
               </a>
@@ -44,8 +44,8 @@
                   <i class="fab fa-qq"></i>
                 </div>
                 <div class="resource-content">
-                  <span class="resource-title">加入串流裙</span>
-                  <span class="resource-desc">获取帮助与交流经验</span>
+                  <span class="resource-title">{{ $t('apps.join_group') }}</span>
+                  <span class="resource-desc">{{ $t('apps.join_group_desc') }}</span>
                 </div>
                 <i class="fas fa-external-link-alt resource-arrow"></i>
               </a>
@@ -57,7 +57,7 @@
         <div class="resource-group mb-4">
           <h6 class="resource-group-title">
             <i class="fas fa-download text-primary me-2"></i>
-            客户端下载
+            {{ $t('apps.client_download') }}
           </h6>
           <div class="row g-3">
             <div class="col-md-6 col-lg-4">
@@ -70,8 +70,8 @@
                   <i class="fab fa-android"></i>
                 </div>
                 <div class="resource-content">
-                  <span class="resource-title">威力加强版</span>
-                  <span class="resource-desc">Android 推荐</span>
+                  <span class="resource-title">{{ $t('apps.powered_edition') }}</span>
+                  <span class="resource-desc">{{ $t('apps.powered_edition_desc') }}</span>
                 </div>
                 <i class="fas fa-external-link-alt resource-arrow"></i>
               </a>
@@ -86,8 +86,8 @@
                   <i class="fas fa-crown"></i>
                 </div>
                 <div class="resource-content">
-                  <span class="resource-title">王冠版</span>
-                  <span class="resource-desc">Android</span>
+                  <span class="resource-title">{{ $t('apps.crown_edition') }}</span>
+                  <span class="resource-desc">{{ $t('apps.crown_edition_desc') }}</span>
                 </div>
                 <i class="fas fa-external-link-alt resource-arrow"></i>
               </a>
@@ -102,8 +102,8 @@
                   <i class="fab fa-apple"></i>
                 </div>
                 <div class="resource-content">
-                  <span class="resource-title">虚空终端</span>
-                  <span class="resource-desc">iOS / iPadOS</span>
+                  <span class="resource-title">{{ $t('apps.void_terminal') }}</span>
+                  <span class="resource-desc">{{ $t('apps.void_terminal_desc') }}</span>
                 </div>
                 <i class="fas fa-external-link-alt resource-arrow"></i>
               </a>
@@ -131,7 +131,7 @@
         <div class="resource-group">
           <h6 class="resource-group-title">
             <i class="fab fa-github text-dark me-2"></i>
-            开源项目
+            {{ $t('apps.open_source') }}
           </h6>
           <div class="row g-3">
             <div class="col-12">
@@ -145,7 +145,7 @@
                 </div>
                 <div class="resource-content">
                   <span class="resource-title">Sunshine Foundation</span>
-                  <span class="resource-desc">Star & Fork 支持项目发展</span>
+                  <span class="resource-desc">{{ $t('apps.star_fork') }}</span>
                 </div>
                 <i class="fas fa-star resource-arrow text-warning"></i>
               </a>
@@ -193,7 +193,7 @@
               </div>
               <div class="resource-content">
                 <span class="resource-title">{{ $t('resource_card.license') }}</span>
-                <span class="resource-desc">查看完整许可证</span>
+                <span class="resource-desc">{{ $t('apps.view_full_license') }}</span>
               </div>
               <i class="fas fa-external-link-alt resource-arrow"></i>
             </a>
@@ -209,7 +209,7 @@
               </div>
               <div class="resource-content">
                 <span class="resource-title">{{ $t('resource_card.third_party_notice') }}</span>
-                <span class="resource-desc">第三方组件声明</span>
+                <span class="resource-desc">{{ $t('apps.third_party_statement') }}</span>
               </div>
               <i class="fas fa-external-link-alt resource-arrow"></i>
             </a>

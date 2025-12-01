@@ -1,7 +1,7 @@
 <template>
   <nav class="navbar navbar-light navbar-expand-lg navbar-background header">
     <div class="container-fluid">
-      <a class="navbar-brand brand-enhanced" href="/" title="这里不可以">
+      <a class="navbar-brand brand-enhanced" href="/" :title="$t('apps.here_not_allowed')">
         <img src="/images/logo-sunshine-256.png" height="50" alt="Sunshine-Foundation" class="brand-logo" />
       </a>
       <button

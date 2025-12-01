@@ -10,8 +10,8 @@
             <th style="width: 40px"></th>
             <th v-if="type === 'prep'"><i class="fas fa-play"></i> {{ $t('_common.do_cmd') }}</th>
             <th v-if="type === 'prep'"><i class="fas fa-undo"></i> {{ $t('_common.undo_cmd') }}</th>
-            <th v-if="type === 'menu'"><i class="fas fa-tag"></i> 展示名称</th>
-            <th v-if="type === 'menu'"><i class="fas fa-terminal"></i> 指令</th>
+            <th v-if="type === 'menu'"><i class="fas fa-tag"></i> {{ $t('apps.display_name') }}</th>
+            <th v-if="type === 'menu'"><i class="fas fa-terminal"></i> {{ $t('apps.command') }}</th>
             <th v-if="platform === 'windows'"><i class="fas fa-shield-alt"></i> {{ $t('_common.run_as') }}</th>
             <th style="width: 100px">操作</th>
           </tr>
@@ -33,7 +33,7 @@
             <tr :key="getCommandKey(command, index)">
               <!-- 拖拽手柄 -->
               <td class="drag-handle-cell">
-                <div class="drag-handle" @dragstart.stop @dragend.stop :title="'拖拽排序'">
+                <div class="drag-handle" @dragstart.stop @dragend.stop :title="$t('apps.drag_sort')">
                   <i class="fas fa-grip-vertical"></i>
                 </div>
               </td>
@@ -44,7 +44,7 @@
                   type="text"
                   class="form-control form-control-sm monospace"
                   v-model="command.do"
-                  placeholder="执行命令"
+                  :placeholder="$t('apps.execute_cmd')"
                 />
               </td>
               <td>
@@ -52,7 +52,7 @@
                   type="text"
                   class="form-control form-control-sm monospace"
                   v-model="command.undo"
-                  placeholder="撤销命令"
+                  :placeholder="$t('apps.undo_cmd')"
                 />
               </td>
             </template>
@@ -60,14 +60,14 @@
             <!-- 菜单命令字段 -->
             <template v-if="type === 'menu'">
               <td>
-                <input type="text" class="form-control form-control-sm" v-model="command.name" placeholder="显示名称" />
+                <input type="text" class="form-control form-control-sm" v-model="command.name" :placeholder="$t('apps.display_name')" />
               </td>
               <td>
                 <input
                   type="text"
                   class="form-control form-control-sm monospace"
                   v-model="command.cmd"
-                  placeholder="命令"
+                  :placeholder="$t('apps.command')"
                 />
               </td>
             </template>
@@ -106,7 +106,7 @@
                   type="button"
                   class="btn btn-outline-danger btn-sm"
                   @click="removeCommand(index)"
-                  :title="type === 'prep' ? '删除准备命令' : '删除菜单命令'"
+                  :title="type === 'prep' ? $t('apps.delete_prep_cmd') : $t('apps.delete_menu_cmd')"
                 >
                   <i class="fas fa-trash"></i>
                 </button>
@@ -164,16 +164,16 @@ export default {
   },
   computed: {
     tableTitle() {
-      return this.type === 'prep' ? this.$t('apps.cmd_prep_name') : '炒鸡菜单命令'
+      return this.type === 'prep' ? this.$t('apps.cmd_prep_name') : this.$t('apps.menu_cmd_name')
     },
     tableDescription() {
       if (this.type === 'prep') {
         return this.$t('apps.cmd_prep_desc')
       }
-      return '配置后在客户端返回菜单中可见，用于在不打断串流的情况下快速执行特定操作，例如调出辅助程序。\n示例：展示名称-关闭你的颠佬；指令-shutdown -s -t 10'
+      return this.$t('apps.menu_cmd_desc')
     },
     addButtonText() {
-      return this.type === 'prep' ? this.$t('apps.add_cmds') : '添加菜单命令'
+      return this.type === 'prep' ? this.$t('apps.add_cmds') : this.$t('apps.add_menu_cmd')
     },
   },
   methods: {

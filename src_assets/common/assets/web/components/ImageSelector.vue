@@ -33,7 +33,7 @@
         @dragleave="handleDragLeave"
         @dragover.prevent=""
         @drop.prevent.stop="handleDrop"
-        placeholder="选择图片文件或拖拽到此处"
+        :placeholder="$t('apps.select_image_or_drag')"
       />
       <button class="btn btn-outline-secondary" type="button" @click="openCoverFinder" :disabled="!appName">
         <i class="fas fa-search me-1"></i>{{ $t('apps.find_cover') }}
@@ -43,10 +43,10 @@
     <!-- 图片预览 -->
     <div class="image-preview-container mt-3" v-if="!isDesktopImage && imagePath">
       <div class="image-preview">
-        <img :src="getImagePreviewUrl()" alt="图片预览" @error="handleImageError" />
+        <img :src="getImagePreviewUrl()" :alt="$t('apps.image_preview')" @error="handleImageError" />
       </div>
       <div class="image-preview-circle">
-        <img :src="getImagePreviewUrl()" alt="图片预览" @error="handleImageError" />
+        <img :src="getImagePreviewUrl()" :alt="$t('apps.image_preview')" @error="handleImageError" />
       </div>
     </div>
 
@@ -121,13 +121,13 @@ export default {
         const validation = validateFile(file)
         if (validation.isValid) {
           try {
-            this.$emit('image-error', '正在上传图片...')
+            this.$emit('image-error', this.$t('apps.uploading_image'))
             const path = await this.uploadImageToSunshine(file)
             this.$emit('update-image', path)
             this.$emit('image-error', '')
           } catch (error) {
             console.error('上传图片失败:', error)
-            this.$emit('image-error', '上传图片失败: ' + error.message)
+            this.$emit('image-error', this.$t('apps.upload_image_failed') + ': ' + error.message)
           }
         } else {
           this.$emit('image-error', validation.message)
@@ -141,7 +141,7 @@ export default {
     handleDragEnter(event) {
       event.preventDefault()
       this.dragCounter++
-      this.$emit('image-error', '杂鱼~快放进来呀~')
+      this.$emit('image-error', this.$t('apps.drag_drop_hint'))
     },
 
     /**
@@ -171,20 +171,20 @@ export default {
           } else {
             // 上传到 Sunshine API
             try {
-              this.$emit('image-error', '正在上传图片...')
+              this.$emit('image-error', this.$t('apps.uploading_image'))
               const path = await this.uploadImageToSunshine(file)
               this.$emit('update-image', path)
               this.$emit('image-error', '')
             } catch (error) {
               console.error('上传图片失败:', error)
-              this.$emit('image-error', '上传图片失败: ' + error.message)
+              this.$emit('image-error', this.$t('apps.upload_image_failed') + ': ' + error.message)
             }
           }
         } else {
           this.$emit('image-error', validation.message)
         }
       } else {
-        this.$emit('image-error', '其他地方不可以！')
+        this.$emit('image-error', this.$t('apps.drop_elsewhere_error'))
       }
     },
 
@@ -246,7 +246,7 @@ export default {
      * 处理图片加载错误
      */
     handleImageError() {
-      this.$emit('image-error', '图片加载失败，请检查文件路径')
+      this.$emit('image-error', this.$t('apps.image_load_failed'))
     },
 
     /**
@@ -254,7 +254,7 @@ export default {
      */
     openCoverFinder() {
       if (!this.appName) {
-        this.$emit('image-error', '请先输入应用名称')
+        this.$emit('image-error', this.$t('apps.enter_app_name_first'))
         return
       }
 

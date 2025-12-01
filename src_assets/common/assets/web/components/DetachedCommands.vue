@@ -17,14 +17,14 @@
             type="text" 
             v-model="commands[index]" 
             class="form-control form-control-enhanced monospace" 
-            :placeholder="`独立命令 ${index + 1}`"
+            :placeholder="`${$t('apps.detached_cmd_placeholder')} ${index + 1}`"
           />
         </div>
         <button 
           type="button" 
           class="btn btn-outline-danger btn-sm" 
           @click="removeCommand(index)"
-          :title="'删除独立命令'"
+          :title="$t('apps.delete_detached_cmd')"
         >
           <i class="fas fa-times"></i>
         </button>

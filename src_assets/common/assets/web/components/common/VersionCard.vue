@@ -28,7 +28,7 @@
       <div v-if="notifyPreReleases && preReleaseBuildAvailable">
         <div class="alert alert-warning">
           <div class="d-flex justify-content-between">
-            <div class="my-2">有新的 <b>基地版</b> sunshine可以更新!</div>
+            <div class="my-2" v-html="$t('apps.new_pre_release_available')"></div>
             <a 
               class="btn btn-success m-1" 
               :href="preReleaseVersion.release.html_url" 

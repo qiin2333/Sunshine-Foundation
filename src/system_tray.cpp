@@ -559,6 +559,12 @@ namespace system_tray {
 
       // 更新或添加 tray_locale 配置项
       vars["tray_locale"] = locale;
+      // 同时更新 web UI 的 locale 设置，使两者保持同步
+      // Also update web UI locale setting to keep them in sync
+      vars["locale"] = locale;
+      // 更新内存中的配置
+      config::sunshine.locale = locale;
+
       for (const auto &[key, value] : vars) {
         if (!value.empty() && value != "null") {
           configStream << key << " = " << value << std::endl;
@@ -566,7 +572,7 @@ namespace system_tray {
       }
 
       file_handler::write_file(config::sunshine.config_file.c_str(), configStream.str());
-      BOOST_LOG(info) << "Tray language setting saved to config file"sv;
+      BOOST_LOG(info) << "Tray language setting saved to config file (synced with web UI locale)"sv;
     }
     catch (std::exception &e) {
       BOOST_LOG(warning) << "Failed to save tray language setting: "sv << e.what();
@@ -639,7 +645,8 @@ namespace system_tray {
   #endif
   };
 
-  // 菜单数组定义
+  // 菜单数组定义 - 初始值使用英文，会在 init_tray() 中通过 update_menu_texts() 更新为当前语言
+  // Menu array definition - Initial values in English, will be updated to current language via update_menu_texts() in init_tray()
   struct tray_menu tray_menus[] = {
     { .text = "Open Sunshine", .cb = tray_open_ui_cb },
     { .text = "-" },
@@ -656,9 +663,9 @@ namespace system_tray {
     { .text = "Language",
       .submenu =
         (struct tray_menu[]) {
-          { .text = "中文", .cb = tray_language_chinese_cb },
-          { .text = "English", .cb = tray_language_english_cb },
-          { .text = "日本語", .cb = tray_language_japanese_cb },
+          { .text = "中文", .cb = tray_language_chinese_cb },  // Will be updated to localized string
+          { .text = "English", .cb = tray_language_english_cb },  // Will be updated to localized string
+          { .text = "日本語", .cb = tray_language_japanese_cb },  // Will be updated to localized string
           { .text = nullptr } } },
     { .text = "-" },
     { .text = "Star Project", .cb = tray_star_project_cb },
@@ -784,12 +791,16 @@ namespace system_tray {
   int
   process_tray_events() {
     if (!tray_initialized) {
-      BOOST_LOG(error) << "System tray is not initialized"sv;
       return 1;
     }
 
-    // Block until an event is processed or tray_quit() is called
-    return tray_loop(1);
+    // Process one iteration of the tray loop with non-blocking mode (0)
+    if (const int result = tray_loop(0); result != 0) {
+      BOOST_LOG(warning) << "System tray loop failed"sv;
+      return result;
+    }
+
+    return 0;
   }
 
   int

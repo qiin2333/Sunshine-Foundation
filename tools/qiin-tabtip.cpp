@@ -1,7 +1,7 @@
 /**
  * @file tools/qiin-tabtip.cpp
- * @brief 调出或隐藏 Windows 触摸虚拟键盘的工具
- * @note 优化版本 - 不使用 C++ 标准库以减小文件大小
+ * @brief Tool to show or hide Windows touch virtual keyboard
+ * @note Optimized version - does not use C++ standard library to reduce file size
  */
 #ifndef UNICODE
 #define UNICODE
@@ -14,8 +14,9 @@
 #include <shellapi.h>
 #include <initguid.h>
 #include <Objbase.h>
+#include "qiin-tabtip_i18n.h"
 
-// 简单的控制台输出函数（替代 iostream）
+// Simple console output functions (replacement for iostream)
 static void Print(const wchar_t* msg) {
   DWORD written;
   HANDLE hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
@@ -232,15 +233,15 @@ bool ShowKeyboardViaCOM() {
  * 显示触摸键盘（综合方法）
  */
 bool ShowKeyboard() {
-  // 方法 1: 使用 COM 接口（最可靠的方法）
+  // Method 1: Use COM interface (most reliable method)
   if (ShowKeyboardViaCOM()) {
-    Print(L"✓ 触摸键盘已显示");
+    Print(qiin_tabtip_i18n::get_localized_string(qiin_tabtip_i18n::KEY_TOUCH_KEYBOARD_DISPLAYED).c_str());
     return true;
   }
   
-  // 方法 2: 传统方法作为备选
+  // Method 2: Traditional method as fallback
   if (!CheckTabTipExists()) {
-    PrintError(L"✗ 找不到 TabTip.exe");
+    PrintError(qiin_tabtip_i18n::get_localized_string(qiin_tabtip_i18n::KEY_TABTIP_NOT_FOUND).c_str());
     return false;
   }
 
@@ -257,12 +258,12 @@ bool ShowKeyboard() {
 
   if (existingWnd != NULL) {
     if (ForceShowKeyboardWindow()) {
-      Print(L"✓ 触摸键盘已显示");
+      Print(qiin_tabtip_i18n::get_localized_string(qiin_tabtip_i18n::KEY_TOUCH_KEYBOARD_DISPLAYED).c_str());
       return true;
     }
   }
 
-  // 启动 TabTip.exe
+  // Launch TabTip.exe
   SHELLEXECUTEINFO sei = { 0 };
   sei.cbSize = sizeof(SHELLEXECUTEINFO);
   sei.fMask = SEE_MASK_NOCLOSEPROCESS | SEE_MASK_FLAG_NO_UI;
@@ -278,19 +279,19 @@ bool ShowKeyboard() {
     Sleep(500);
     
     if (ForceShowKeyboardWindow()) {
-      Print(L"✓ 触摸键盘已显示");
+      Print(qiin_tabtip_i18n::get_localized_string(qiin_tabtip_i18n::KEY_TOUCH_KEYBOARD_DISPLAYED).c_str());
       return true;
     }
   }
 
-  // 最后备选：OSK
+  // Final fallback: OSK
   HINSTANCE result = ShellExecute(NULL, L"open", L"osk.exe", NULL, NULL, SW_SHOW);
   if ((INT_PTR)result > 32) {
-    Print(L"✓ 屏幕键盘已显示");
+    Print(qiin_tabtip_i18n::get_localized_string(qiin_tabtip_i18n::KEY_ONSCREEN_KEYBOARD_DISPLAYED).c_str());
     return true;
   }
   
-  PrintError(L"✗ 无法显示键盘");
+  PrintError(qiin_tabtip_i18n::get_localized_string(qiin_tabtip_i18n::KEY_CANNOT_DISPLAY_KEYBOARD).c_str());
   return false;
 }
 
@@ -307,11 +308,11 @@ bool HideKeyboard() {
 
   if (hwnd != NULL && IsWindowVisible(hwnd)) {
     PostMessage(hwnd, WM_SYSCOMMAND, SC_CLOSE, 0);
-    Print(L"✓ 触摸键盘已隐藏");
+    Print(qiin_tabtip_i18n::get_localized_string(qiin_tabtip_i18n::KEY_TOUCH_KEYBOARD_HIDDEN).c_str());
     return true;
   }
   
-  Print(L"触摸键盘未运行或已隐藏");
+  Print(qiin_tabtip_i18n::get_localized_string(qiin_tabtip_i18n::KEY_KEYBOARD_NOT_RUNNING).c_str());
   return false;
 }
 
@@ -330,12 +331,11 @@ bool ToggleKeyboard() {
  * 诊断系统环境
  */
 void Diagnose() {
-  wchar_t buffer[256];
   
-  Print(L"=== 系统诊断信息 ===");
+  Print(qiin_tabtip_i18n::get_localized_string(qiin_tabtip_i18n::KEY_SYSTEM_DIAGNOSTIC_INFO).c_str());
   Print(L"");
   
-  // 检查 Windows 版本
+  // Check Windows version
   OSVERSIONINFOEX osvi = { 0 };
   osvi.dwOSVersionInfoSize = sizeof(OSVERSIONINFOEX);
   #if defined(_MSC_VER)
@@ -346,43 +346,52 @@ void Diagnose() {
   #if defined(_MSC_VER)
   #pragma warning(pop)
   #endif
-  wsprintfW(buffer, L"Windows 版本: %d.%d", osvi.dwMajorVersion, osvi.dwMinorVersion);
-  Print(buffer);
+  Print(qiin_tabtip_i18n::get_localized_string_fmt(qiin_tabtip_i18n::KEY_WINDOWS_VERSION, osvi.dwMajorVersion, osvi.dwMinorVersion).c_str());
   
-  // 检查 TabTip.exe
+  // Check TabTip.exe
   Print(L"");
-  wsprintfW(buffer, L"TabTip 路径: %s", TABTIP_PATH);
-  Print(buffer);
-  Print(CheckTabTipExists() ? L"TabTip.exe: ✓ 存在" : L"TabTip.exe: ✗ 不存在");
+  Print(qiin_tabtip_i18n::get_localized_string_fmt(qiin_tabtip_i18n::KEY_TABTIP_PATH, TABTIP_PATH).c_str());
+  Print(CheckTabTipExists() ? qiin_tabtip_i18n::get_localized_string(qiin_tabtip_i18n::KEY_TABTIP_EXISTS).c_str() : qiin_tabtip_i18n::get_localized_string(qiin_tabtip_i18n::KEY_TABTIP_NOT_EXISTS).c_str());
   
-  // 检查注册表设置
+  // Check registry settings
   Print(L"");
-  Print(L"注册表设置:");
-  Print(IsDesktopModeAutoInvokeEnabled() ? 
-        L"  EnableDesktopModeAutoInvoke: ✓ 已启用" : 
-        L"  EnableDesktopModeAutoInvoke: ✗ 未启用");
+  Print(qiin_tabtip_i18n::get_localized_string(qiin_tabtip_i18n::KEY_REGISTRY_SETTINGS).c_str());
+  std::wstring enableMsg = L"  EnableDesktopModeAutoInvoke: ";
+  enableMsg += IsDesktopModeAutoInvokeEnabled() ? 
+      L"✓ " + qiin_tabtip_i18n::get_localized_string(qiin_tabtip_i18n::KEY_ENABLED) : 
+      L"✗ " + qiin_tabtip_i18n::get_localized_string(qiin_tabtip_i18n::KEY_DISABLED);
+  Print(enableMsg.c_str());
   
-  // 检查键盘窗口
+  // Check keyboard window
   Print(L"");
-  Print(L"检查键盘窗口:");
+  Print(qiin_tabtip_i18n::get_localized_string(qiin_tabtip_i18n::KEY_CHECKING_KEYBOARD_WINDOW).c_str());
   HWND hwnd = FindWindow(L"IPTip_Main_Window", NULL);
+  std::wstring visibilityLabel = L"  " + qiin_tabtip_i18n::get_localized_string(qiin_tabtip_i18n::KEY_VISIBILITY) + L": ";
+  
   if (hwnd) {
-    Print(L"  IPTip_Main_Window: ✓ 找到 (Windows 10)");
-    Print(IsWindowVisible(hwnd) ? L"  可见性: 可见" : L"  可见性: 隐藏");
+    std::wstring msg = L"  IPTip_Main_Window: ✓ " + qiin_tabtip_i18n::get_localized_string(qiin_tabtip_i18n::KEY_FOUND_WIN10);
+    Print(msg.c_str());
+    msg = visibilityLabel + (IsWindowVisible(hwnd) ? qiin_tabtip_i18n::get_localized_string(qiin_tabtip_i18n::KEY_VISIBLE) : qiin_tabtip_i18n::get_localized_string(qiin_tabtip_i18n::KEY_HIDDEN));
+    Print(msg.c_str());
   } else {
-    Print(L"  IPTip_Main_Window: ✗ 未找到");
+    std::wstring msg = L"  IPTip_Main_Window: ✗ " + qiin_tabtip_i18n::get_localized_string(qiin_tabtip_i18n::KEY_NOT_FOUND);
+    Print(msg.c_str());
   }
   
   hwnd = FindWindow(L"ApplicationFrameWindow", L"Microsoft Text Input Application");
   if (hwnd) {
-    Print(L"  ApplicationFrameWindow: ✓ 找到 (Windows 11)");
-    Print(IsWindowVisible(hwnd) ? L"  可见性: 可见" : L"  可见性: 隐藏");
+    std::wstring msg = L"  ApplicationFrameWindow: ✓ " + qiin_tabtip_i18n::get_localized_string(qiin_tabtip_i18n::KEY_FOUND_WIN11);
+    Print(msg.c_str());
+    msg = visibilityLabel + (IsWindowVisible(hwnd) ? qiin_tabtip_i18n::get_localized_string(qiin_tabtip_i18n::KEY_VISIBLE) : qiin_tabtip_i18n::get_localized_string(qiin_tabtip_i18n::KEY_HIDDEN));
+    Print(msg.c_str());
   } else {
-    Print(L"  ApplicationFrameWindow: ✗ 未找到");
+    std::wstring msg = L"  ApplicationFrameWindow: ✗ " + qiin_tabtip_i18n::get_localized_string(qiin_tabtip_i18n::KEY_NOT_FOUND);
+    Print(msg.c_str());
   }
   
   Print(L"");
-  Print(IsKeyboardVisible() ? L"当前键盘状态: 可见" : L"当前键盘状态: 隐藏");
+  std::wstring statusMsg = qiin_tabtip_i18n::get_localized_string(IsKeyboardVisible() ? qiin_tabtip_i18n::KEY_STATUS_VISIBLE : qiin_tabtip_i18n::KEY_STATUS_HIDDEN);
+  Print(statusMsg.c_str());
 }
 
 /**
@@ -391,10 +400,10 @@ void Diagnose() {
 bool ShowOSK() {
   HINSTANCE result = ShellExecute(NULL, L"open", L"osk.exe", NULL, NULL, SW_SHOW);
   if ((INT_PTR)result > 32) {
-    Print(L"✓ 屏幕键盘已显示");
+    Print(qiin_tabtip_i18n::get_localized_string(qiin_tabtip_i18n::KEY_ONSCREEN_KEYBOARD_DISPLAYED).c_str());
     return true;
   }
-  PrintError(L"✗ 无法显示屏幕键盘");
+  PrintError(qiin_tabtip_i18n::get_localized_string(qiin_tabtip_i18n::KEY_CANNOT_DISPLAY_OSK).c_str());
   return false;
 }
 
@@ -402,30 +411,37 @@ bool ShowOSK() {
  * 显示使用帮助
  */
 void ShowHelp() {
-  Print(L"Windows 虚拟触摸键盘工具");
+  Print(qiin_tabtip_i18n::get_localized_string(qiin_tabtip_i18n::KEY_TOOL_TITLE).c_str());
   Print(L"");
-  Print(L"用法:");
-  Print(L"  qiin-tabtip [选项]");
+  Print(qiin_tabtip_i18n::get_localized_string(qiin_tabtip_i18n::KEY_USAGE).c_str());
+  Print(L"  qiin-tabtip [options]");
   Print(L"");
-  Print(L"选项:");
-  Print(L"  show      - 显示触摸键盘 (TabTip)");
-  Print(L"  hide      - 隐藏触摸键盘");
-  Print(L"  toggle    - 切换键盘显示状态 (默认)");
-  Print(L"  osk       - 显示屏幕键盘 (OSK)");
-  Print(L"  status    - 检查键盘是否可见");
-  Print(L"  diagnose  - 诊断系统环境");
-  Print(L"  help      - 显示此帮助信息");
+  Print(qiin_tabtip_i18n::get_localized_string(qiin_tabtip_i18n::KEY_OPTIONS).c_str());
+  Print(qiin_tabtip_i18n::get_localized_string(qiin_tabtip_i18n::KEY_SHOW_DESC).c_str());
+  Print(qiin_tabtip_i18n::get_localized_string(qiin_tabtip_i18n::KEY_HIDE_DESC).c_str());
+  Print(qiin_tabtip_i18n::get_localized_string(qiin_tabtip_i18n::KEY_TOGGLE_DESC).c_str());
+  Print(qiin_tabtip_i18n::get_localized_string(qiin_tabtip_i18n::KEY_OSK_DESC).c_str());
+  Print(qiin_tabtip_i18n::get_localized_string(qiin_tabtip_i18n::KEY_STATUS_DESC).c_str());
+  Print(qiin_tabtip_i18n::get_localized_string(qiin_tabtip_i18n::KEY_DIAGNOSE_DESC).c_str());
+  Print(qiin_tabtip_i18n::get_localized_string(qiin_tabtip_i18n::KEY_HELP_DESC).c_str());
   Print(L"");
-  Print(L"示例:");
-  Print(L"  qiin-tabtip              # 切换键盘状态");
-  Print(L"  qiin-tabtip show         # 显示触摸键盘");
-  Print(L"  qiin-tabtip osk          # 显示屏幕键盘");
-  Print(L"  qiin-tabtip diagnose     # 诊断问题");
+  Print(qiin_tabtip_i18n::get_localized_string(qiin_tabtip_i18n::KEY_EXAMPLES).c_str());
+  Print(qiin_tabtip_i18n::get_localized_string(qiin_tabtip_i18n::KEY_EXAMPLE_TOGGLE).c_str());
+  Print(qiin_tabtip_i18n::get_localized_string(qiin_tabtip_i18n::KEY_EXAMPLE_SHOW).c_str());
+  Print(qiin_tabtip_i18n::get_localized_string(qiin_tabtip_i18n::KEY_EXAMPLE_OSK).c_str());
+  Print(qiin_tabtip_i18n::get_localized_string(qiin_tabtip_i18n::KEY_EXAMPLE_DIAGNOSE).c_str());
 }
 
 int wmain(int argc, wchar_t* argv[]) {
-  // 设置控制台 UTF-8 输出
-  SetConsoleOutputCP(CP_UTF8);
+  // 初始化语言环境，根据系统语言自动选择
+  LANGID langId = GetUserDefaultUILanguage();
+  if (PRIMARYLANGID(langId) == LANG_CHINESE) {
+    qiin_tabtip_i18n::init_locale("zh");
+  } else if (PRIMARYLANGID(langId) == LANG_JAPANESE) {
+    qiin_tabtip_i18n::init_locale("ja");
+  } else {
+    qiin_tabtip_i18n::init_locale("en");
+  }
 
   const wchar_t* command = L"toggle";
   wchar_t cmdLower[256] = {0};
@@ -452,10 +468,10 @@ int wmain(int argc, wchar_t* argv[]) {
   }
   else if (StrEqualI(command, L"status")) {
     if (IsKeyboardVisible()) {
-      Print(L"触摸键盘当前: 可见");
+      Print(qiin_tabtip_i18n::get_localized_string(qiin_tabtip_i18n::KEY_STATUS_VISIBLE).c_str());
       return 0;
     } else {
-      Print(L"触摸键盘当前: 隐藏");
+      Print(qiin_tabtip_i18n::get_localized_string(qiin_tabtip_i18n::KEY_STATUS_HIDDEN).c_str());
       return 1;
     }
   }
@@ -469,10 +485,8 @@ int wmain(int argc, wchar_t* argv[]) {
     return 0;
   }
   else {
-    wchar_t errMsg[512];
-    wsprintfW(errMsg, L"未知命令: %s", command);
-    PrintError(errMsg);
-    PrintError(L"使用 'qiin-tabtip help' 查看帮助");
+    PrintError(qiin_tabtip_i18n::get_localized_string_fmt(qiin_tabtip_i18n::KEY_UNKNOWN_COMMAND, command).c_str());
+    PrintError(qiin_tabtip_i18n::get_localized_string(qiin_tabtip_i18n::KEY_USE_HELP).c_str());
     return 1;
   }
 

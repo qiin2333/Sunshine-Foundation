@@ -57,8 +57,8 @@
         <!-- 无结果提示 -->
         <div v-if="!loading && covers.length === 0" class="col-12 text-center py-4">
           <i class="fas fa-search fa-3x text-muted mb-3"></i>
-          <p class="text-muted">未找到相关封面</p>
-          <p class="text-muted small">尝试使用不同的关键词或切换数据源</p>
+          <p class="text-muted">{{ $t('apps.no_covers_found') }}</p>
+          <p class="text-muted small">{{ $t('apps.try_different_keywords_or_source') }}</p>
         </div>
       </div>
     </div>

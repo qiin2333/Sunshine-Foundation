@@ -30,7 +30,7 @@
               class="view-toggle-btn"
               :class="{ active: viewMode === 'grid' }"
               @click="viewMode = 'grid'"
-              :title="'网格视图'"
+              :title="$t('apps.grid_view')"
             >
               <i class="fas fa-th"></i>
             </button>
@@ -38,7 +38,7 @@
               class="view-toggle-btn"
               :class="{ active: viewMode === 'list' }"
               @click="viewMode = 'list'"
-              :title="'列表视图'"
+              :title="$t('apps.list_view')"
             >
               <i class="fas fa-list"></i>
             </button>
@@ -51,7 +51,7 @@
             class="cute-btn cute-btn-secondary"
             data-bs-toggle="modal"
             data-bs-target="#envVarsModal"
-            :title="'环境变量说明'"
+            :title="$t('apps.env_vars_info')"
           >
             <i class="fas fa-info-circle"></i>
           </button>
@@ -163,10 +163,10 @@
             <i class="fas fa-rocket"></i>
           </div>
           <h3 class="empty-title">
-            {{ searchQuery ? '未找到匹配的应用' : '暂无应用' }}
+            {{ searchQuery ? $t('apps.no_apps_found') : $t('apps.no_apps') }}
           </h3>
           <p class="empty-subtitle">
-            {{ searchQuery ? '尝试使用不同的搜索关键词' : '点击下方按钮添加第一个应用' }}
+            {{ searchQuery ? $t('apps.try_different_keywords') : $t('apps.add_first_app') }}
           </p>
           <button v-if="!searchQuery" class="btn btn-primary" @click="newApp">
             <i class="fas fa-plus me-1"></i>{{ $t('apps.add_new') }}

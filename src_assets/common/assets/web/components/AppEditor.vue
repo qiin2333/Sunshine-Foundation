@@ -5,7 +5,7 @@
         <div class="modal-header">
           <h5 class="modal-title" id="editAppModalLabel">
             <i class="fas fa-edit me-2"></i>
-            {{ isNewApp ? '添加新应用' : '编辑应用' }}
+            {{ isNewApp ? $t('apps.add_new_app') : $t('apps.edit_app') }}
           </h5>
           <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
         </div>
@@ -21,7 +21,7 @@
               <div class="accordion-item">
                 <h2 class="accordion-header" id="basicInfoHeading">
                   <button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#basicInfoCollapse" aria-expanded="true" aria-controls="basicInfoCollapse">
-                    <i class="fas fa-info-circle me-2"></i>基本信息
+                    <i class="fas fa-info-circle me-2"></i>{{ $t('apps.basic_info') }}
                   </button>
                 </h2>
                 <div id="basicInfoCollapse" class="accordion-collapse collapse show" aria-labelledby="basicInfoHeading" data-bs-parent="#appFormAccordion">
@@ -42,7 +42,7 @@
                         {{ validation.name.message }}
                       </div>
                       <div v-if="validation.name && validation.name.isValid && formData.name" class="valid-feedback">
-                        应用名称有效
+                        {{ $t('apps.app_name_valid') }}
                       </div>
                       <div class="field-hint">{{ $t('apps.app_name_desc') }}</div>
                     </div>
@@ -85,7 +85,7 @@
                         {{ validation.cmd.message }}
                       </div>
                       <div v-if="validation.cmd && validation.cmd.isValid && formData.cmd" class="valid-feedback">
-                        命令有效
+                        {{ $t('apps.command_valid') }}
                       </div>
                       <div class="field-hint">
                         {{ $t('apps.cmd_desc') }}<br>
@@ -123,7 +123,7 @@
               <div class="accordion-item">
                 <h2 class="accordion-header" id="commandsHeading">
                   <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#commandsCollapse" aria-expanded="false" aria-controls="commandsCollapse">
-                    <i class="fas fa-terminal me-2"></i>命令设置
+                    <i class="fas fa-terminal me-2"></i>{{ $t('apps.command_settings') }}
                   </button>
                 </h2>
                 <div id="commandsCollapse" class="accordion-collapse collapse" aria-labelledby="commandsHeading" data-bs-parent="#appFormAccordion">
@@ -181,7 +181,7 @@
               <div class="accordion-item">
                 <h2 class="accordion-header" id="advancedHeading">
                   <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#advancedCollapse" aria-expanded="false" aria-controls="advancedCollapse">
-                    <i class="fas fa-cogs me-2"></i>高级选项
+                    <i class="fas fa-cogs me-2"></i>{{ $t('apps.advanced_options') }}
                   </button>
                 </h2>
                 <div id="advancedCollapse" class="accordion-collapse collapse" aria-labelledby="advancedHeading" data-bs-parent="#appFormAccordion">
@@ -241,7 +241,7 @@
               <div class="accordion-item">
                 <h2 class="accordion-header" id="imageHeading">
                   <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#imageCollapse" aria-expanded="false" aria-controls="imageCollapse">
-                    <i class="fas fa-image me-2"></i>图片设置
+                    <i class="fas fa-image me-2"></i>{{ $t('apps.image_settings') }}
                   </button>
                 </h2>
                 <div id="imageCollapse" class="accordion-collapse collapse" aria-labelledby="imageHeading" data-bs-parent="#appFormAccordion">
@@ -261,10 +261,10 @@
         <div class="modal-footer modal-footer-enhanced">
           <div class="save-status">
             <span v-if="isFormValid" class="text-success">
-              <i class="fas fa-check-circle me-1"></i>合规应用
+              <i class="fas fa-check-circle me-1"></i>{{ $t('apps.compliant_app') }}
             </span>
             <span v-else class="text-warning">
-              <i class="fas fa-exclamation-triangle me-1"></i>请检查必填字段
+              <i class="fas fa-exclamation-triangle me-1"></i>{{ $t('apps.check_required_fields') }}
             </span>
             <div v-if="imageError" class="text-danger mt-1">
               <i class="fas fa-exclamation-circle me-1"></i>{{ imageError }}
@@ -705,7 +705,7 @@ export default {
      */
     selectFile(fieldName) {
       if (!this.fileSelector) {
-        this.showErrorMessage('文件选择器未初始化');
+        this.showErrorMessage(this.$t('apps.file_selector_not_initialized'));
         return;
       }
       
@@ -721,7 +721,7 @@ export default {
      */
     selectDirectory(fieldName) {
       if (!this.fileSelector) {
-        this.showErrorMessage('文件选择器未初始化');
+        this.showErrorMessage(this.$t('apps.file_selector_not_initialized'));
         return;
       }
       
@@ -751,7 +751,7 @@ export default {
      * 获取按钮标题文本
      */
     getButtonTitle(type) {
-      return this.fileSelector ? this.fileSelector.getButtonTitle(type) : '选择';
+      return this.fileSelector ? this.fileSelector.getButtonTitle(type) : this.$t('apps.select');
     },
     
     /**

@@ -29,7 +29,7 @@ target_link_libraries(sunshinesvc
         ${PLATFORM_LIBRARIES})
 target_compile_options(sunshinesvc PRIVATE ${SUNSHINE_COMPILE_OPTIONS})
 
-add_executable(qiin-tabtip qiin-tabtip.cpp)
+add_executable(qiin-tabtip qiin-tabtip.cpp qiin-tabtip_i18n.cpp)
 set_target_properties(qiin-tabtip PROPERTIES CXX_STANDARD 23)
 target_compile_definitions(qiin-tabtip PRIVATE UNICODE _UNICODE)
 target_link_libraries(qiin-tabtip
