@@ -73,13 +73,13 @@
                       required
                     />
                     <div class="invalid-feedback" v-if="!passwordsMatch && passwordData.confirmNewPassword">
-                      <i class="fas fa-exclamation-circle me-1"></i>密码不匹配
+                      <i class="fas fa-exclamation-circle me-1"></i>{{ $t('apps.password_mismatch') }}
                     </div>
                     <div
                       class="valid-feedback"
                       v-if="passwordsMatch && passwordData.confirmNewPassword && passwordData.newPassword"
                     >
-                      <i class="fas fa-check-circle me-1"></i>密码匹配
+                      <i class="fas fa-check-circle me-1"></i>{{ $t('apps.password_match') }}
                     </div>
                   </div>
 

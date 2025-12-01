@@ -9,7 +9,7 @@
       <li v-for="log in fatalLogs" :key="log.timestamp">{{ log.value }}</li>
     </ul>
     <a class="btn btn-danger" href="/troubleshooting/#logs">
-      {{ $t('index.view_logs') || 'View Logs' }}
+      {{ $t('index.view_logs') }}
     </a>
   </div>
 </template>

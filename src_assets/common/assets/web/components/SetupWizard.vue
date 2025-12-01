@@ -48,8 +48,8 @@
               <div class="option-icon">
                 <i class="fas fa-language"></i>
               </div>
-              <h4>简体中文</h4>
-              <p>使用简体中文界面</p>
+              <h4>{{ $t('apps.chinese_simplified') }}</h4>
+              <p>{{ $t('apps.chinese_simplified_desc') }}</p>
             </div>
 
             <div class="option-card" 
@@ -59,7 +59,7 @@
                 <i class="fas fa-language"></i>
               </div>
               <h4>English</h4>
-              <p>Use English interface</p>
+              <p>{{ $t('apps.english_desc') }}</p>
             </div>
           </div>
 
