@@ -97,7 +97,6 @@ if(WIN32)
         ntdll
         userenv
         ws2_32
-        gcc_s
         pthread
     )
 elseif(APPLE)
