@@ -1,7 +1,7 @@
 /**
  * @file src/system_tray_rust.cpp
  * @brief System tray implementation using the Rust tray library
- * 
+ *
  * This file provides a thin C++ wrapper around the Rust tray library.
  * All menu logic, i18n, and event handling is done in Rust.
  */
@@ -17,20 +17,20 @@
   #define WIN32_LEAN_AND_MEAN
   #include <windows.h>
   #include <tlhelp32.h>
-  #define TRAY_ICON WEB_DIR "images/sunshine.ico"
-  #define TRAY_ICON_PLAYING WEB_DIR "images/sunshine-playing.ico"
-  #define TRAY_ICON_PAUSING WEB_DIR "images/sunshine-pausing.ico"
-  #define TRAY_ICON_LOCKED WEB_DIR "images/sunshine-locked.ico"
+  #define ICON_PATH_NORMAL WEB_DIR "images/sunshine.ico"
+  #define ICON_PATH_PLAYING WEB_DIR "images/sunshine-playing.ico"
+  #define ICON_PATH_PAUSING WEB_DIR "images/sunshine-pausing.ico"
+  #define ICON_PATH_LOCKED WEB_DIR "images/sunshine-locked.ico"
 #elif defined(__linux__) || defined(linux) || defined(__linux)
-  #define TRAY_ICON "sunshine-tray"
-  #define TRAY_ICON_PLAYING "sunshine-playing"
-  #define TRAY_ICON_PAUSING "sunshine-pausing"
-  #define TRAY_ICON_LOCKED "sunshine-locked"
+  #define ICON_PATH_NORMAL "sunshine-tray"
+  #define ICON_PATH_PLAYING "sunshine-playing"
+  #define ICON_PATH_PAUSING "sunshine-pausing"
+  #define ICON_PATH_LOCKED "sunshine-locked"
 #elif defined(__APPLE__) || defined(__MACH__)
-  #define TRAY_ICON WEB_DIR "images/logo-sunshine-16.png"
-  #define TRAY_ICON_PLAYING WEB_DIR "images/sunshine-playing-16.png"
-  #define TRAY_ICON_PAUSING WEB_DIR "images/sunshine-pausing-16.png"
-  #define TRAY_ICON_LOCKED WEB_DIR "images/sunshine-locked-16.png"
+  #define ICON_PATH_NORMAL WEB_DIR "images/logo-sunshine-16.png"
+  #define ICON_PATH_PLAYING WEB_DIR "images/sunshine-playing-16.png"
+  #define ICON_PATH_PAUSING WEB_DIR "images/sunshine-pausing-16.png"
+  #define ICON_PATH_LOCKED WEB_DIR "images/sunshine-locked-16.png"
 #endif
 
 // Boost includes
@@ -107,7 +107,7 @@ namespace system_tray {
           case TRAY_ACTION_LANGUAGE_ENGLISH: locale = "en"; break;
           case TRAY_ACTION_LANGUAGE_JAPANESE: locale = "ja"; break;
         }
-        
+
         // Save to config file
         try {
           auto vars = config::parse_config(file_handler::read_file(config::sunshine.config_file.c_str()));
@@ -213,10 +213,10 @@ namespace system_tray {
 
     // Initialize the Rust tray
     int result = tray_init_ex(
-      TRAY_ICON,
-      TRAY_ICON_PLAYING,
-      TRAY_ICON_PAUSING,
-      TRAY_ICON_LOCKED,
+      ICON_PATH_NORMAL,
+      ICON_PATH_PLAYING,
+      ICON_PATH_PAUSING,
+      ICON_PATH_LOCKED,
       tooltip.c_str(),
       locale.c_str(),
       handle_tray_action
@@ -246,7 +246,7 @@ namespace system_tray {
 
     tray_exit();
     tray_initialized = false;
-    
+
     BOOST_LOG(info) << "Rust tray shut down"sv;
     return 0;
   }
@@ -280,38 +280,38 @@ namespace system_tray {
 
   void update_tray_playing(std::string app_name) {
     if (!tray_initialized) return;
-    
-    tray_set_icon(TRAY_ICON_PLAYING);
-    
+
+    tray_set_icon(TRAY_ICON_TYPE_PLAYING);
+
     std::string tooltip = "Sunshine - Playing: " + app_name;
     tray_set_tooltip(tooltip.c_str());
   }
 
   void update_tray_pausing(std::string app_name) {
     if (!tray_initialized) return;
-    
-    tray_set_icon(TRAY_ICON_PAUSING);
-    
+
+    tray_set_icon(TRAY_ICON_TYPE_PAUSING);
+
     std::string tooltip = "Sunshine - Paused: " + app_name;
     tray_set_tooltip(tooltip.c_str());
   }
 
   void update_tray_stopped(std::string app_name) {
     if (!tray_initialized) return;
-    
-    tray_set_icon(TRAY_ICON_NORMAL);
-    
+
+    tray_set_icon(TRAY_ICON_TYPE_NORMAL);
+
     std::string tooltip = "Sunshine "s + PROJECT_VER;
     tray_set_tooltip(tooltip.c_str());
   }
 
   void update_tray_require_pin(std::string pin_name) {
     if (!tray_initialized) return;
-    
+
     tray_show_notification(
       "Sunshine",
       ("PIN required for: " + pin_name).c_str(),
-      TRAY_ICON_NORMAL
+      TRAY_ICON_TYPE_NORMAL
     );
   }
 

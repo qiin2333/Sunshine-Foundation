@@ -35,10 +35,10 @@ typedef enum {
  * @brief Icon types for tray_set_icon
  */
 typedef enum {
-    TRAY_ICON_NORMAL = 0,
-    TRAY_ICON_PLAYING = 1,
-    TRAY_ICON_PAUSING = 2,
-    TRAY_ICON_LOCKED = 3,
+    TRAY_ICON_TYPE_NORMAL = 0,
+    TRAY_ICON_TYPE_PLAYING = 1,
+    TRAY_ICON_TYPE_PAUSING = 2,
+    TRAY_ICON_TYPE_LOCKED = 3,
 } TrayIconType;
 
 /**
