@@ -154,6 +154,60 @@ fn load_icon(icon_str: &str) -> Option<Icon> {
     }
 }
 
+/// Build submenu recursively and append items directly to parent
+unsafe fn build_submenu_items(submenu: &Submenu, menu_ptr: *const tray_menu, items: &mut Vec<MenuItemInfo>) {
+    if menu_ptr.is_null() {
+        return;
+    }
+
+    let mut current = menu_ptr;
+    while !current.is_null() {
+        let menu_item = &*current;
+
+        // Check for null terminator
+        if menu_item.text.is_null() {
+            break;
+        }
+
+        let text = c_str_to_str(menu_item.text).unwrap_or("");
+
+        // Check for separator
+        if text == "-" {
+            let _ = submenu.append(&PredefinedMenuItem::separator());
+            current = current.add(1);
+            continue;
+        }
+
+        // Check for nested submenu
+        if !menu_item.submenu.is_null() {
+            let nested_submenu = Submenu::new(text, true);
+            build_submenu_items(&nested_submenu, menu_item.submenu, items);
+            let _ = submenu.append(&nested_submenu);
+        } else {
+            // Regular menu item
+            if menu_item.checkbox != 0 {
+                // Checkbox item
+                let check_item = muda::CheckMenuItem::new(text, true, menu_item.checked != 0, None);
+                items.push(MenuItemInfo {
+                    id: check_item.id().clone(),
+                    c_menu: current,
+                });
+                let _ = submenu.append(&check_item);
+            } else {
+                // Normal item
+                let normal_item = MenuItem::new(text, menu_item.disabled == 0, None);
+                items.push(MenuItemInfo {
+                    id: normal_item.id().clone(),
+                    c_menu: current,
+                });
+                let _ = submenu.append(&normal_item);
+            }
+        }
+
+        current = current.add(1);
+    }
+}
+
 /// Build menu recursively from C tray_menu structure
 unsafe fn build_menu(menu_ptr: *const tray_menu) -> (Menu, Vec<MenuItemInfo>) {
     let menu = Menu::new();
@@ -183,43 +237,29 @@ unsafe fn build_menu(menu_ptr: *const tray_menu) -> (Menu, Vec<MenuItemInfo>) {
 
         // Check for submenu
         if !menu_item.submenu.is_null() {
-            let (sub_menu_obj, sub_items) = build_menu(menu_item.submenu);
             let submenu = Submenu::new(text, true);
-
-            // Copy items from sub_menu_obj to submenu
-            for item in sub_menu_obj.items() {
-                match item {
-                    muda::MenuItemKind::MenuItem(mi) => { let _ = submenu.append(&mi); }
-                    muda::MenuItemKind::Submenu(sm) => { let _ = submenu.append(&sm); }
-                    muda::MenuItemKind::Predefined(pi) => { let _ = submenu.append(&pi); }
-                    muda::MenuItemKind::Check(ci) => { let _ = submenu.append(&ci); }
-                    muda::MenuItemKind::Icon(ii) => { let _ = submenu.append(&ii); }
-                }
-            }
-
+            // Build submenu items directly into the submenu
+            build_submenu_items(&submenu, menu_item.submenu, &mut items);
             let _ = menu.append(&submenu);
-            items.extend(sub_items);
         } else {
             // Regular menu item
-            let item = if menu_item.checkbox != 0 {
+            if menu_item.checkbox != 0 {
                 // Checkbox item
-                let check_item =
-                    muda::CheckMenuItem::new(text, true, menu_item.checked != 0, None);
-                let id = check_item.id().clone();
+                let check_item = muda::CheckMenuItem::new(text, true, menu_item.checked != 0, None);
+                items.push(MenuItemInfo {
+                    id: check_item.id().clone(),
+                    c_menu: current,
+                });
                 let _ = menu.append(&check_item);
-                id
             } else {
                 // Normal item
                 let normal_item = MenuItem::new(text, menu_item.disabled == 0, None);
-                let id = normal_item.id().clone();
+                items.push(MenuItemInfo {
+                    id: normal_item.id().clone(),
+                    c_menu: current,
+                });
                 let _ = menu.append(&normal_item);
-                id
-            };
-
-            items.push(MenuItemInfo {
-                id: item,
-                c_menu: current,
-            });
+            }
         }
 
         current = current.add(1);
