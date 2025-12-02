@@ -6,14 +6,9 @@ set(RUST_TARGET_DIR "${CMAKE_BINARY_DIR}/rust_tray")
 
 # Determine the Rust target and output filename based on platform
 if(WIN32)
-    if(MSVC)
-        set(RUST_TARGET "x86_64-pc-windows-msvc")
-        set(RUST_LIB_NAME "tray.lib")
-    else()
-        # MinGW - Rust still generates .lib files on Windows
-        set(RUST_TARGET "x86_64-pc-windows-gnu")
-        set(RUST_LIB_NAME "tray.lib")
-    endif()
+    # Windows uses MinGW/UCRT toolchain - must use gnu target
+    set(RUST_TARGET "x86_64-pc-windows-gnu")
+    set(RUST_LIB_NAME "libtray.a")
 elseif(APPLE)
     set(RUST_LIB_NAME "libtray.a")
     # Check for ARM64
@@ -41,8 +36,8 @@ else()
     set(CARGO_BUILD_FLAGS "--release")
 endif()
 
-# For default target (no cross-compilation), the path is simpler
-set(RUST_OUTPUT_LIB "${RUST_TARGET_DIR}/${RUST_BUILD_TYPE}/${RUST_LIB_NAME}")
+# Output path: target/<target>/<profile>/
+set(RUST_OUTPUT_LIB "${RUST_TARGET_DIR}/${RUST_TARGET}/${RUST_BUILD_TYPE}/${RUST_LIB_NAME}")
 
 # Find cargo
 find_program(CARGO_EXECUTABLE cargo HINTS $ENV{HOME}/.cargo/bin $ENV{USERPROFILE}/.cargo/bin)
@@ -51,6 +46,7 @@ if(NOT CARGO_EXECUTABLE)
 endif()
 
 message(STATUS "Found Cargo: ${CARGO_EXECUTABLE}")
+message(STATUS "Rust target: ${RUST_TARGET}")
 message(STATUS "Rust tray library will be built at: ${RUST_OUTPUT_LIB}")
 
 # Custom command to build the Rust library
@@ -60,6 +56,7 @@ add_custom_command(
         CARGO_TARGET_DIR=${RUST_TARGET_DIR}
         ${CARGO_EXECUTABLE} build
         --manifest-path ${RUST_TRAY_SOURCE_DIR}/Cargo.toml
+        --target ${RUST_TARGET}
         ${CARGO_BUILD_FLAGS}
     WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
     COMMENT "Building Rust tray library (${RUST_BUILD_TYPE})"
@@ -87,7 +84,7 @@ set(RUST_TRAY_LIBRARY ${RUST_OUTPUT_LIB} CACHE FILEPATH "Path to the Rust tray l
 
 # Platform-specific dependencies for the Rust library
 if(WIN32)
-    # Windows dependencies for tray-icon crate
+    # MinGW/UCRT dependencies for Rust static library
     set(RUST_TRAY_PLATFORM_LIBS
         user32
         gdi32
@@ -100,6 +97,8 @@ if(WIN32)
         ntdll
         userenv
         ws2_32
+        gcc_s
+        pthread
     )
 elseif(APPLE)
     # macOS dependencies for tray-icon crate
