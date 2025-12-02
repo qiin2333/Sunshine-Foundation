@@ -67,7 +67,8 @@ add_custom_command(
         ${RUST_TRAY_SOURCE_DIR}/Cargo.toml
         ${RUST_TRAY_SOURCE_DIR}/build.rs
         ${RUST_TRAY_SOURCE_DIR}/src/lib.rs
-        ${RUST_TRAY_SOURCE_DIR}/src/ffi.rs
+        ${RUST_TRAY_SOURCE_DIR}/src/i18n.rs
+        ${RUST_TRAY_SOURCE_DIR}/src/actions.rs
     VERBATIM
 )
 

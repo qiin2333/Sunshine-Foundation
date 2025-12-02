@@ -124,13 +124,7 @@ list(PREPEND PLATFORM_LIBRARIES
 )
 
 if(SUNSHINE_ENABLE_TRAY)
-    if(SUNSHINE_USE_RUST_TRAY)
-        # Use Rust tray implementation
-        include(${CMAKE_MODULE_PATH}/targets/rust_tray.cmake)
-        list(APPEND PLATFORM_LIBRARIES ${RUST_TRAY_LIBRARY} ${RUST_TRAY_PLATFORM_LIBS})
-    else()
-        # Use original C tray implementation
-        list(APPEND PLATFORM_TARGET_FILES
-                "${CMAKE_SOURCE_DIR}/third-party/tray/src/tray_windows.c")
-    endif()
+    # Rust tray implementation
+    include(${CMAKE_MODULE_PATH}/targets/rust_tray.cmake)
+    list(APPEND PLATFORM_LIBRARIES ${RUST_TRAY_LIBRARY} ${RUST_TRAY_PLATFORM_LIBS})
 endif()
