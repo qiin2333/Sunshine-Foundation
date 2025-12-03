@@ -55,9 +55,7 @@ using namespace std::literals;
 namespace system_tray {
 
   static std::atomic<bool> tray_initialized = false;
-  static std::thread tray_thread;
-  static std::atomic<bool> tray_thread_running = false;
-  static std::atomic<bool> tray_thread_should_exit = false;
+  static std::atomic<bool> end_tray_called = false;
 
   // Forward declarations
   static void handle_tray_action(uint32_t action);
@@ -123,13 +121,11 @@ namespace system_tray {
 
       case TRAY_ACTION_RESTART:
         BOOST_LOG(info) << "Restarting from system tray"sv;
-        tray_exit();
         platf::restart();
         break;
 
       case TRAY_ACTION_QUIT:
         BOOST_LOG(info) << "Quitting from system tray"sv;
-        tray_exit();
 #ifdef _WIN32
         terminate_gui_processes();
         if (GetConsoleWindow() == NULL) {
@@ -227,40 +223,38 @@ namespace system_tray {
   }
 
   int end_tray() {
+    // Use atomic exchange to ensure only one call proceeds
+    if (end_tray_called.exchange(true)) {
+      return 0;
+    }
+
     if (!tray_initialized) {
       return 0;
     }
 
-    tray_exit();
     tray_initialized = false;
+    tray_exit();
 
     BOOST_LOG(info) << "Rust tray shut down"sv;
     return 0;
   }
 
   int init_tray_threaded() {
-    if (tray_thread_running.exchange(true)) {
-      BOOST_LOG(warning) << "Tray thread already running"sv;
-      return 0;
-    }
+    // Reset the end_tray flag for new tray instance
+    end_tray_called = false;
 
-    tray_thread_should_exit = false;
-
-    tray_thread = std::thread([]() {
+    std::thread tray_thread([]() {
       if (init_tray() != 0) {
-        tray_thread_running = false;
         return;
       }
 
-      while (!tray_thread_should_exit.load()) {
-        if (tray_loop(1) < 0) {  // Blocking with timeout
-          break;
-        }
-      }
-
-      end_tray();
-      tray_thread_running = false;
+      // Main tray event loop
+      while (process_tray_events() == 0);
     });
+
+    // The tray thread doesn't require strong lifetime management.
+    // It will exit asynchronously when tray_exit() is called.
+    tray_thread.detach();
 
     return 0;
   }
