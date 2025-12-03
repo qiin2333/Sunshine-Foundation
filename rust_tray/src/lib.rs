@@ -33,8 +33,11 @@ use actions::{MenuAction, trigger_action, register_callback, ActionCallback, ope
 #[cfg(target_os = "windows")]
 use windows_sys::Win32::UI::WindowsAndMessaging::{
     DispatchMessageW, GetMessageW, PeekMessageW, PostQuitMessage, TranslateMessage, 
-    MSG, WM_QUIT, PM_REMOVE,
+    MSG, WM_QUIT, PM_REMOVE, WM_DPICHANGED,
 };
+
+#[cfg(target_os = "windows")]
+use std::sync::atomic::AtomicI32;
 
 /// Tray state
 #[allow(dead_code)]  // Fields are needed for lifetime management
@@ -77,6 +80,15 @@ unsafe impl Sync for TrayState {}
 static TRAY_STATE: OnceCell<Mutex<Option<TrayState>>> = OnceCell::new();
 static SHOULD_EXIT: AtomicBool = AtomicBool::new(false);
 
+/// Current icon type (0=normal, 1=playing, 2=pausing, 3=locked)
+/// Used to refresh icon when DPI changes
+#[cfg(target_os = "windows")]
+static CURRENT_ICON_TYPE: AtomicI32 = AtomicI32::new(0);
+
+/// Cached DPI value to detect DPI changes
+#[cfg(target_os = "windows")]
+static CACHED_DPI_SIZE: AtomicI32 = AtomicI32::new(0);
+
 /// Config file path storage (set from C++)
 static CONFIG_FILE_PATH: OnceCell<String> = OnceCell::new();
 
@@ -103,17 +115,88 @@ unsafe fn c_str_to_string(ptr: *const c_char) -> Option<String> {
     CStr::from_ptr(ptr).to_str().ok().map(|s| s.to_string())
 }
 
+/// Get the system small icon size (used for notification area icons)
+/// This size is DPI-aware and matches what Windows expects for tray icons
+#[cfg(target_os = "windows")]
+fn get_system_small_icon_size() -> (u32, u32) {
+    use windows_sys::Win32::UI::WindowsAndMessaging::{GetSystemMetrics, SM_CXSMICON, SM_CYSMICON};
+
+    unsafe {
+        let width = GetSystemMetrics(SM_CXSMICON);
+        let height = GetSystemMetrics(SM_CYSMICON);
+
+        // Fallback to 16x16 if GetSystemMetrics fails (returns 0)
+        let width = if width > 0 { width as u32 } else { 16 };
+        let height = if height > 0 { height as u32 } else { 16 };
+
+        // Cache the current size for DPI change detection
+        CACHED_DPI_SIZE.store(width as i32, Ordering::SeqCst);
+
+        (width, height)
+    }
+}
+
+/// Check if DPI has changed since last icon load
+/// Returns true if DPI changed and icon needs refresh
+#[cfg(target_os = "windows")]
+fn check_dpi_changed() -> bool {
+    use windows_sys::Win32::UI::WindowsAndMessaging::{GetSystemMetrics, SM_CXSMICON};
+
+    unsafe {
+        let current_size = GetSystemMetrics(SM_CXSMICON);
+        let cached_size = CACHED_DPI_SIZE.load(Ordering::SeqCst);
+
+        // If cached is 0, we haven't loaded yet - not a change
+        if cached_size == 0 {
+            return false;
+        }
+
+        current_size != cached_size
+    }
+}
+
+/// Refresh the current icon with new DPI settings
+#[cfg(target_os = "windows")]
+fn refresh_icon_for_dpi() {
+    let icon_type = CURRENT_ICON_TYPE.load(Ordering::SeqCst);
+
+    let icon_paths = match ICON_PATHS.get() {
+        Some(p) => p,
+        None => return,
+    };
+
+    let icon_path = match icon_type {
+        0 => &icon_paths.normal,
+        1 => &icon_paths.playing,
+        2 => &icon_paths.pausing,
+        3 => &icon_paths.locked,
+        _ => &icon_paths.normal,
+    };
+
+    if let Some(icon) = load_icon(icon_path) {
+        if let Some(state_mutex) = TRAY_STATE.get() {
+            let state_guard = state_mutex.lock();
+            if let Some(ref state) = *state_guard {
+                let _ = state.icon.set_icon(Some(icon));
+            }
+        }
+    }
+}
+
 /// Load icon from ICO file path using native Windows API
-/// This supports multi-resolution icons - Windows will automatically select
-/// the appropriate size based on DPI settings
+/// This properly handles DPI scaling by requesting the correct icon size
+/// based on SM_CXSMICON/SM_CYSMICON system metrics
 #[cfg(target_os = "windows")]
 fn load_icon_from_path(path: &str) -> Option<Icon> {
-    // Use native Windows ICO loading (like ExtractIconEx in C++)
-    // Passing None for size lets Windows choose based on system DPI
-    match Icon::from_path(path, None) {
+    // Get the correct icon size for the notification area based on system DPI
+    let size = get_system_small_icon_size();
+
+    // Request the specific size - Windows will select the best matching
+    // icon from the ICO file's multiple resolutions
+    match Icon::from_path(path, Some(size)) {
         Ok(icon) => Some(icon),
         Err(e) => {
-            eprintln!("Failed to load icon '{}': {}", path, e);
+            eprintln!("Failed to load icon '{}' with size {:?}: {}", path, size, e);
             None
         }
     }
@@ -630,6 +713,11 @@ pub extern "C" fn tray_loop(blocking: c_int) -> c_int {
                 return -1;
             }
 
+            // Handle DPI change - refresh icon with new size
+            if msg.message == WM_DPICHANGED || check_dpi_changed() {
+                refresh_icon_for_dpi();
+            }
+
             TranslateMessage(&msg);
             DispatchMessageW(&msg);
         }
@@ -728,6 +816,10 @@ pub extern "C" fn tray_exit() {
 /// * `icon_type` - 0=normal, 1=playing, 2=pausing, 3=locked
 #[no_mangle]
 pub extern "C" fn tray_set_icon(icon_type: c_int) {
+    // Store current icon type for DPI change refresh
+    #[cfg(target_os = "windows")]
+    CURRENT_ICON_TYPE.store(icon_type, Ordering::SeqCst);
+
     let icon_paths = match ICON_PATHS.get() {
         Some(p) => p,
         None => return,
