@@ -118,6 +118,25 @@ void tray_set_locale(const char* locale);
  */
 void tray_show_notification(const char* title, const char* text, int icon_type);
 
+/**
+ * @brief Enable dark mode for context menus (follow system setting)
+ * 
+ * Call this before creating menus. The menu will automatically
+ * follow the system's dark/light mode setting.
+ * Note: Only effective on Windows 10 1903+ and Windows 11.
+ */
+void tray_enable_dark_mode(void);
+
+/**
+ * @brief Force dark mode for context menus
+ */
+void tray_force_dark_mode(void);
+
+/**
+ * @brief Force light mode for context menus
+ */
+void tray_force_light_mode(void);
+
 #ifdef __cplusplus
 }
 #endif
