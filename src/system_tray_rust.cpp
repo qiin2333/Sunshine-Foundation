@@ -205,6 +205,7 @@ namespace system_tray {
       ICON_PATH_LOCKED,
       tooltip.c_str(),
       locale.c_str(),
+      config::sunshine.config_file.c_str(),
       handle_tray_action
     );
 

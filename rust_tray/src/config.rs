@@ -2,12 +2,16 @@
 //! 
 //! Provides functionality for reading, writing, importing, exporting,
 //! and resetting the Sunshine configuration file.
+//! 
+//! The configuration file path is obtained from C++ via the tray_init_ex function,
+//! which provides the exact path used by the main Sunshine application.
 
 use std::collections::HashMap;
 use std::fs;
 use std::path::PathBuf;
 
 use crate::i18n::{get_string, StringKey};
+use crate::get_config_file_path_from_cpp;
 
 #[cfg(target_os = "windows")]
 use std::ffi::OsStr;
@@ -43,44 +47,12 @@ impl std::fmt::Display for ConfigError {
 
 /// Get the Sunshine configuration file path
 /// 
-/// On Windows: %PROGRAMDATA%/Sunshine/config/sunshine.conf
-/// On Linux: ~/.config/sunshine/sunshine.conf or /etc/sunshine/sunshine.conf
-/// On macOS: ~/Library/Application Support/Sunshine/config/sunshine.conf
-#[cfg(target_os = "windows")]
+/// The path is provided by C++ via tray_init_ex, ensuring consistency
+/// with the main Sunshine application's configuration path.
 pub fn get_config_file_path() -> Option<PathBuf> {
-    std::env::var("PROGRAMDATA")
-        .ok()
-        .map(|data| PathBuf::from(data).join("Sunshine").join("config").join("sunshine.conf"))
+    get_config_file_path_from_cpp()
+        .map(PathBuf::from)
         .filter(|p| p.exists())
-}
-
-#[cfg(target_os = "linux")]
-pub fn get_config_file_path() -> Option<PathBuf> {
-    // Try user config first
-    if let Some(home) = std::env::var("HOME").ok() {
-        let user_config = PathBuf::from(home).join(".config/sunshine/sunshine.conf");
-        if user_config.exists() {
-            return Some(user_config);
-        }
-    }
-    // Fallback to system config
-    let system_config = PathBuf::from("/etc/sunshine/sunshine.conf");
-    if system_config.exists() {
-        return Some(system_config);
-    }
-    None
-}
-
-#[cfg(target_os = "macos")]
-pub fn get_config_file_path() -> Option<PathBuf> {
-    if let Some(home) = std::env::var("HOME").ok() {
-        let config = PathBuf::from(home)
-            .join("Library/Application Support/Sunshine/config/sunshine.conf");
-        if config.exists() {
-            return Some(config);
-        }
-    }
-    None
 }
 
 /// Parse configuration file content into a key-value map
