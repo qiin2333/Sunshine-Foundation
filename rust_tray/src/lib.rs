@@ -320,11 +320,15 @@ fn update_menu_texts() {
             state.menu_items.reset_display.set_text(get_string(StringKey::ResetDisplayDeviceConfig));
             state.menu_items.restart.set_text(get_string(StringKey::Restart));
             state.menu_items.quit.set_text(get_string(StringKey::Quit));
-            
+
             // Update submenu texts
             state.config_submenu.set_text(get_string(StringKey::Configuration));
             state.language_submenu.set_text(get_string(StringKey::Language));
             state.help_submenu.set_text(get_string(StringKey::HelpUs));
+
+            // Re-set the menu on the tray icon to ensure click events work after text update
+            // This is necessary on Windows where menu updates don't automatically propagate
+            let _ = state.icon.set_menu(Some(Box::new(state.menu.clone())));
         }
     }
 }
