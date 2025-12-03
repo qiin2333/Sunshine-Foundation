@@ -18,6 +18,7 @@ use std::os::raw::{c_char, c_int};
 use std::path::Path;
 use std::sync::atomic::{AtomicBool, Ordering};
 
+#[cfg(not(target_os = "windows"))]
 use image::ImageReader;
 use muda::{Menu, MenuEvent, MenuId, MenuItem, PredefinedMenuItem, Submenu, CheckMenuItem};
 use once_cell::sync::OnceCell;
@@ -92,7 +93,25 @@ unsafe fn c_str_to_string(ptr: *const c_char) -> Option<String> {
     CStr::from_ptr(ptr).to_str().ok().map(|s| s.to_string())
 }
 
-/// Load icon from file path
+/// Load icon from ICO file path using native Windows API
+/// This supports multi-resolution icons - Windows will automatically select
+/// the appropriate size based on DPI settings
+#[cfg(target_os = "windows")]
+fn load_icon_from_path(path: &str) -> Option<Icon> {
+    // Use native Windows ICO loading (like ExtractIconEx in C++)
+    // Passing None for size lets Windows choose based on system DPI
+    match Icon::from_path(path, None) {
+        Ok(icon) => Some(icon),
+        Err(e) => {
+            eprintln!("Failed to load icon '{}': {}", path, e);
+            None
+        }
+    }
+}
+
+/// Load icon from file path on non-Windows platforms
+/// On Linux/macOS, ICO files are decoded using the image crate
+#[cfg(not(target_os = "windows"))]
 fn load_icon_from_path(path: &str) -> Option<Icon> {
     let path = Path::new(path);
     
@@ -100,7 +119,7 @@ fn load_icon_from_path(path: &str) -> Option<Icon> {
         Ok(reader) => match reader.decode() {
             Ok(img) => img.into_rgba8(),
             Err(e) => {
-                eprintln!("Failed to decode icon: {}", e);
+                eprintln!("Failed to decode icon '{}': {}", path.display(), e);
                 return None;
             }
         },
@@ -135,12 +154,18 @@ fn load_icon_by_name(name: &str) -> Option<Icon> {
     None
 }
 
-/// Load icon (handles both path and name)
+/// Load icon
+///
+/// On Windows: expects .ico file path (supports multi-resolution)
+/// On Linux: can be either a file path or an icon name (searches system dirs)
+/// On macOS: expects file path
 fn load_icon(icon_str: &str) -> Option<Icon> {
+    // First, try as a direct file path
     if Path::new(icon_str).exists() {
         return load_icon_from_path(icon_str);
     }
 
+    // On Linux, try searching by icon name
     #[cfg(target_os = "linux")]
     {
         return load_icon_by_name(icon_str);
