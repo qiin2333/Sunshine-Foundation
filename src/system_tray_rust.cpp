@@ -151,7 +151,11 @@ namespace system_tray {
         BOOST_LOG(info) << "Quitting from system tray"sv;
 #ifdef _WIN32
         terminate_gui_processes();
-        lifetime::exit_sunshine(ERROR_SHUTDOWN_IN_PROGRESS, true);
+        if (GetConsoleWindow() == NULL) {
+            lifetime::exit_sunshine(ERROR_SHUTDOWN_IN_PROGRESS, true);
+        } else {
+            lifetime::exit_sunshine(0, true);
+        }
 #else
         lifetime::exit_sunshine(0, true);
 #endif
