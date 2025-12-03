@@ -85,46 +85,25 @@ namespace system_tray {
 
       case TRAY_ACTION_IMPORT_CONFIG:
         BOOST_LOG(info) << "Import config requested"sv;
-        // Config import is handled in Rust for file dialog
+        // Config import is now handled entirely in Rust
         break;
 
       case TRAY_ACTION_EXPORT_CONFIG:
         BOOST_LOG(info) << "Export config requested"sv;
-        // Config export is handled in Rust for file dialog
+        // Config export is now handled entirely in Rust
         break;
 
       case TRAY_ACTION_RESET_CONFIG:
         BOOST_LOG(info) << "Reset config requested"sv;
-        // Reset config handled in C++ for now
+        // Reset config is now handled entirely in Rust
         break;
 
       case TRAY_ACTION_LANGUAGE_CHINESE:
       case TRAY_ACTION_LANGUAGE_ENGLISH:
-      case TRAY_ACTION_LANGUAGE_JAPANESE: {
-        std::string locale;
-        switch (action) {
-          case TRAY_ACTION_LANGUAGE_CHINESE: locale = "zh"; break;
-          case TRAY_ACTION_LANGUAGE_ENGLISH: locale = "en"; break;
-          case TRAY_ACTION_LANGUAGE_JAPANESE: locale = "ja"; break;
-        }
-
-        // Save to config file
-        try {
-          auto vars = config::parse_config(file_handler::read_file(config::sunshine.config_file.c_str()));
-          std::stringstream configStream;
-          vars["tray_locale"] = locale;
-          for (const auto& [key, value] : vars) {
-            if (!value.empty() && value != "null") {
-              configStream << key << " = " << value << std::endl;
-            }
-          }
-          file_handler::write_file(config::sunshine.config_file.c_str(), configStream.str());
-          BOOST_LOG(info) << "Tray language setting saved"sv;
-        } catch (const std::exception& e) {
-          BOOST_LOG(warning) << "Failed to save tray language: " << e.what();
-        }
+      case TRAY_ACTION_LANGUAGE_JAPANESE:
+        // Language setting is now saved in Rust, just log here
+        BOOST_LOG(info) << "Tray language changed (saved by Rust)"sv;
         break;
-      }
 
       case TRAY_ACTION_STAR_PROJECT:
         // Handled in Rust (opens URL)
@@ -144,16 +123,19 @@ namespace system_tray {
 
       case TRAY_ACTION_RESTART:
         BOOST_LOG(info) << "Restarting from system tray"sv;
+        tray_exit();
         platf::restart();
         break;
 
       case TRAY_ACTION_QUIT:
         BOOST_LOG(info) << "Quitting from system tray"sv;
+        tray_exit();
 #ifdef _WIN32
         terminate_gui_processes();
         if (GetConsoleWindow() == NULL) {
             lifetime::exit_sunshine(ERROR_SHUTDOWN_IN_PROGRESS, true);
-        } else {
+        }
+        else {
             lifetime::exit_sunshine(0, true);
         }
 #else

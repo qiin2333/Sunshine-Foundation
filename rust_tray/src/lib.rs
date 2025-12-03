@@ -12,6 +12,7 @@
 
 pub mod i18n;
 pub mod actions;
+pub mod config;
 
 use std::ffi::CStr;
 use std::os::raw::{c_char, c_int};
@@ -278,49 +279,168 @@ fn build_menu() -> (Menu, MenuItems, Submenu, Submenu, Submenu, MenuId) {
     (menu, menu_items, config_submenu, language_submenu, help_submenu, vdd_toggle_id)
 }
 
-/// Handle menu events
-fn handle_menu_event(event: &MenuEvent, state: &TrayState) {
+/// Identify which action corresponds to the menu event
+/// Returns the action to perform (if any) and whether menu rebuild is needed
+fn identify_menu_action(event: &MenuEvent, state: &TrayState) -> (Option<MenuAction>, bool) {
     let items = &state.menu_items;
     
     if event.id == items.open_sunshine.id() {
-        trigger_action(MenuAction::OpenUI);
+        (Some(MenuAction::OpenUI), false)
     } else if event.id == items.vdd_toggle.id() {
-        trigger_action(MenuAction::ToggleVddMonitor);
+        (Some(MenuAction::ToggleVddMonitor), false)
     } else if event.id == items.import_config.id() {
-        trigger_action(MenuAction::ImportConfig);
+        (Some(MenuAction::ImportConfig), false)
     } else if event.id == items.export_config.id() {
-        trigger_action(MenuAction::ExportConfig);
+        (Some(MenuAction::ExportConfig), false)
     } else if event.id == items.reset_config.id() {
-        trigger_action(MenuAction::ResetConfig);
+        (Some(MenuAction::ResetConfig), false)
     } else if event.id == items.lang_chinese.id() {
-        set_locale_str("zh");
-        trigger_action(MenuAction::LanguageChinese);
-        update_menu_texts();
+        (Some(MenuAction::LanguageChinese), true)
     } else if event.id == items.lang_english.id() {
-        set_locale_str("en");
-        trigger_action(MenuAction::LanguageEnglish);
-        update_menu_texts();
+        (Some(MenuAction::LanguageEnglish), true)
     } else if event.id == items.lang_japanese.id() {
-        set_locale_str("ja");
-        trigger_action(MenuAction::LanguageJapanese);
-        update_menu_texts();
+        (Some(MenuAction::LanguageJapanese), true)
     } else if event.id == items.star_project.id() {
-        open_url(urls::GITHUB_PROJECT);
-        trigger_action(MenuAction::StarProject);
+        (Some(MenuAction::StarProject), false)
     } else if event.id == items.donate_yundi339.id() {
-        open_url(urls::DONATE_YUNDI339);
-        trigger_action(MenuAction::DonateYundi339);
+        (Some(MenuAction::DonateYundi339), false)
     } else if event.id == items.donate_qiin.id() {
-        open_url(urls::DONATE_QIIN);
-        trigger_action(MenuAction::DonateQiin);
+        (Some(MenuAction::DonateQiin), false)
     } else if event.id == items.restart.id() {
-        trigger_action(MenuAction::Restart);
+        (Some(MenuAction::Restart), false)
     } else if event.id == items.quit.id() {
-        trigger_action(MenuAction::Quit);
+        (Some(MenuAction::Quit), false)
+    } else {
+        #[cfg(target_os = "windows")]
+        if event.id == items.reset_display.id() {
+            return (Some(MenuAction::ResetDisplayDeviceConfig), false);
+        }
+        (None, false)
     }
-    #[cfg(target_os = "windows")]
-    if event.id == items.reset_display.id() {
-        trigger_action(MenuAction::ResetDisplayDeviceConfig);
+}
+
+/// Execute the identified action
+/// This is called AFTER releasing the state lock to avoid deadlocks
+fn execute_action(action: MenuAction, needs_menu_rebuild: bool) {
+    match action {
+        MenuAction::ImportConfig => {
+            // Handle config import in Rust
+            std::thread::spawn(|| {
+                if let Err(e) = config::import_config() {
+                    match e {
+                        config::ConfigError::DialogCancelled => {}
+                        _ => {
+                            config::show_message_box(
+                                i18n::get_string(i18n::StringKey::ImportErrorTitle),
+                                &format!("{}", e),
+                                true,
+                            );
+                        }
+                    }
+                }
+            });
+            trigger_action(action);
+        }
+        MenuAction::ExportConfig => {
+            // Handle config export in Rust
+            std::thread::spawn(|| {
+                if let Err(e) = config::export_config() {
+                    match e {
+                        config::ConfigError::DialogCancelled => {}
+                        _ => {
+                            config::show_message_box(
+                                i18n::get_string(i18n::StringKey::ExportErrorTitle),
+                                &format!("{}", e),
+                                true,
+                            );
+                        }
+                    }
+                }
+            });
+            trigger_action(action);
+        }
+        MenuAction::ResetConfig => {
+            // Handle config reset in Rust
+            std::thread::spawn(|| {
+                if let Err(e) = config::reset_config() {
+                    match e {
+                        config::ConfigError::DialogCancelled => {}
+                        _ => {
+                            config::show_message_box(
+                                i18n::get_string(i18n::StringKey::ResetErrorTitle),
+                                &format!("{}", e),
+                                true,
+                            );
+                        }
+                    }
+                }
+            });
+            trigger_action(action);
+        }
+        MenuAction::LanguageChinese => {
+            set_locale_str("zh");
+            let _ = config::save_tray_locale("zh");
+            trigger_action(action);
+            if needs_menu_rebuild {
+                update_menu_texts();
+            }
+        }
+        MenuAction::LanguageEnglish => {
+            set_locale_str("en");
+            let _ = config::save_tray_locale("en");
+            trigger_action(action);
+            if needs_menu_rebuild {
+                update_menu_texts();
+            }
+        }
+        MenuAction::LanguageJapanese => {
+            set_locale_str("ja");
+            let _ = config::save_tray_locale("ja");
+            trigger_action(action);
+            if needs_menu_rebuild {
+                update_menu_texts();
+            }
+        }
+        MenuAction::StarProject => {
+            open_url(urls::GITHUB_PROJECT);
+            trigger_action(action);
+        }
+        MenuAction::DonateYundi339 => {
+            open_url(urls::DONATE_YUNDI339);
+            trigger_action(action);
+        }
+        MenuAction::DonateQiin => {
+            open_url(urls::DONATE_QIIN);
+            trigger_action(action);
+        }
+        _ => {
+            // For all other actions, just trigger the callback
+            trigger_action(action);
+        }
+    }
+}
+
+/// Process a menu event - identifies the action while holding the lock,
+/// then releases the lock before executing to avoid deadlocks
+fn process_menu_event(event: &MenuEvent) {
+    let (action, needs_rebuild) = {
+        // Hold lock only while identifying the action
+        if let Some(state_mutex) = TRAY_STATE.get() {
+            let state_guard = state_mutex.lock();
+            if let Some(ref state) = *state_guard {
+                identify_menu_action(event, state)
+            } else {
+                (None, false)
+            }
+        } else {
+            (None, false)
+        }
+        // Lock is released here
+    };
+    
+    // Execute action without holding the lock
+    if let Some(action) = action {
+        execute_action(action, needs_rebuild);
     }
 }
 
@@ -494,14 +614,9 @@ pub extern "C" fn tray_loop(blocking: c_int) -> c_int {
             DispatchMessageW(&msg);
         }
 
-        // Process menu events
+        // Process menu events - use process_menu_event to avoid deadlocks
         if let Ok(event) = MenuEvent::receiver().try_recv() {
-            if let Some(state_mutex) = TRAY_STATE.get() {
-                let state_guard = state_mutex.lock();
-                if let Some(ref state) = *state_guard {
-                    handle_menu_event(&event, state);
-                }
-            }
+            process_menu_event(&event);
         }
 
         if SHOULD_EXIT.load(Ordering::SeqCst) {
@@ -522,14 +637,9 @@ pub extern "C" fn tray_loop(blocking: c_int) -> c_int {
             std::thread::sleep(std::time::Duration::from_millis(100));
         }
 
-        // Process menu events
+        // Process menu events - use process_menu_event to avoid deadlocks
         if let Ok(event) = MenuEvent::receiver().try_recv() {
-            if let Some(state_mutex) = TRAY_STATE.get() {
-                let state_guard = state_mutex.lock();
-                if let Some(ref state) = *state_guard {
-                    handle_menu_event(&event, state);
-                }
-            }
+            process_menu_event(&event);
         }
 
         if SHOULD_EXIT.load(Ordering::SeqCst) {
@@ -553,14 +663,9 @@ pub extern "C" fn tray_loop(blocking: c_int) -> c_int {
             }
         });
 
-        // Process menu events
+        // Process menu events - use process_menu_event to avoid deadlocks
         if let Ok(event) = MenuEvent::receiver().try_recv() {
-            if let Some(state_mutex) = TRAY_STATE.get() {
-                let state_guard = state_mutex.lock();
-                if let Some(ref state) = *state_guard {
-                    handle_menu_event(&event, state);
-                }
-            }
+            process_menu_event(&event);
         }
 
         if SHOULD_EXIT.load(Ordering::SeqCst) {

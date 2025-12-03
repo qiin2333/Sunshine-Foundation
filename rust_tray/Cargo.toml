@@ -23,6 +23,7 @@ windows-sys = { version = "0.59", features = [
     "Win32_UI_WindowsAndMessaging",
     "Win32_System_LibraryLoader",
     "Win32_UI_Shell",
+    "Win32_UI_Controls_Dialogs",
 ] }
 
 [target.'cfg(target_os = "linux")'.dependencies]
