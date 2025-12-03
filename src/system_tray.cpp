@@ -241,9 +241,14 @@ namespace system_tray {
       // First, terminate sunshine-gui.exe if it's running
       terminate_gui_processes();
 
-      // Stop the Windows service by sending special exit code
-      // This will terminate both the GUI program and the service
-      lifetime::exit_sunshine(ERROR_SHUTDOWN_IN_PROGRESS, true);
+      // If running as service (no console window), use ERROR_SHUTDOWN_IN_PROGRESS
+      // Otherwise, use exit code 0 to prevent service restart
+      if (GetConsoleWindow() == NULL) {
+        lifetime::exit_sunshine(ERROR_SHUTDOWN_IN_PROGRESS, true);
+      }
+      else {
+        lifetime::exit_sunshine(0, false);
+      }
       return;
     }
   #else
