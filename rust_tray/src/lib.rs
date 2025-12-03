@@ -324,36 +324,35 @@ fn handle_menu_event(event: &MenuEvent, state: &TrayState) {
     }
 }
 
-/// Update menu texts after language change
+/// Update menu texts after language change by rebuilding the menu
+/// 
+/// On Windows, simply updating menu item texts with set_text() and calling set_menu()
+/// can cause issues with the menu event handling. The safest approach is to rebuild
+/// the entire menu with the new texts.
 fn update_menu_texts() {
     if let Some(state_mutex) = TRAY_STATE.get() {
-        let state_guard = state_mutex.lock();
-        if let Some(ref state) = *state_guard {
-            // Update menu item texts
-            state.menu_items.open_sunshine.set_text(get_string(StringKey::OpenSunshine));
-            state.menu_items.vdd_toggle.set_text(get_string(StringKey::VddMonitorToggle));
-            state.menu_items.import_config.set_text(get_string(StringKey::ImportConfig));
-            state.menu_items.export_config.set_text(get_string(StringKey::ExportConfig));
-            state.menu_items.reset_config.set_text(get_string(StringKey::ResetToDefault));
-            state.menu_items.lang_chinese.set_text(get_string(StringKey::Chinese));
-            state.menu_items.lang_english.set_text(get_string(StringKey::English));
-            state.menu_items.lang_japanese.set_text(get_string(StringKey::Japanese));
-            state.menu_items.star_project.set_text(get_string(StringKey::StarProject));
-            state.menu_items.donate_yundi339.set_text(get_string(StringKey::DeveloperYundi339));
-            state.menu_items.donate_qiin.set_text(get_string(StringKey::DeveloperQiin));
-            #[cfg(target_os = "windows")]
-            state.menu_items.reset_display.set_text(get_string(StringKey::ResetDisplayDeviceConfig));
-            state.menu_items.restart.set_text(get_string(StringKey::Restart));
-            state.menu_items.quit.set_text(get_string(StringKey::Quit));
-
-            // Update submenu texts
-            state.config_submenu.set_text(get_string(StringKey::Configuration));
-            state.language_submenu.set_text(get_string(StringKey::Language));
-            state.help_submenu.set_text(get_string(StringKey::HelpUs));
-
-            // Re-set the menu on the tray icon to ensure click events work after text update
-            // This is necessary on Windows where menu updates don't automatically propagate
-            let _ = state.icon.set_menu(Some(Box::new(state.menu.clone())));
+        let mut state_guard = state_mutex.lock();
+        if let Some(ref mut state) = *state_guard {
+            // Get the current VDD toggle state before rebuilding
+            let vdd_checked = state.menu_items.vdd_toggle.is_checked();
+            
+            // Build a completely new menu with the updated language
+            let (new_menu, new_menu_items, new_config_submenu, new_language_submenu, new_help_submenu, new_vdd_toggle_id) = build_menu();
+            
+            // Restore the VDD toggle state
+            new_menu_items.vdd_toggle.set_checked(vdd_checked);
+            
+            // Set the new menu on the tray icon
+            // This properly detaches the old menu subclass and attaches the new one
+            let _ = state.icon.set_menu(Some(Box::new(new_menu.clone())));
+            
+            // Update the state with the new menu and items
+            state.menu = new_menu;
+            state.menu_items = new_menu_items;
+            state.config_submenu = new_config_submenu;
+            state.language_submenu = new_language_submenu;
+            state.help_submenu = new_help_submenu;
+            state.vdd_toggle_id = new_vdd_toggle_id;
         }
     }
 }
