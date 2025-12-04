@@ -13,7 +13,6 @@
 pub mod i18n;
 pub mod actions;
 pub mod config;
-pub mod dark_mode;
 
 use std::ffi::CStr;
 use std::os::raw::{c_char, c_int};
@@ -624,10 +623,6 @@ pub unsafe extern "C" fn tray_init_ex(
     // Register callback
     register_callback(callback);
     
-    // Enable dark mode for context menus (follow system setting)
-    // This must be called before creating the menu
-    dark_mode::enable_dark_mode();
-    
     // Initialize global state
     let _ = TRAY_STATE.get_or_init(|| Mutex::new(None));
     
@@ -899,31 +894,6 @@ pub unsafe extern "C" fn tray_show_notification(
     
     // Log for now - proper notification support needs platform-specific implementation
     eprintln!("Notification: {} - {}", title_str, text_str);
-}
-
-// ============================================================================
-// Dark Mode API
-// ============================================================================
-
-/// Enable dark mode for context menus (follow system setting)
-/// 
-/// Call this before creating menus. The menu will automatically
-/// follow the system's dark/light mode setting.
-#[no_mangle]
-pub extern "C" fn tray_enable_dark_mode() {
-    dark_mode::enable_dark_mode();
-}
-
-/// Force dark mode for context menus
-#[no_mangle]
-pub extern "C" fn tray_force_dark_mode() {
-    dark_mode::force_dark_mode();
-}
-
-/// Force light mode for context menus
-#[no_mangle]
-pub extern "C" fn tray_force_light_mode() {
-    dark_mode::force_light_mode();
 }
 
 // ============================================================================
