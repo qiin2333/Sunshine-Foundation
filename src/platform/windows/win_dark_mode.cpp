@@ -31,6 +31,13 @@ namespace win_dark_mode {
   static SetPreferredAppModeFn g_SetPreferredAppMode = nullptr;
   static std::once_flag g_init_flag;
 
+  // Static holder for uxtheme.dll handle
+  // Design decision: We intentionally keep this handle loaded for the lifetime of the process
+  // because the function pointers (g_SetPreferredAppMode) must remain valid. The library is
+  // only loaded once via std::call_once, so there's no risk of multiple loads. The OS will
+  // automatically clean up when the process exits.
+  static HMODULE g_hUxTheme = nullptr;
+
   /**
    * @brief Initialize the dark mode API function pointers
    *
@@ -40,8 +47,8 @@ namespace win_dark_mode {
   static void
   init_dark_mode_apis() {
     // Load uxtheme.dll
-    HMODULE hUxTheme = LoadLibraryW(L"uxtheme.dll");
-    if (!hUxTheme) {
+    g_hUxTheme = LoadLibraryW(L"uxtheme.dll");
+    if (!g_hUxTheme) {
       return;
     }
 
@@ -50,10 +57,7 @@ namespace win_dark_mode {
     // On older versions, the function will exist but may not have the expected effect
     g_SetPreferredAppMode =
       reinterpret_cast<SetPreferredAppModeFn>(
-        GetProcAddress(hUxTheme, MAKEINTRESOURCEA(135)));
-
-    // Note: We intentionally don't call FreeLibrary(hUxTheme) because we need
-    // the function pointers to remain valid for the lifetime of the process
+        GetProcAddress(g_hUxTheme, MAKEINTRESOURCEA(135)));
   }
 
   void
@@ -68,24 +72,6 @@ namespace win_dark_mode {
     }
     // If API is not available, dark mode is not supported on this Windows version
     // (Windows 10 < 1809 or earlier). We silently do nothing in this case.
-  }
-
-  void
-  apply_window_dark_title_bar(HWND hwnd, bool enable) {
-    if (!hwnd) {
-      return;
-    }
-
-    // DWMWA_USE_IMMERSIVE_DARK_MODE is documented for Windows 11
-    // but also works on Windows 10 20H1+
-    constexpr DWORD DWMWA_USE_IMMERSIVE_DARK_MODE = 20;
-
-    BOOL useDark = enable ? TRUE : FALSE;
-    DwmSetWindowAttribute(
-      hwnd,
-      DWMWA_USE_IMMERSIVE_DARK_MODE,
-      &useDark,
-      sizeof(useDark));
   }
 
 }  // namespace win_dark_mode

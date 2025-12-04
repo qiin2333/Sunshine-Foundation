@@ -30,17 +30,6 @@ namespace win_dark_mode {
    */
   void enable_process_dark_mode();
 
-  /**
-   * @brief Apply dark mode to a specific window's title bar
-   *
-   * This function applies the immersive dark mode to a window's title bar using
-   * DwmSetWindowAttribute with DWMWA_USE_IMMERSIVE_DARK_MODE.
-   *
-   * @param hwnd Window handle to apply dark mode to
-   * @param enable Whether to enable (true) or disable (false) dark mode for the title bar
-   */
-  void apply_window_dark_title_bar(HWND hwnd, bool enable);
-
 }  // namespace win_dark_mode
 
 #endif  // _WIN32
