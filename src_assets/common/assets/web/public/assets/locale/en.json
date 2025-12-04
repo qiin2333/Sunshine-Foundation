@@ -168,6 +168,8 @@
     "display_mode_remapping_received_resolution_windows": "Received resolution",
     "display_mode_remapping_resolution_only_mode_desc_windows": "Note: if \"Optimize game settings\" option is not enabled on the Moonlight client, the remapping is disabled.",
     "display_mode_remapping_windows": "Remap display modes",
+    "display_modes": "Display Modes",
+    "virtual_display": "Virtual Display",
     "ds4_back_as_touchpad_click": "Map Back/Select to Touchpad Click",
     "ds4_back_as_touchpad_click_desc": "When forcing DS4 emulation, map Back/Select to Touchpad Click",
     "encoder": "Force a Specific Encoder",
@@ -525,7 +527,27 @@
     "unpair_title": "Unpair Devices",
     "reopen_setup_wizard": "Reopen Setup Wizard",
     "reopen_setup_wizard_desc": "Reopen the setup wizard page to reconfigure initial settings.",
-    "reopen_setup_wizard_error": "Failed to reopen setup wizard"
+    "reopen_setup_wizard_error": "Failed to reopen setup wizard",
+    "copy_logs": "Copy logs",
+    "download_logs": "Download logs",
+    "match_contains": "Contains",
+    "match_regex": "Regex",
+    "match_exact": "Exact",
+    "ignore_case": "Ignore case"
+  },
+  "tabs": {
+    "general": "General",
+    "input": "Input",
+    "av": "Audio/Video",
+    "network": "Network",
+    "files": "Config Files",
+    "advanced": "Advanced",
+    "nv": "NVIDIA NVENC Encoder",
+    "qsv": "Intel QuickSync Encoder",
+    "amd": "AMD AMF Encoder",
+    "vt": "VideoToolbox Encoder",
+    "sw": "Software Encoder",
+    "vaapi": "VAAPI Encoder"
   },
   "welcome": {
     "confirm_password": "Confirm password",
@@ -533,6 +555,13 @@
     "create_creds_alert": "The credentials below are needed to access Sunshine's Web UI. Keep them safe, since you will never see them again!",
     "greeting": "Welcome to Sunshine Foundation!",
     "login": "Login",
-    "welcome_success": "This page will reload soon, your browser will ask you for the new credentials"
+    "welcome_success": "This page will reload soon, your browser will ask you for the new credentials",
+    "username": "Username",
+    "password": "Password",
+    "error": "Error!",
+    "success": "Success!",
+    "password_mismatch": "Passwords do not match",
+    "server_error": "Server error",
+    "network_error": "Network error, please check your connection"
   }
 }

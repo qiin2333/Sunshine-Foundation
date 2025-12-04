@@ -9,6 +9,8 @@
     <!-- Vue 应用挂载点 -->
   </body>
 
+  <!-- WELCOME_LOCALES_INLINE_PLACEHOLDER -->
+
   <script type="module">
     import { createApp } from 'vue'
     import { initApp } from './init'
@@ -18,3 +20,4 @@
     initApp(app)
   </script>
 </html>
+
