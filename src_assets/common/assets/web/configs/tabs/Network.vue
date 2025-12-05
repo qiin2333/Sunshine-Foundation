@@ -16,7 +16,6 @@ const effectivePort = computed(() => +config.value?.port ?? defaultMoonlightPort
 const showCurlModal = ref(false)
 const copied = ref(false)
 
-// 生成 curl 命令
 const curlCommand = computed(() => {
   if (!config.value.webhook_url) {
     return ''
@@ -30,26 +29,21 @@ const curlCommand = computed(() => {
     }
   })
   
-  // 转义 JSON 中的特殊字符，用于 shell（单引号需要特殊处理）
-  // 使用单引号包裹，并将单引号转义为 '\''
   const escapedPayload = payload.replace(/'/g, "'\\''")
   
   return `curl -X POST '${url}' \\\n  -H 'Content-Type: application/json' \\\n  -d '${escapedPayload}'`
 })
 
-// 显示 curl 命令弹窗
 const showCurlCommand = () => {
   showCurlModal.value = true
   copied.value = false
 }
 
-// 关闭 curl 命令弹窗
 const closeCurlModal = () => {
   showCurlModal.value = false
   copied.value = false
 }
 
-// 复制 curl 命令到剪贴板
 const copyCurlCommand = async () => {
   try {
     await navigator.clipboard.writeText(curlCommand.value)
@@ -78,24 +72,19 @@ const copyCurlCommand = async () => {
   }
 }
 
-// Webhook test function
 const testWebhook = async () => {
   if (!config.value.webhook_url) {
     alert(t('config.webhook_test_url_required'))
     return
   }
 
-  // Check if URL is valid
-  let webhookUrl
   try {
-    webhookUrl = new URL(config.value.webhook_url)
+    new URL(config.value.webhook_url)
   } catch (error) {
     alert(t('config.webhook_test_failed') + ': Invalid URL format')
     return
   }
 
-  // 方案：使用 no-cors 模式绕过 CORS 限制
-  // 注意：no-cors 模式下无法读取响应状态，但请求会被发送
   try {
     const testPayload = JSON.stringify({
       msgtype: 'text',
@@ -104,15 +93,21 @@ const testWebhook = async () => {
       }
     })
 
-    // 先尝试正常请求（如果服务器支持 CORS）
+    const controller = new AbortController()
+    const timeout = parseInt(config.value.webhook_timeout) || 1000
+    const timeoutId = setTimeout(() => controller.abort(), timeout)
+
     try {
       const response = await fetch(config.value.webhook_url, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: testPayload
+        body: testPayload,
+        signal: controller.signal
       })
+
+      clearTimeout(timeoutId)
 
       if (response.ok) {
         alert(t('config.webhook_test_success'))
@@ -121,26 +116,45 @@ const testWebhook = async () => {
         throw new Error(`HTTP ${response.status}`)
       }
     } catch (corsError) {
-      // 如果遇到 CORS 错误，使用 no-cors 模式
-      if (corsError.name === 'TypeError' && corsError.message.includes('Failed to fetch')) {
-        // 使用 no-cors 模式发送请求（绕过 CORS，但无法读取响应）
-        await fetch(config.value.webhook_url, {
-          method: 'POST',
-          mode: 'no-cors', // 绕过 CORS 检查
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: testPayload
-        })
+      clearTimeout(timeoutId)
 
-        // no-cors 模式下无法读取响应，但请求已发送
-        alert(t('config.webhook_test_success') + '\n\n提示：由于 CORS 限制，无法确认服务器响应状态。\n请求已发送，如果 webhook 配置正确，消息应该已送达。\n\n建议：在浏览器开发者工具的 Network 标签页中查看请求详情。')
+      if (corsError.name === 'TypeError' && corsError.message.includes('Failed to fetch')) {
+        const noCorsController = new AbortController()
+        const noCorsTimeoutId = setTimeout(() => noCorsController.abort(), timeout)
+
+        try {
+          await fetch(config.value.webhook_url, {
+            method: 'POST',
+            mode: 'no-cors',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: testPayload,
+            signal: noCorsController.signal
+          })
+
+          clearTimeout(noCorsTimeoutId)
+          alert(t('config.webhook_test_success') + '\n\n提示：由于 CORS 限制，无法确认服务器响应状态。\n请求已发送，如果 webhook 配置正确，消息应该已送达。\n\n建议：在浏览器开发者工具的 Network 标签页中查看请求详情。')
+        } catch (noCorsError) {
+          clearTimeout(noCorsTimeoutId)
+          if (noCorsError.name === 'AbortError') {
+            throw new Error(`Request timeout (${timeout}ms)`)
+          }
+          throw noCorsError
+        }
+      } else if (corsError.name === 'AbortError') {
+        throw new Error(`Request timeout (${timeout}ms)`)
       } else {
         throw corsError
       }
     }
   } catch (error) {
-    alert(`${t('config.webhook_test_failed')}: ${error.message || 'Unknown error'}\n\n提示：请检查 URL 是否正确，或查看浏览器控制台获取更多信息。`)
+    if (error.name === 'AbortError' || error.message.includes('timeout')) {
+      const timeout = parseInt(config.value.webhook_timeout) || 1000
+      alert(t('config.webhook_test_failed') + `: Request timeout (${timeout}ms)`)
+    } else {
+      alert(`${t('config.webhook_test_failed')}: ${error.message || 'Unknown error'}\n\n提示：请检查 URL 是否正确，或查看浏览器控制台获取更多信息。`)
+    }
   }
 }
 </script>
@@ -173,15 +187,12 @@ const testWebhook = async () => {
       <input type="number" min="1029" max="65514" class="form-control" id="port" :placeholder="defaultMoonlightPort"
              v-model="config.port" />
       <div class="form-text">{{ $t('config.port_desc') }}</div>
-      <!-- Add warning if any port is less than 1024 -->
       <div class="alert alert-danger" v-if="(+effectivePort - 5) < 1024">
         <i class="fa-solid fa-xl fa-triangle-exclamation"></i> {{ $t('config.port_alert_1') }}
       </div>
-      <!-- Add warning if any port is above 65535 -->
       <div class="alert alert-danger" v-if="(+effectivePort + 21) > 65535">
         <i class="fa-solid fa-xl fa-triangle-exclamation"></i> {{ $t('config.port_alert_2') }}
       </div>
-      <!-- Create a port table for the various ports needed by Sunshine -->
       <table class="table">
         <thead>
         <tr>
@@ -227,7 +238,6 @@ const testWebhook = async () => {
         </tr>
         </tbody>
       </table>
-      <!-- add warning about exposing web ui to the internet -->
       <div class="alert alert-warning" v-if="config.origin_web_ui_allowed === 'wan'">
         <i class="fa-solid fa-xl fa-triangle-exclamation"></i> {{ $t('config.port_warning') }}
       </div>
@@ -386,7 +396,6 @@ const testWebhook = async () => {
 </template>
 
 <style scoped>
-/* Modal styles (参考 SetupWizard.vue) */
 .modal {
   display: none;
   position: fixed;

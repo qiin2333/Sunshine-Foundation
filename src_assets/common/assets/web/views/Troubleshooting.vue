@@ -67,7 +67,7 @@
                 {{ $t('troubleshooting.boom_sunshine_success') }}
               </div>
             </template>
-            <button class="btn btn-danger" :disabled="boomPressed" @click="handleConfirmBoom">
+            <button class="btn btn-danger" :disabled="boomPressed" @click="showBoomModal">
               <i class="fas fa-bomb me-2"></i>
               {{ $t('troubleshooting.boom_sunshine') }}
             </button>
@@ -130,11 +130,34 @@
         :copyConfig="handleCopyConfig"
       />
     </div>
+
+    <!-- Boom Confirm Modal -->
+    <div id="boomConfirmModal" class="modal" :class="{ show: showBoomConfirmModal }" @click.self="closeBoomModal">
+      <div class="modal-content" @click.stop>
+        <div class="modal-header">
+          <h5>
+            <i class="fas fa-bomb me-2"></i>{{ $t('troubleshooting.confirm_boom') }}
+          </h5>
+          <span class="close" @click="closeBoomModal">&times;</span>
+        </div>
+        <div class="modal-body">
+          <p>{{ $t('troubleshooting.confirm_boom_desc') }}</p>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" @click="closeBoomModal">
+            {{ $t('_common.cancel') }}
+          </button>
+          <button type="button" class="btn btn-danger" @click="confirmBoom">
+            <i class="fas fa-bomb me-2"></i>{{ $t('troubleshooting.boom_sunshine') }}
+          </button>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
 <script setup>
-import { onMounted } from 'vue'
+import { onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import Navbar from '../components/layout/Navbar.vue'
 import TroubleshootingCard from '../components/TroubleshootingCard.vue'
@@ -167,10 +190,19 @@ const {
   startLogRefresh,
 } = useTroubleshooting()
 
-const handleConfirmBoom = async () => {
-  if (await confirm(t('troubleshooting.confirm_boom_desc'))) {
-    boom()
-  }
+const showBoomConfirmModal = ref(false)
+
+const showBoomModal = () => {
+  showBoomConfirmModal.value = true
+}
+
+const closeBoomModal = () => {
+  showBoomConfirmModal.value = false
+}
+
+const confirmBoom = () => {
+  closeBoomModal()
+  boom()
 }
 
 const handleCopyConfig = () => copyConfig(t)
@@ -203,6 +235,85 @@ onMounted(async () => {
   border-radius: 8px;
   font-size: 0.9rem;
   padding: 0.75rem 1rem;
+}
+
+.modal {
+  display: none;
+  position: fixed;
+  z-index: 1000;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  overflow: auto;
+  background-color: rgba(0, 0, 0, 0.5);
+  align-items: center;
+  justify-content: center;
+}
+
+.modal.show {
+  display: flex;
+}
+
+.modal-content {
+  background-color: #ffffff;
+  margin: auto;
+  padding: 0;
+  border: 1px solid #888;
+  border-radius: 8px;
+  width: 90%;
+  max-width: 500px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 15px 20px;
+  border-bottom: 1px solid #dee2e6;
+  background-color: #f8f9fa;
+  border-radius: 8px 8px 0 0;
+}
+
+.modal-header h5 {
+  margin: 0;
+  font-size: 1.1rem;
+  font-weight: 600;
+}
+
+.close {
+  color: #aaa;
+  font-size: 28px;
+  font-weight: bold;
+  cursor: pointer;
+  line-height: 1;
+}
+
+.close:hover,
+.close:focus {
+  color: #000;
+}
+
+.modal-body {
+  padding: 20px;
+  font-size: 0.95rem;
+  line-height: 1.5;
+}
+
+.modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  padding: 15px 20px;
+  border-top: 1px solid #dee2e6;
+  background-color: #f8f9fa;
+  border-radius: 0 0 8px 8px;
+}
+
+.modal-footer button {
+  padding: 8px 16px;
+  font-size: 0.9rem;
 }
 
 @media (max-width: 991.98px) {
