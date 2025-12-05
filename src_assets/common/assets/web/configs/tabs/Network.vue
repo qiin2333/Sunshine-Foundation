@@ -425,6 +425,12 @@ const testWebhook = async () => {
   box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
 }
 
+[data-bs-theme='dark'] .modal-content {
+  background-color: #212529;
+  border-color: #495057;
+  color: #fff;
+}
+
 .modal-header {
   display: flex;
   justify-content: space-between;
@@ -435,10 +441,19 @@ const testWebhook = async () => {
   border-radius: 8px 8px 0 0;
 }
 
+[data-bs-theme='dark'] .modal-header {
+  background-color: #343a40;
+  border-bottom-color: #495057;
+}
+
 .modal-header h5 {
   margin: 0;
   font-size: 1.1rem;
   font-weight: 600;
+}
+
+[data-bs-theme='dark'] .modal-header h5 {
+  color: #fff;
 }
 
 .close {
@@ -454,8 +469,17 @@ const testWebhook = async () => {
   color: #000;
 }
 
+[data-bs-theme='dark'] .close:hover,
+[data-bs-theme='dark'] .close:focus {
+  color: #fff;
+}
+
 .modal-body {
   padding: 20px;
+}
+
+[data-bs-theme='dark'] .modal-body {
+  color: #e9ecef;
 }
 
 .modal-footer {
@@ -468,13 +492,22 @@ const testWebhook = async () => {
   border-radius: 0 0 8px 8px;
 }
 
-/* Curl command container */
+[data-bs-theme='dark'] .modal-footer {
+  background-color: #343a40;
+  border-top-color: #495057;
+}
+
 .curl-command-container {
   position: relative;
   background-color: #f8f9fa;
   border: 1px solid #dee2e6;
   border-radius: 4px;
   padding: 15px;
+}
+
+[data-bs-theme='dark'] .curl-command-container {
+  background-color: #343a40;
+  border-color: #495057;
 }
 
 .curl-command {
@@ -490,6 +523,10 @@ const testWebhook = async () => {
   overflow-x: auto;
   max-height: 300px;
   overflow-y: auto;
+}
+
+[data-bs-theme='dark'] .curl-command {
+  color: #e9ecef;
 }
 
 .copy-btn {
