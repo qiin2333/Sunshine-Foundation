@@ -438,6 +438,6 @@ watch(searchQuery, () => {
 })
 </script>
 
-<style scoped>
-@import '../styles/apps.css';
+<style>
+@import '../styles/apps.less';
 </style>

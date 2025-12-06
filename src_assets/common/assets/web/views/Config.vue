@@ -8,11 +8,8 @@
       <button class="cute-btn cute-btn-success" @click="apply" v-if="saved && !restarted" :title="$t('_common.apply')">
         <i class="fas fa-check"></i>
       </button>
-    </div>
-    <div class="container">
-      <h1 class="my-4 page-title">{{ $t('config.configuration') }}</h1>
       <!-- Toast notifications for save/apply success -->
-      <div class="toast-container position-fixed top-0 end-0 p-3" style="z-index: 1100">
+      <div class="floating-toast-container">
         <div
           class="toast align-items-center text-bg-success border-0"
           :class="{ show: showSaveToast }"
@@ -54,6 +51,9 @@
           </div>
         </div>
       </div>
+    </div>
+    <div class="container">
+      <h1 class="my-4 page-title">{{ $t('config.configuration') }}</h1>
       <div class="form card" v-if="config">
         <!-- Header -->
         <ul class="nav nav-tabs config-tabs card-header">
@@ -185,8 +185,19 @@ onMounted(async () => {
 })
 </script>
 
-<style>
-@import '../styles/global.css';
+<style lang="less">
+@import '../styles/global.less';
+
+// Variables
+@transition-fast: 0.3s;
+@transition-medium: 0.6s;
+@border-radius-sm: 2px;
+@border-radius-md: 10px;
+@border-radius-lg: 12px;
+@btn-size: 56px;
+@btn-size-mobile: 48px;
+@cubic-bounce: cubic-bezier(0.68, -0.55, 0.265, 1.55);
+@cubic-smooth: cubic-bezier(0.4, 0, 0.2, 1);
 
 .config-page {
   padding: 1em;
@@ -197,28 +208,84 @@ onMounted(async () => {
   backface-visibility: hidden;
 }
 
-.page-config .nav-tabs {
-  border: none;
+.page-config {
+  .nav-tabs {
+    border: none;
+  }
+
+  .ms-item {
+    border: 1px solid;
+    border-radius: @border-radius-sm;
+    font-size: 12px;
+    font-weight: bold;
+  }
+
+  // 配置页面标签栏
+  .config-tabs {
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.2), rgba(255, 255, 255, 0.1));
+    border-radius: @border-radius-lg @border-radius-lg 0 0;
+    padding: 0.75rem 1rem 0;
+    gap: 0.5rem;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+
+    .nav-item {
+      margin-bottom: -1px;
+    }
+
+    .nav-link {
+      border: none;
+      border-radius: @border-radius-md @border-radius-md 0 0;
+      padding: 0.75rem 1.5rem;
+      font-weight: 500;
+      color: var(--bs-secondary-color);
+      background: transparent;
+      transition: all @transition-fast @cubic-smooth;
+      position: relative;
+      overflow: hidden;
+
+      &::before {
+        content: '';
+        position: absolute;
+        bottom: 0;
+        left: 50%;
+        transform: translateX(-50%) scaleX(0);
+        width: 80%;
+        height: 3px;
+        background: linear-gradient(90deg, var(--bs-primary), var(--bs-info));
+        border-radius: 3px 3px 0 0;
+        transition: transform @transition-fast @cubic-smooth;
+      }
+
+      &:hover {
+        color: var(--bs-primary);
+        background: rgba(var(--bs-primary-rgb), 0.08);
+      }
+
+      &.active {
+        color: var(--bs-primary);
+        background: var(--bs-body-bg);
+        box-shadow: 0 -4px 12px rgba(0, 0, 0, 0.08);
+        font-weight: 600;
+
+        &::before {
+          transform: translateX(-50%) scaleX(1);
+        }
+      }
+    }
+  }
 }
 
-.page-config .ms-item {
-  border: 1px solid;
-  border-radius: 2px;
-  font-size: 12px;
-  font-weight: bold;
-}
-
-/* Toast 样式 */
+// Toast 样式
 .toast {
   opacity: 0;
-  transition: opacity 0.3s ease-in-out;
+  transition: opacity @transition-fast ease-in-out;
+
+  &.show {
+    opacity: 1;
+  }
 }
 
-.toast.show {
-  opacity: 1;
-}
-
-/* 浮动按钮组 */
+// 浮动按钮组
 .config-floating-buttons {
   position: sticky;
   top: 2rem;
@@ -230,127 +297,87 @@ onMounted(async () => {
   flex-direction: column;
   gap: 1rem;
   z-index: 1000;
+
+  .floating-toast-container {
+    position: absolute;
+    right: calc(100% + 1rem);
+    top: 0;
+    width: max-content;
+    max-width: 300px;
+
+    .toast {
+      margin-bottom: 0.5rem;
+    }
+  }
+
+  .cute-btn {
+    width: @btn-size;
+    height: @btn-size;
+    border-radius: 50%;
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    color: #fff;
+    font-size: 1.25rem;
+    cursor: pointer;
+    transition: all @transition-fast @cubic-bounce;
+    backdrop-filter: blur(10px);
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2), 0 2px 8px rgba(0, 0, 0, 0.15);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    position: relative;
+    overflow: hidden;
+
+    &::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: rgba(255, 255, 255, 0.3);
+      border-radius: 50%;
+      transform: scale(0);
+      transition: transform @transition-medium ease;
+    }
+
+    i {
+      position: relative;
+      z-index: 2;
+      transition: transform @transition-fast ease;
+    }
+
+    &-primary {
+      background: linear-gradient(135deg, #667eea, #764ba2);
+
+      &:hover {
+        background: linear-gradient(135deg, #764ba2, #667eea);
+      }
+    }
+
+    &-success {
+      background: linear-gradient(135deg, #11998e, #38ef7d);
+
+      &:hover {
+        background: linear-gradient(135deg, #38ef7d, #11998e);
+      }
+    }
+  }
 }
 
-.config-floating-buttons .cute-btn {
-  width: 56px;
-  height: 56px;
-  border-radius: 50%;
-  border: 2px solid rgba(255, 255, 255, 0.3);
-  color: #fff;
-  font-size: 1.25rem;
-  cursor: pointer;
-  transition: all 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55);
-  backdrop-filter: blur(10px);
-  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2), 0 2px 8px rgba(0, 0, 0, 0.15);
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  position: relative;
-  overflow: hidden;
-}
-
-.config-floating-buttons .cute-btn::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background: rgba(255, 255, 255, 0.3);
-  border-radius: 50%;
-  transform: scale(0);
-  transition: transform 0.6s ease;
-}
-
-.config-floating-buttons .cute-btn i {
-  position: relative;
-  z-index: 2;
-  transition: transform 0.3s ease;
-}
-
-.config-floating-buttons .cute-btn-primary {
-  background: linear-gradient(135deg, #667eea, #764ba2);
-}
-
-.config-floating-buttons .cute-btn-primary:hover {
-  background: linear-gradient(135deg, #764ba2, #667eea);
-}
-
-.config-floating-buttons .cute-btn-success {
-  background: linear-gradient(135deg, #11998e, #38ef7d);
-}
-
-.config-floating-buttons .cute-btn-success:hover {
-  background: linear-gradient(135deg, #38ef7d, #11998e);
-}
-
-/* 配置页面标签栏 */
-.page-config .config-tabs {
-  background: linear-gradient(135deg, rgba(255, 255, 255, 0.2), rgba(255, 255, 255, 0.1));
-  border-radius: 12px 12px 0 0;
-  padding: 0.75rem 1rem 0;
-  gap: 0.5rem;
-  border-bottom: 1px solid rgba(0, 0, 0, 0.1);
-}
-
-.page-config .config-tabs .nav-item {
-  margin-bottom: -1px;
-}
-
-.page-config .config-tabs .nav-link {
-  border: none;
-  border-radius: 10px 10px 0 0;
-  padding: 0.75rem 1.5rem;
-  font-weight: 500;
-  color: var(--bs-secondary-color);
-  background: transparent;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  position: relative;
-  overflow: hidden;
-}
-
-.page-config .config-tabs .nav-link::before {
-  content: '';
-  position: absolute;
-  bottom: 0;
-  left: 50%;
-  transform: translateX(-50%) scaleX(0);
-  width: 80%;
-  height: 3px;
-  background: linear-gradient(90deg, var(--bs-primary), var(--bs-info));
-  border-radius: 3px 3px 0 0;
-  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-.page-config .config-tabs .nav-link:hover {
-  color: var(--bs-primary);
-  background: rgba(var(--bs-primary-rgb), 0.08);
-}
-
-.page-config .config-tabs .nav-link.active {
-  color: var(--bs-primary);
-  background: var(--bs-body-bg);
-  box-shadow: 0 -4px 12px rgba(0, 0, 0, 0.08);
-  font-weight: 600;
-}
-
-.page-config .config-tabs .nav-link.active::before {
-  transform: translateX(-50%) scaleX(1);
-}
-
-/* 暗色模式适配 */
+// 暗色模式适配
 [data-bs-theme='dark'] .page-config .config-tabs {
   background: linear-gradient(135deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.05));
   border-bottom-color: rgba(255, 255, 255, 0.1);
+
+  .nav-link {
+    &:hover {
+      background: rgba(var(--bs-primary-rgb), 0.15);
+    }
+
+    &.active {
+      box-shadow: 0 -4px 12px rgba(0, 0, 0, 0.3);
+    }
+  }
 }
 
-[data-bs-theme='dark'] .page-config .config-tabs .nav-link:hover {
-  background: rgba(var(--bs-primary-rgb), 0.15);
-}
-
-[data-bs-theme='dark'] .page-config .config-tabs .nav-link.active {
-  box-shadow: 0 -4px 12px rgba(0, 0, 0, 0.3);
-}
-
-/* 响应式优化 */
+// 响应式优化
 @media (max-width: 768px) {
   .config-floating-buttons {
     float: none;
@@ -360,12 +387,20 @@ onMounted(async () => {
     top: auto;
     margin: 0;
     gap: 0.75rem;
-  }
 
-  .config-floating-buttons .cute-btn {
-    width: 48px;
-    height: 48px;
-    font-size: 1.1rem;
+    .floating-toast-container {
+      right: auto;
+      left: auto;
+      top: auto;
+      bottom: calc(100% + 1rem);
+      max-width: calc(100vw - 2rem);
+    }
+
+    .cute-btn {
+      width: @btn-size-mobile;
+      height: @btn-size-mobile;
+      font-size: 1.1rem;
+    }
   }
 
   .page-config .config-tabs {
@@ -373,12 +408,12 @@ onMounted(async () => {
     gap: 0.25rem;
     overflow-x: auto;
     flex-wrap: nowrap;
-  }
 
-  .page-config .config-tabs .nav-link {
-    padding: 0.5rem 1rem;
-    font-size: 0.875rem;
-    white-space: nowrap;
+    .nav-link {
+      padding: 0.5rem 1rem;
+      font-size: 0.875rem;
+      white-space: nowrap;
+    }
   }
 }
 </style>
