@@ -76,13 +76,14 @@ body.bg-light .page-title {
 .card {
   border: none;
   border-radius: 12px;
-  backdrop-filter: blur(3px);
 }
 
 .card-header {
   border-radius: 12px 12px 0 0 !important;
   padding: 1rem 1.25rem;
-  backdrop-filter: blur(1px);
+  backdrop-filter: blur(4px) saturate(1.8);
+  transform: translateZ(0);
+  backface-visibility: hidden;
 }
 
 .card-title {
@@ -92,6 +93,9 @@ body.bg-light .page-title {
 
 .card-body {
   padding: 1.25rem;
+  backdrop-filter: blur(2px) saturate(1.8);
+  transform: translateZ(0);
+  backface-visibility: hidden;
 }
 
 .card-body p {

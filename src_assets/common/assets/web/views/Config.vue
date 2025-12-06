@@ -1,11 +1,62 @@
 <template>
   <div class="page-config">
     <Navbar />
+    <div class="config-floating-buttons">
+      <button class="cute-btn cute-btn-primary" @click="save" :title="$t('_common.save')">
+        <i class="fas fa-save"></i>
+      </button>
+      <button class="cute-btn cute-btn-success" @click="apply" v-if="saved && !restarted" :title="$t('_common.apply')">
+        <i class="fas fa-check"></i>
+      </button>
+    </div>
     <div class="container">
       <h1 class="my-4 page-title">{{ $t('config.configuration') }}</h1>
+      <!-- Toast notifications for save/apply success -->
+      <div class="toast-container position-fixed top-0 end-0 p-3" style="z-index: 1100">
+        <div
+          class="toast align-items-center text-bg-success border-0"
+          :class="{ show: showSaveToast }"
+          role="alert"
+          aria-live="assertive"
+          aria-atomic="true"
+        >
+          <div class="d-flex">
+            <div class="toast-body">
+              <i class="fas fa-check-circle me-2"></i>
+              <b>{{ $t('_common.success') }}</b> {{ $t('config.apply_note') }}
+            </div>
+            <button
+              type="button"
+              class="btn-close btn-close-white me-2 m-auto"
+              @click="showSaveToast = false"
+              aria-label="Close"
+            ></button>
+          </div>
+        </div>
+        <div
+          class="toast align-items-center text-bg-success border-0 mt-2"
+          :class="{ show: showRestartToast }"
+          role="alert"
+          aria-live="assertive"
+          aria-atomic="true"
+        >
+          <div class="d-flex">
+            <div class="toast-body">
+              <i class="fas fa-check-circle me-2"></i>
+              <b>{{ $t('_common.success') }}</b> {{ $t('config.restart_note') }}
+            </div>
+            <button
+              type="button"
+              class="btn-close btn-close-white me-2 m-auto"
+              @click="showRestartToast = false"
+              aria-label="Close"
+            ></button>
+          </div>
+        </div>
+      </div>
       <div class="form card" v-if="config">
         <!-- Header -->
-        <ul class="nav nav-tabs config-tabs">
+        <ul class="nav nav-tabs config-tabs card-header">
           <li class="nav-item" v-for="tab in tabs" :key="tab.id">
             <a
               class="nav-link"
@@ -50,26 +101,12 @@
 
         <ContainerEncoders :current-tab="currentTab" :config="config" :platform="platform" />
       </div>
-
-      <!-- Save and Apply buttons -->
-      <div class="alert alert-success my-4" v-if="saved && !restarted">
-        <b>{{ $t('_common.success') }}</b> {{ $t('config.apply_note') }}
-      </div>
-      <div class="alert alert-success my-4" v-if="restarted">
-        <b>{{ $t('_common.success') }}</b> {{ $t('config.restart_note') }}
-      </div>
-      <div class="mb-3 buttons">
-        <button class="btn btn-primary" @click="save">{{ $t('_common.save') }}</button>
-        <button class="btn btn-success" @click="apply" v-if="saved && !restarted">
-          {{ $t('_common.apply') }}
-        </button>
-      </div>
     </div>
   </div>
 </template>
 
 <script setup>
-import { onMounted, provide, computed } from 'vue'
+import { ref, watch, onMounted, provide, computed } from 'vue'
 import Navbar from '../components/layout/Navbar.vue'
 import General from '../configs/tabs/General.vue'
 import Inputs from '../configs/tabs/Inputs.vue'
@@ -102,6 +139,30 @@ const {
   handleHash,
 } = useConfig()
 
+// Toast 状态
+const showSaveToast = ref(false)
+const showRestartToast = ref(false)
+
+// 监听 saved 和 restarted 状态变化来显示 toast
+watch(saved, (newVal) => {
+  if (newVal && !restarted.value) {
+    showSaveToast.value = true
+    setTimeout(() => {
+      showSaveToast.value = false
+    }, 5000)
+  }
+})
+
+watch(restarted, (newVal) => {
+  if (newVal) {
+    showSaveToast.value = false
+    showRestartToast.value = true
+    setTimeout(() => {
+      showRestartToast.value = false
+    }, 5000)
+  }
+})
+
 // 提供平台信息给子组件
 provide(
   'platform',
@@ -126,22 +187,18 @@ onMounted(async () => {
 
 <style>
 @import '../styles/global.css';
+
 .config-page {
   padding: 1em;
   border: 1px solid transparent;
   border-top: none;
-}
-
-.page-config .form {
-  backdrop-filter: blur(4px);
+  backdrop-filter: blur(2px);
+  transform: translateZ(0);
+  backface-visibility: hidden;
 }
 
 .page-config .nav-tabs {
   border: none;
-}
-
-.page-config .buttons {
-  padding: 1em 0;
 }
 
 .page-config .ms-item {
@@ -151,9 +208,83 @@ onMounted(async () => {
   font-weight: bold;
 }
 
-/* 美化配置页面标签栏 */
+/* Toast 样式 */
+.toast {
+  opacity: 0;
+  transition: opacity 0.3s ease-in-out;
+}
+
+.toast.show {
+  opacity: 1;
+}
+
+/* 浮动按钮组 */
+.config-floating-buttons {
+  position: sticky;
+  top: 2rem;
+  right: 2rem;
+  float: right;
+  clear: right;
+  margin: 2rem 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  z-index: 1000;
+}
+
+.config-floating-buttons .cute-btn {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  color: #fff;
+  font-size: 1.25rem;
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+  backdrop-filter: blur(10px);
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2), 0 2px 8px rgba(0, 0, 0, 0.15);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  position: relative;
+  overflow: hidden;
+}
+
+.config-floating-buttons .cute-btn::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: rgba(255, 255, 255, 0.3);
+  border-radius: 50%;
+  transform: scale(0);
+  transition: transform 0.6s ease;
+}
+
+.config-floating-buttons .cute-btn i {
+  position: relative;
+  z-index: 2;
+  transition: transform 0.3s ease;
+}
+
+.config-floating-buttons .cute-btn-primary {
+  background: linear-gradient(135deg, #667eea, #764ba2);
+}
+
+.config-floating-buttons .cute-btn-primary:hover {
+  background: linear-gradient(135deg, #764ba2, #667eea);
+}
+
+.config-floating-buttons .cute-btn-success {
+  background: linear-gradient(135deg, #11998e, #38ef7d);
+}
+
+.config-floating-buttons .cute-btn-success:hover {
+  background: linear-gradient(135deg, #38ef7d, #11998e);
+}
+
+/* 配置页面标签栏 */
 .page-config .config-tabs {
-  background: linear-gradient(135deg, rgba(255, 255, 255, 0.1) 0%, rgba(255, 255, 255, 0.05) 100%);
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.2), rgba(255, 255, 255, 0.1));
   border-radius: 12px 12px 0 0;
   padding: 0.75rem 1rem 0;
   gap: 0.5rem;
@@ -207,7 +338,7 @@ onMounted(async () => {
 
 /* 暗色模式适配 */
 [data-bs-theme='dark'] .page-config .config-tabs {
-  background: linear-gradient(135deg, rgba(255, 255, 255, 0.05) 0%, rgba(255, 255, 255, 0.02) 100%);
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.05));
   border-bottom-color: rgba(255, 255, 255, 0.1);
 }
 
@@ -221,6 +352,22 @@ onMounted(async () => {
 
 /* 响应式优化 */
 @media (max-width: 768px) {
+  .config-floating-buttons {
+    float: none;
+    position: fixed;
+    right: 1rem;
+    bottom: 1rem;
+    top: auto;
+    margin: 0;
+    gap: 0.75rem;
+  }
+
+  .config-floating-buttons .cute-btn {
+    width: 48px;
+    height: 48px;
+    font-size: 1.1rem;
+  }
+
   .page-config .config-tabs {
     padding: 0.5rem 0.5rem 0;
     gap: 0.25rem;

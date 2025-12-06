@@ -4,7 +4,6 @@
     id="editAppModal"
     tabindex="-1"
     aria-labelledby="editAppModalLabel"
-    aria-hidden="true"
     ref="modalElement"
   >
     <div class="modal-dialog modal-xl">
@@ -578,29 +577,30 @@ export default {
      * 初始化表单数据
      */
     initializeForm(app) {
-      if (app.index === -1) {
-        // 新应用
-        this.formData = {
-          name: '',
-          output: '',
-          cmd: '',
-          index: -1,
-          'exclude-global-prep-cmd': false,
-          elevated: false,
-          'auto-detach': true,
-          'wait-all': true,
-          'exit-timeout': 5,
-          'prep-cmd': [],
-          'menu-cmd': [],
-          detached: [],
-          'image-path': '',
-          'working-dir': '',
-        }
-      } else {
-        // 编辑现有应用
-        this.formData = JSON.parse(JSON.stringify(app))
-        this.ensureDefaultValues()
+      // 默认表单数据
+      const defaultForm = {
+        name: '',
+        output: '',
+        cmd: '',
+        index: -1,
+        'exclude-global-prep-cmd': false,
+        elevated: false,
+        'auto-detach': true,
+        'wait-all': true,
+        'exit-timeout': 5,
+        'prep-cmd': [],
+        'menu-cmd': [],
+        detached: [],
+        'image-path': '',
+        'working-dir': '',
       }
+
+      // 合并传入的 app 数据（支持拖拽预填充）
+      this.formData = {
+        ...defaultForm,
+        ...JSON.parse(JSON.stringify(app)),
+      }
+      this.ensureDefaultValues()
 
       // 重置验证状态
       this.validation = {}

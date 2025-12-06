@@ -212,6 +212,22 @@
   border-color: var(--cute-btn-border-hover-color);
 }
 
+.cute-btn-info {
+  background: linear-gradient(135deg, #17a2b8, #138496);
+  border: 2px solid var(--cute-btn-border-color);
+}
+
+.cute-btn-info:hover {
+  background: linear-gradient(135deg, #138496, #0c6b7a);
+  border-color: var(--cute-btn-border-hover-color);
+}
+
+.cute-btn-info:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none !important;
+}
+
 .cute-btn:nth-child(1) {
   animation-delay: 0.1s;
 }
@@ -1325,4 +1341,232 @@ td {
   font-size: 0.875rem;
   color: #6c757d;
   margin-top: 0.25rem;
+}
+
+/* 扫描结果模态框样式 */
+.scan-result-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: var(--overlay-bg, rgba(0, 0, 0, 0.7));
+  backdrop-filter: blur(8px);
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--spacing-lg, 20px);
+}
+
+.scan-result-modal {
+  background: var(--modal-bg, rgba(30, 30, 50, 0.95));
+  border: 1px solid var(--border-color-light, rgba(255, 255, 255, 0.2));
+  border-radius: var(--border-radius-xl);
+  width: 100%;
+  max-width: 700px;
+  max-height: 80vh;
+  display: flex;
+  flex-direction: column;
+  backdrop-filter: blur(20px);
+  box-shadow: var(--shadow-xl, 0 25px 50px rgba(0, 0, 0, 0.5));
+  animation: modalSlideUp 0.3s ease;
+}
+
+@keyframes modalSlideUp {
+  from {
+    transform: translateY(20px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+.scan-result-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: var(--spacing-lg, 20px) var(--spacing-xl, 24px);
+  border-bottom: 1px solid var(--border-color-light, rgba(255, 255, 255, 0.1));
+}
+
+.scan-result-header h5 {
+  margin: 0;
+  color: var(--text-primary, #fff);
+  font-size: var(--font-size-lg);
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm, 8px);
+}
+
+.scan-result-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: var(--spacing-md, 16px) var(--spacing-xl, 24px);
+}
+
+.scan-result-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-md, 12px);
+}
+
+.scan-result-item {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-md, 16px);
+  padding: var(--spacing-md, 12px) var(--spacing-md, 16px);
+  background: var(--card-bg-hover, rgba(255, 255, 255, 0.05));
+  border: 1px solid var(--border-color-light, rgba(255, 255, 255, 0.1));
+  border-radius: var(--border-radius-md);
+  transition: var(--transition-default);
+}
+
+.scan-result-item:hover {
+  background: var(--card-bg-active, rgba(255, 255, 255, 0.1));
+  border-color: var(--border-color-hover, rgba(255, 255, 255, 0.2));
+  transform: translateX(4px);
+}
+
+.scan-app-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: var(--border-radius-sm);
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--gradient-primary, linear-gradient(135deg, #667eea, #764ba2));
+  flex-shrink: 0;
+  box-shadow: var(--shadow-sm, 0 2px 8px rgba(0, 0, 0, 0.2));
+}
+
+.scan-app-icon img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.scan-app-icon i {
+  font-size: 1.5rem;
+  color: var(--text-primary, #fff);
+}
+
+.scan-app-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.scan-app-name {
+  font-size: var(--font-size-md);
+  font-weight: 600;
+  color: var(--text-primary, #fff);
+  margin-bottom: var(--spacing-xs, 4px);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.scan-app-cmd {
+  font-size: var(--font-size-sm);
+  color: var(--text-primary, rgba(255, 255, 255, 0.85));
+  font-family: var(--font-mono, 'Courier New', monospace);
+  background: var(--code-bg, rgba(0, 0, 0, 0.3));
+  padding: var(--spacing-xs, 4px) var(--spacing-sm, 8px);
+  border-radius: var(--border-radius-xs, 4px);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin-bottom: var(--spacing-xs, 4px);
+  display: inline-block;
+  max-width: 100%;
+  letter-spacing: 0.02em;
+  line-height: 1.4;
+}
+
+.scan-app-path {
+  font-size: var(--font-size-sm);
+  color: var(--text-secondary, rgba(255, 255, 255, 0.65));
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  line-height: 1.4;
+}
+
+.scan-app-actions {
+  display: flex;
+  gap: var(--spacing-sm, 8px);
+  flex-shrink: 0;
+}
+
+.scan-app-actions .btn {
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  transition: var(--transition-default);
+}
+
+.scan-app-actions .btn:hover {
+  transform: scale(1.1);
+}
+
+.scan-result-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--spacing-md, 12px);
+  padding: var(--spacing-md, 16px) var(--spacing-xl, 24px);
+  border-top: 1px solid var(--border-color-light, rgba(255, 255, 255, 0.1));
+}
+
+.scan-result-footer .btn {
+  padding: var(--spacing-sm, 10px) var(--spacing-lg, 20px);
+  border-radius: var(--border-radius-md);
+  font-weight: 500;
+  transition: var(--transition-default);
+}
+
+.scan-result-footer .btn-primary {
+  background: var(--gradient-primary);
+  border: none;
+  color: var(--text-primary, #fff);
+}
+
+.scan-result-footer .btn-primary:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-primary, 0 8px 25px rgba(102, 126, 234, 0.4));
+}
+
+.scan-result-footer .btn-secondary {
+  background: var(--btn-secondary-bg, rgba(255, 255, 255, 0.1));
+  border: 1px solid var(--border-color-light, rgba(255, 255, 255, 0.2));
+  color: var(--text-primary, #fff);
+}
+
+.scan-result-footer .btn-secondary:hover {
+  background: var(--btn-secondary-bg-hover, rgba(255, 255, 255, 0.15));
+}
+
+/* 扫描结果空状态 */
+.scan-result-empty {
+  text-align: center;
+  padding: var(--spacing-xxl, 40px) var(--spacing-lg, 20px);
+  color: var(--text-muted, rgba(255, 255, 255, 0.5));
+}
+
+.scan-result-empty i {
+  font-size: 3rem;
+  margin-bottom: var(--spacing-md, 16px);
+  opacity: 0.5;
+}
+
+.scan-result-empty p {
+  margin: 0;
+  font-size: var(--font-size-md);
 }

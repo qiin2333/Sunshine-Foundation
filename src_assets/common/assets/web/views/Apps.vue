@@ -48,6 +48,15 @@
             <i class="fas fa-plus"></i>
           </button>
           <button
+            v-if="isTauriEnv()"
+            class="cute-btn cute-btn-info"
+            @click="scanDirectory(true)"
+            :disabled="isScanning"
+            title="扫描目录添加应用"
+          >
+            <i class="fas" :class="isScanning ? 'fa-spinner fa-spin' : 'fa-folder-open'"></i>
+          </button>
+          <button
             class="cute-btn cute-btn-secondary"
             data-bs-toggle="modal"
             data-bs-target="#envVarsModal"
@@ -194,6 +203,71 @@
         </button>
       </div>
 
+      <!-- 扫描结果模态框 -->
+      <Transition name="fade">
+        <div v-if="showScanResult" class="scan-result-overlay" @click.self="closeScanResult">
+          <div class="scan-result-modal">
+            <div class="scan-result-header">
+              <h5>
+                <i class="fas fa-search me-2"></i>扫描结果
+                <span class="badge bg-primary ms-2">{{ scannedApps.length }}</span>
+              </h5>
+              <button class="btn-close" @click="closeScanResult"></button>
+            </div>
+            <div class="scan-result-body">
+              <div v-if="scannedApps.length === 0" class="text-center text-muted py-4">
+                <i class="fas fa-folder-open fa-3x mb-3"></i>
+                <p>未找到可添加的应用程序</p>
+              </div>
+              <div v-else class="scan-result-list">
+                <div v-for="(app, index) in scannedApps" :key="app.source_path" class="scan-result-item">
+                  <div class="scan-app-icon">
+                    <img
+                      v-if="app['image-path']"
+                      :src="app['image-path']"
+                      :alt="app.name"
+                      @error="$event.target.style.display = 'none'"
+                    />
+                    <i v-else class="fas fa-cube"></i>
+                  </div>
+                  <div class="scan-app-info">
+                    <div class="scan-app-name">{{ app.name }}</div>
+                    <div class="scan-app-cmd small">{{ app.cmd }}</div>
+                    <div class="scan-app-path small"><i class="fas fa-folder-open me-1"></i>{{ app.source_path }}</div>
+                  </div>
+                  <div class="scan-app-actions">
+                    <button
+                      class="btn btn-sm btn-outline-primary"
+                      @click="addScannedApp(app), closeScanResult()"
+                      title="添加并编辑"
+                    >
+                      <i class="fas fa-edit"></i>
+                    </button>
+                    <button
+                      class="btn btn-sm btn-outline-success"
+                      @click="quickAddScannedApp(app, index)"
+                      title="直接添加"
+                    >
+                      <i class="fas fa-plus"></i>
+                    </button>
+                    <button class="btn btn-sm btn-outline-danger" @click="removeScannedApp(index)" title="从列表移除">
+                      <i class="fas fa-times"></i>
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="scan-result-footer" v-if="scannedApps.length > 0">
+              <button class="btn btn-secondary" @click="closeScanResult"><i class="fas fa-times me-1"></i>关闭</button>
+              <button class="btn btn-primary" @click="addAllScannedApps" :disabled="isSaving">
+                <i class="fas" :class="isSaving ? 'fa-spinner fa-spin' : 'fa-check-double'"></i>
+                <span class="ms-1">全部添加</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      </Transition>
+
       <!-- 环境变量说明模态框 -->
       <div class="modal fade" id="envVarsModal" tabindex="-1">
         <div class="modal-dialog modal-lg">
@@ -306,6 +380,10 @@ const {
   envVars,
   debouncedSearch,
   messageClass,
+  // 扫描相关
+  isScanning,
+  scannedApps,
+  showScanResult,
   loadApps,
   loadPlatform,
   performSearch,
@@ -320,6 +398,14 @@ const {
   save,
   onDragStart,
   onDragEnd,
+  // 扫描相关方法
+  scanDirectory,
+  addScannedApp,
+  addAllScannedApps,
+  closeScanResult,
+  removeScannedApp,
+  quickAddScannedApp,
+  isTauriEnv,
   showMessage,
   getMessageIcon,
   handleCopySuccess,
