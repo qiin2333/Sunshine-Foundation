@@ -27,6 +27,94 @@ export function getSearchBucket(name) {
 }
 
 /**
+ * 规范化搜索字符串
+ * @param {string} str 原始字符串
+ * @returns {string} 规范化后的字符串
+ */
+function normalizeSearchString(str) {
+  return str
+    .toLowerCase()
+    .replace(/[:\-_''""]/g, ' ') // 替换常见分隔符为空格
+    .replace(/\s+/g, ' ') // 合并多个空格
+    .trim()
+}
+
+/**
+ * 计算字符串相似度（Dice系数）
+ * @param {string} str1 字符串1
+ * @param {string} str2 字符串2
+ * @returns {number} 相似度 0-1
+ */
+function calculateSimilarity(str1, str2) {
+  const s1 = normalizeSearchString(str1)
+  const s2 = normalizeSearchString(str2)
+
+  if (s1 === s2) return 1
+  if (s1.length < 2 || s2.length < 2) return 0
+
+  // 生成bigrams
+  const getBigrams = (str) => {
+    const bigrams = new Set()
+    for (let i = 0; i < str.length - 1; i++) {
+      bigrams.add(str.substring(i, i + 2))
+    }
+    return bigrams
+  }
+
+  const bigrams1 = getBigrams(s1)
+  const bigrams2 = getBigrams(s2)
+
+  let intersection = 0
+  for (const bigram of bigrams1) {
+    if (bigrams2.has(bigram)) intersection++
+  }
+
+  return (2 * intersection) / (bigrams1.size + bigrams2.size)
+}
+
+/**
+ * 检查是否匹配搜索词
+ * @param {string} gameName 游戏名称
+ * @param {string} searchTerm 搜索词
+ * @returns {{match: boolean, score: number}} 匹配结果和分数
+ */
+function matchesSearch(gameName, searchTerm) {
+  const normalizedGame = normalizeSearchString(gameName)
+  const normalizedSearch = normalizeSearchString(searchTerm)
+
+  // 完全匹配
+  if (normalizedGame === normalizedSearch) {
+    return { match: true, score: 1 }
+  }
+
+  // 前缀匹配（高优先级）
+  if (normalizedGame.startsWith(normalizedSearch)) {
+    return { match: true, score: 0.95 }
+  }
+
+  // 包含匹配
+  if (normalizedGame.includes(normalizedSearch)) {
+    return { match: true, score: 0.85 }
+  }
+
+  // 单词匹配（搜索词的所有单词都在游戏名中）
+  const searchWords = normalizedSearch.split(' ').filter((w) => w.length > 1)
+  const gameWords = normalizedGame.split(' ')
+  const allWordsMatch = searchWords.every((sw) => gameWords.some((gw) => gw.startsWith(sw) || gw.includes(sw)))
+  if (allWordsMatch && searchWords.length > 0) {
+    return { match: true, score: 0.8 }
+  }
+
+  // 相似度匹配
+  const similarity = calculateSimilarity(gameName, searchTerm)
+  if (similarity > 0.5) {
+    return { match: true, score: similarity * 0.7 }
+  }
+
+  return { match: false, score: 0 }
+}
+
+/**
  * 带缓存的fetch函数
  * @param {Map} cache 缓存Map
  * @param {string} key 缓存键
@@ -42,7 +130,7 @@ async function fetchWithCache(cache, key, fetchFn) {
 
 /**
  * 搜索IGDB封面（单个结果，返回URL字符串）
- * @param {string} searchName 搜索名称（已处理格式）
+ * @param {string} searchName 搜索名称
  * @param {string} bucket bucket标识符
  * @returns {Promise<string>} 封面URL，未找到返回空字符串
  */
@@ -55,14 +143,21 @@ export async function searchIGDBCover(searchName, bucket) {
 
     if (!maps) return ''
 
-    const matchedId = Object.keys(maps).find((id) =>
-      maps[id].name.replace(/\s+/g, '.').toLowerCase().startsWith(searchName)
-    )
+    let bestMatch = null
+    let bestScore = 0
 
-    if (!matchedId) return ''
+    for (const id of Object.keys(maps)) {
+      const { match, score } = matchesSearch(maps[id].name, searchName)
+      if (match && score > bestScore) {
+        bestScore = score
+        bestMatch = id
+      }
+    }
 
-    const game = await fetchWithCache(gameCache, matchedId, async () => {
-      const res = await fetch(`${IGDB_BASE_URL}/games/${matchedId}.json`)
+    if (!bestMatch) return ''
+
+    const game = await fetchWithCache(gameCache, bestMatch, async () => {
+      const res = await fetch(`${IGDB_BASE_URL}/games/${bestMatch}.json`)
       return res.ok ? res.json() : null
     })
 
@@ -87,7 +182,6 @@ export async function searchIGDBCover(searchName, bucket) {
 export async function searchIGDBCovers(name, signal = null, maxResults = 20) {
   if (!name) return []
 
-  const searchName = name.replace(/\s+/g, '.').toLowerCase()
   const bucket = getSearchBucket(name)
 
   try {
@@ -100,9 +194,20 @@ export async function searchIGDBCovers(name, signal = null, maxResults = 20) {
       bucketCache.set(bucket, maps)
     }
 
-    const matchedIds = Object.keys(maps)
-      .filter((id) => maps[id].name.replace(/\s+/g, '.').toLowerCase().startsWith(searchName))
+    // 使用改进的匹配算法，收集所有匹配项并按分数排序
+    const matches = []
+    for (const id of Object.keys(maps)) {
+      const { match, score } = matchesSearch(maps[id].name, name)
+      if (match) {
+        matches.push({ id, score, name: maps[id].name })
+      }
+    }
+
+    // 按分数降序排序，取前maxResults个
+    const matchedIds = matches
+      .sort((a, b) => b.score - a.score)
       .slice(0, maxResults)
+      .map((m) => m.id)
 
     // 并行获取游戏详情，使用缓存
     const games = await Promise.all(
@@ -153,12 +258,11 @@ export async function searchIGDBCovers(name, signal = null, maxResults = 20) {
 export async function searchCoverImage(appName) {
   if (!appName) return ''
 
-  const searchName = appName.replace(/\s+/g, '.').toLowerCase()
   const bucket = getSearchBucket(appName)
 
   try {
     const [igdbResult, steamResult] = await Promise.allSettled([
-      searchIGDBCover(searchName, bucket),
+      searchIGDBCover(appName, bucket),
       searchSteamCovers(appName, 1).then((results) => (results.length > 0 ? results[0].saveUrl : '')),
     ])
 
@@ -185,9 +289,7 @@ export async function batchSearchCoverImages(appList) {
       'image-path': await searchCoverImage(encodeURIComponent(app.name)),
     }))
   )
-  return results.map((result, index) =>
-    result.status === 'fulfilled' ? result.value : appList[index]
-  )
+  return results.map((result, index) => (result.status === 'fulfilled' ? result.value : appList[index]))
 }
 
 /**
