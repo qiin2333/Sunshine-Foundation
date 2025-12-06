@@ -249,7 +249,7 @@
                 <p class="small">尝试使用不同的搜索关键词</p>
               </div>
               <div v-else class="scan-result-list">
-                <div v-for="(app, index) in filteredScannedApps" :key="app.source_path" class="scan-result-item">
+                <div v-for="app in filteredScannedApps" :key="app.source_path" class="scan-result-item">
                   <div class="scan-app-icon">
                     <img
                       v-if="app['image-path']"
@@ -257,9 +257,19 @@
                       :alt="app.name"
                       @error="$event.target.style.display = 'none'"
                     />
-                    <svg v-else width="100" height="100" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
-                      <rect width="100" height="100" fill="#667eea"/>
-                      <text x="50" y="50" font-size="40" font-weight="bold" fill="#fff" text-anchor="middle" dominant-baseline="central">{{ app.name.charAt(0).toUpperCase() }}</text>
+                    <svg v-else width="80" height="80" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+                      <rect width="100" height="100" fill="#667eea" />
+                      <text
+                        x="50"
+                        y="50"
+                        font-size="40"
+                        font-weight="bold"
+                        fill="#fff"
+                        text-anchor="middle"
+                        dominant-baseline="central"
+                      >
+                        {{ app.name.charAt(0).toUpperCase() }}
+                      </text>
                     </svg>
                   </div>
                   <div class="scan-app-info">
