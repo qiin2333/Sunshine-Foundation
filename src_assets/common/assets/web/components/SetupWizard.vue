@@ -950,6 +950,12 @@ export default {
   position: relative;
 }
 
+[data-bs-theme='dark'] .modal-content {
+  background-color: #212529 !important;
+  border-color: #495057;
+  color: #fff;
+}
+
 .modal-header {
   display: flex;
   justify-content: space-between;
@@ -961,6 +967,10 @@ export default {
   margin: 0;
   font-size: 1rem;
   font-weight: 800;
+}
+
+[data-bs-theme='dark'] .modal-header h5 {
+  color: #fff;
 }
 
 .close {
@@ -982,10 +992,19 @@ export default {
   cursor: pointer;
 }
 
+[data-bs-theme='dark'] .close:hover,
+[data-bs-theme='dark'] .close:focus {
+  color: #fff;
+}
+
 .modal-body {
   margin: 8px 0;
   font-size: 0.95rem;
   line-height: 1.4;
+}
+
+[data-bs-theme='dark'] .modal-body {
+  color: #e9ecef;
 }
 
 .modal-footer {
@@ -995,6 +1014,10 @@ export default {
   margin-top: 8px;
   padding-top: 10px;
   border-top: 1px solid #eee;
+}
+
+[data-bs-theme='dark'] .modal-footer {
+  border-top-color: #495057;
 }
 
 .modal-footer button {
