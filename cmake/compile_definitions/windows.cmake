@@ -67,6 +67,8 @@ set(PLATFORM_TARGET_FILES
         "${CMAKE_SOURCE_DIR}/src/platform/windows/ftime_compat.cpp"
         "${CMAKE_SOURCE_DIR}/src/platform/windows/misc.h"
         "${CMAKE_SOURCE_DIR}/src/platform/windows/misc.cpp"
+        "${CMAKE_SOURCE_DIR}/src/platform/windows/win_dark_mode.h"
+        "${CMAKE_SOURCE_DIR}/src/platform/windows/win_dark_mode.cpp"
         "${CMAKE_SOURCE_DIR}/src/platform/windows/input.cpp"
         "${CMAKE_SOURCE_DIR}/src/platform/windows/dsu_server.h"
         "${CMAKE_SOURCE_DIR}/src/platform/windows/dsu_server.cpp"
@@ -124,6 +126,7 @@ list(PREPEND PLATFORM_LIBRARIES
 )
 
 if(SUNSHINE_ENABLE_TRAY)
-    list(APPEND PLATFORM_TARGET_FILES
-            "${CMAKE_SOURCE_DIR}/third-party/tray/src/tray_windows.c")
+    # Rust tray implementation
+    include(${CMAKE_MODULE_PATH}/targets/rust_tray.cmake)
+    list(APPEND PLATFORM_LIBRARIES ${RUST_TRAY_LIBRARY} ${RUST_TRAY_PLATFORM_LIBS})
 endif()
