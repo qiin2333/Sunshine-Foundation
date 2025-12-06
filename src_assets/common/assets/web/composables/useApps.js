@@ -27,6 +27,7 @@ export function useApps() {
   const isScanning = ref(false)
   const scannedApps = ref([])
   const showScanResult = ref(false)
+  const scannedAppsSearchQuery = ref('')
 
   // 计算属性
   const messageClass = computed(() => ({
@@ -338,7 +339,22 @@ export function useApps() {
   const closeScanResult = () => {
     showScanResult.value = false
     scannedApps.value = []
+    scannedAppsSearchQuery.value = ''
   }
+
+  // 过滤扫描结果
+  const filteredScannedApps = computed(() => {
+    if (!scannedAppsSearchQuery.value) {
+      return scannedApps.value
+    }
+    const query = scannedAppsSearchQuery.value.toLowerCase()
+    return scannedApps.value.filter((app) => {
+      const name = (app.name || '').toLowerCase()
+      const cmd = (app.cmd || '').toLowerCase()
+      const sourcePath = (app.source_path || '').toLowerCase()
+      return name.includes(query) || cmd.includes(query) || sourcePath.includes(query)
+    })
+  })
 
   const removeScannedApp = (index) => {
     scannedApps.value.splice(index, 1)
@@ -387,8 +403,10 @@ export function useApps() {
     isScanning,
     scannedApps,
     showScanResult,
+    scannedAppsSearchQuery,
     // 计算属性
     messageClass,
+    filteredScannedApps,
     // 方法
     init,
     loadApps,

@@ -212,16 +212,44 @@
               <h5>
                 <i class="fas fa-search me-2"></i>扫描结果
                 <span class="badge bg-primary ms-2">{{ scannedApps.length }}</span>
+                <span v-if="scannedAppsSearchQuery" class="badge bg-info ms-2">
+                  匹配: {{ filteredScannedApps.length }}
+                </span>
               </h5>
               <button class="btn-close" @click="closeScanResult"></button>
+            </div>
+            <!-- 搜索框 -->
+            <div v-if="scannedApps.length > 0" class="scan-result-search">
+              <div class="search-box">
+                <i class="fas fa-search search-icon"></i>
+                <input
+                  type="text"
+                  class="form-control search-input"
+                  placeholder="搜索应用名称、命令或路径..."
+                  v-model="scannedAppsSearchQuery"
+                />
+                <button
+                  v-if="scannedAppsSearchQuery"
+                  class="btn-clear-search"
+                  @click="scannedAppsSearchQuery = ''"
+                  type="button"
+                >
+                  <i class="fas fa-times"></i>
+                </button>
+              </div>
             </div>
             <div class="scan-result-body">
               <div v-if="scannedApps.length === 0" class="text-center text-muted py-4">
                 <i class="fas fa-folder-open fa-3x mb-3"></i>
                 <p>未找到可添加的应用程序</p>
               </div>
+              <div v-else-if="filteredScannedApps.length === 0" class="text-center text-muted py-4">
+                <i class="fas fa-search fa-3x mb-3"></i>
+                <p>未找到匹配的应用</p>
+                <p class="small">尝试使用不同的搜索关键词</p>
+              </div>
               <div v-else class="scan-result-list">
-                <div v-for="(app, index) in scannedApps" :key="app.source_path" class="scan-result-item">
+                <div v-for="(app, index) in filteredScannedApps" :key="app.source_path" class="scan-result-item">
                   <div class="scan-app-icon">
                     <img
                       v-if="app['image-path']"
@@ -229,7 +257,10 @@
                       :alt="app.name"
                       @error="$event.target.style.display = 'none'"
                     />
-                    <i v-else class="fas fa-cube"></i>
+                    <svg v-else width="100" height="100" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+                      <rect width="100" height="100" fill="#667eea"/>
+                      <text x="50" y="50" font-size="40" font-weight="bold" fill="#fff" text-anchor="middle" dominant-baseline="central">{{ app.name.charAt(0).toUpperCase() }}</text>
+                    </svg>
                   </div>
                   <div class="scan-app-info">
                     <div class="scan-app-name">{{ app.name }}</div>
@@ -246,12 +277,16 @@
                     </button>
                     <button
                       class="btn btn-sm btn-outline-success"
-                      @click="quickAddScannedApp(app, index)"
+                      @click="quickAddScannedApp(app, scannedApps.indexOf(app))"
                       title="直接添加"
                     >
                       <i class="fas fa-plus"></i>
                     </button>
-                    <button class="btn btn-sm btn-outline-danger" @click="removeScannedApp(index)" title="从列表移除">
+                    <button
+                      class="btn btn-sm btn-outline-danger"
+                      @click="removeScannedApp(scannedApps.indexOf(app))"
+                      title="从列表移除"
+                    >
                       <i class="fas fa-times"></i>
                     </button>
                   </div>
@@ -387,6 +422,8 @@ const {
   isScanning,
   scannedApps,
   showScanResult,
+  scannedAppsSearchQuery,
+  filteredScannedApps,
   loadApps,
   loadPlatform,
   clearSearch,
