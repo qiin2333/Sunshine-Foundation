@@ -30,7 +30,7 @@
               class="view-toggle-btn"
               :class="{ active: viewMode === 'grid' }"
               @click="viewMode = 'grid'"
-              :title="'网格视图'"
+              title="网格视图"
             >
               <i class="fas fa-th"></i>
             </button>
@@ -38,7 +38,7 @@
               class="view-toggle-btn"
               :class="{ active: viewMode === 'list' }"
               @click="viewMode = 'list'"
-              :title="'列表视图'"
+              title="列表视图"
             >
               <i class="fas fa-list"></i>
             </button>
@@ -60,7 +60,7 @@
             class="cute-btn cute-btn-secondary"
             data-bs-toggle="modal"
             data-bs-target="#envVarsModal"
-            :title="'环境变量说明'"
+            title="环境变量说明"
           >
             <i class="fas fa-info-circle"></i>
           </button>
@@ -105,7 +105,7 @@
           <div v-else class="apps-grid">
             <AppCard
               v-for="(app, index) in filteredApps"
-              :key="'search-' + index"
+              :key="`search-${index}`"
               :app="app"
               :draggable="false"
               :is-search-result="true"
@@ -150,7 +150,7 @@
           <div v-else class="apps-list">
             <AppListItem
               v-for="(app, index) in filteredApps"
-              :key="'search-' + index"
+              :key="`search-${index}`"
               :app="app"
               :draggable="false"
               :is-search-result="true"
@@ -163,7 +163,7 @@
           </div>
         </template>
 
-        <!-- 空状态 - 仅在搜索无结果或已加载数据后无应用时显示 -->
+        <!-- 空状态 - 搜索无结果 -->
         <div v-if="searchQuery && filteredApps.length === 0" class="empty-state">
           <div class="empty-icon">
             <i class="fas fa-search"></i>
@@ -172,6 +172,7 @@
           <p class="empty-subtitle">尝试使用不同的搜索关键词</p>
         </div>
 
+        <!-- 空状态 - 无应用 -->
         <div v-if="!searchQuery && apps.length === 0 && isLoaded" class="empty-state">
           <div class="empty-icon">
             <i class="fas fa-rocket"></i>
@@ -257,7 +258,7 @@
                 </div>
               </div>
             </div>
-            <div class="scan-result-footer" v-if="scannedApps.length > 0">
+            <div v-if="scannedApps.length > 0" class="scan-result-footer">
               <button class="btn btn-secondary" @click="closeScanResult"><i class="fas fa-times me-1"></i>关闭</button>
               <button class="btn btn-primary" @click="addAllScannedApps" :disabled="isSaving">
                 <i class="fas" :class="isSaving ? 'fa-spinner fa-spin' : 'fa-check-double'"></i>
@@ -269,11 +270,11 @@
       </Transition>
 
       <!-- 环境变量说明模态框 -->
-      <div class="modal fade" id="envVarsModal" tabindex="-1">
+      <div id="envVarsModal" class="modal fade" tabindex="-1">
         <div class="modal-dialog modal-lg">
           <div class="modal-content">
             <div class="modal-header">
-              <h5 class="modal-title" id="envVarsModalLabel">
+              <h5 id="envVarsModalLabel" class="modal-title">
                 <i class="fas fa-info-circle me-2"></i>{{ $t('apps.env_vars_about') }}
               </h5>
               <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
@@ -308,26 +309,32 @@
                 </div>
               </div>
               <div class="mt-3">
-                <div class="form-text" v-if="platform === 'windows'">
-                  <strong>{{ $t('apps.env_qres_example') }}</strong>
-                  <pre class="code-example">
+                <template v-if="platform === 'windows'">
+                  <div class="form-text">
+                    <strong>{{ $t('apps.env_qres_example') }}</strong>
+                    <pre class="code-example">
 cmd /C &lt;{{
-                      $t('apps.env_qres_path')
-                    }}&gt;\QRes.exe /X:%SUNSHINE_CLIENT_WIDTH% /Y:%SUNSHINE_CLIENT_HEIGHT% /R:%SUNSHINE_CLIENT_FPS%</pre
-                  >
-                </div>
-                <div class="form-text" v-else-if="platform === 'linux'">
-                  <strong>{{ $t('apps.env_xrandr_example') }}</strong>
-                  <pre class="code-example">
+                        $t('apps.env_qres_path')
+                      }}&gt;\QRes.exe /X:%SUNSHINE_CLIENT_WIDTH% /Y:%SUNSHINE_CLIENT_HEIGHT% /R:%SUNSHINE_CLIENT_FPS%</pre
+                    >
+                  </div>
+                </template>
+                <template v-else-if="platform === 'linux'">
+                  <div class="form-text">
+                    <strong>{{ $t('apps.env_xrandr_example') }}</strong>
+                    <pre class="code-example">
 sh -c "xrandr --output HDMI-1 --mode \"${SUNSHINE_CLIENT_WIDTH}x${SUNSHINE_CLIENT_HEIGHT}\" --rate ${SUNSHINE_CLIENT_FPS}"</pre
-                  >
-                </div>
-                <div class="form-text" v-else-if="platform === 'macos'">
-                  <strong>{{ $t('apps.env_displayplacer_example') }}</strong>
-                  <pre class="code-example">
+                    >
+                  </div>
+                </template>
+                <template v-else-if="platform === 'macos'">
+                  <div class="form-text">
+                    <strong>{{ $t('apps.env_displayplacer_example') }}</strong>
+                    <pre class="code-example">
 sh -c "displayplacer "id:&lt;screenId&gt; res:${SUNSHINE_CLIENT_WIDTH}x${SUNSHINE_CLIENT_HEIGHT} hz:${SUNSHINE_CLIENT_FPS} scaling:on origin:(0,0) degree:0""</pre
-                  >
-                </div>
+                    >
+                  </div>
+                </template>
               </div>
             </div>
             <div class="modal-footer">
@@ -362,10 +369,8 @@ import { useI18n } from 'vue-i18n'
 
 const { t } = useI18n()
 
-// 是否已加载数据
 const isLoaded = ref(false)
 
-// 使用组合式函数
 const {
   apps,
   filteredApps,
@@ -376,17 +381,14 @@ const {
   isDragging,
   viewMode,
   message,
-  messageType,
   envVars,
   debouncedSearch,
   messageClass,
-  // 扫描相关
   isScanning,
   scannedApps,
   showScanResult,
   loadApps,
   loadPlatform,
-  performSearch,
   clearSearch,
   getOriginalIndex,
   newApp,
@@ -394,11 +396,9 @@ const {
   closeAppEditor,
   handleSaveApp,
   showDeleteForm,
-  deleteApp,
   save,
   onDragStart,
   onDragEnd,
-  // 扫描相关方法
   scanDirectory,
   addScannedApp,
   addAllScannedApps,
@@ -406,40 +406,35 @@ const {
   removeScannedApp,
   quickAddScannedApp,
   isTauriEnv,
-  showMessage,
   getMessageIcon,
   handleCopySuccess,
   handleCopyError,
   init,
 } = useApps()
 
-onMounted(async () => {
-  initFirebase()
-
-  trackEvents.pageView('applications')
-
-  init(t)
-
+const initEnvVarsModal = () => {
   try {
     const modalElement = document.getElementById('envVarsModal')
     if (modalElement && window.bootstrap?.Modal) {
-      // 使用全局 Bootstrap 对象（已在 init.js 中导入并设置到 window.bootstrap）
       new window.bootstrap.Modal(modalElement)
     }
   } catch (error) {
     console.warn('Environment variables modal initialization failed:', error)
   }
+}
 
-  await loadApps()
-  await loadPlatform()
+onMounted(async () => {
+  initFirebase()
+  trackEvents.pageView('applications')
+  init(t)
+  initEnvVarsModal()
 
+  await Promise.all([loadApps(), loadPlatform()])
   isLoaded.value = true
 })
 
 watch(searchQuery, () => {
-  if (debouncedSearch.value) {
-    debouncedSearch.value()
-  }
+  debouncedSearch.value?.()
 })
 </script>
 
