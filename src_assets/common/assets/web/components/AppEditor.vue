@@ -304,6 +304,7 @@ export default {
       imageError: '',
       modalInstance: null,
       fileSelector: null,
+      savedScrollPosition: 0,
     }
   },
   computed: {
@@ -350,6 +351,9 @@ export default {
           backdrop: 'static',
           keyboard: false,
         })
+        // 监听模态框显示事件，锁定滚动并滚动到顶部
+        this.$refs.modalElement.addEventListener('shown.bs.modal', this.lockBodyScroll)
+        // 监听模态框隐藏事件，恢复滚动
         this.$refs.modalElement.addEventListener('hidden.bs.modal', this.restoreBodyScroll)
       } catch (error) {
         console.warn('Modal initialization failed:', error)
@@ -403,6 +407,8 @@ export default {
     // 模态框操作
     showModal() {
       if (!this.modalInstance) this.initializeModal()
+      // 保存当前滚动位置
+      this.savedScrollPosition = window.pageYOffset || document.documentElement.scrollTop
       this.modalInstance?.show()
     },
 
@@ -429,9 +435,47 @@ export default {
       }
     },
 
+    // 锁定 body 滚动（在模态框显示后调用）
+    lockBodyScroll() {
+      const { body } = document
+      const { documentElement: html } = document
+      const scrollbarWidth = window.innerWidth - html.clientWidth
+
+      // 保存滚动位置
+      if (!this.savedScrollPosition) {
+        this.savedScrollPosition = window.pageYOffset || html.scrollTop
+      }
+
+      // 锁定滚动并补偿滚动条宽度
+      body.style.overflow = 'hidden'
+      if (scrollbarWidth > 0) {
+        body.style.paddingRight = `${scrollbarWidth}px`
+      }
+
+      // 使用 instant 行为避免滚动动画
+      window.scrollTo({ top: 0, behavior: 'instant' })
+    },
+
+    // 恢复 body 滚动（在模态框隐藏后调用）
     restoreBodyScroll() {
-      Object.assign(document.body.style, { overflow: '', paddingRight: '' })
-      document.querySelectorAll('.modal-backdrop').forEach((el) => el.remove())
+      const { body } = document
+
+      body.style.overflow = ''
+      body.style.paddingRight = ''
+
+      if (this.savedScrollPosition > 0) {
+        requestAnimationFrame(() => {
+          window.scrollTo({ top: this.savedScrollPosition, behavior: 'smooth' })
+          this.savedScrollPosition = 0
+        })
+      } else {
+        this.savedScrollPosition = 0
+      }
+
+      // 清理残留的 backdrop
+      this.$nextTick(() => {
+        document.querySelectorAll('.modal-backdrop:not(.show)').forEach((el) => el.remove())
+      })
     },
 
     // 消息提示
