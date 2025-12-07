@@ -210,6 +210,7 @@ jobs:
             -DSUNSHINE_PUBLISHER_WEBSITE='https://github.com/qiin2333/Sunshine-Foundation' \
             -DSUNSHINE_PUBLISHER_ISSUE_URL='https://github.com/qiin2333/Sunshine-Foundation/issues'
           ninja -C build
+          ninja -C build sunshine-control-panel
 
       - name: Package Windows
         shell: msys2 {0}
@@ -218,8 +219,8 @@ jobs:
           cd build
 
           # package - 生成 NSIS 安装包和 ZIP 便携版
-          cpack -G NSIS --verbose
-          cpack -G ZIP --verbose
+          cpack -G NSIS --config ./CPackConfig.cmake --verbose
+          cpack -G ZIP --config ./CPackConfig.cmake --verbose
 
           # move
           mv ./cpack_artifacts/Sunshine.exe ../artifacts/sunshine-windows-installer.exe

@@ -216,7 +216,7 @@ onMounted(async () => {
 </script>
 
 <style>
-@import '../styles/global.css';
+@import '../styles/global.less';
 </style>
 
 <style scoped>
