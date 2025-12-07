@@ -134,7 +134,7 @@ const testWebhook = async () => {
           })
 
           clearTimeout(noCorsTimeoutId)
-          alert(t('config.webhook_test_success') + '\n\n提示：由于 CORS 限制，无法确认服务器响应状态。\n请求已发送，如果 webhook 配置正确，消息应该已送达。\n\n建议：在浏览器开发者工具的 Network 标签页中查看请求详情。')
+          alert(t('config.webhook_test_success') + '\n\n' + t('config.webhook_test_success_cors_note'))
         } catch (noCorsError) {
           clearTimeout(noCorsTimeoutId)
           if (noCorsError.name === 'AbortError') {
@@ -153,7 +153,7 @@ const testWebhook = async () => {
       const timeout = parseInt(config.value.webhook_timeout) || 1000
       alert(t('config.webhook_test_failed') + `: Request timeout (${timeout}ms)`)
     } else {
-      alert(`${t('config.webhook_test_failed')}: ${error.message || 'Unknown error'}\n\n提示：请检查 URL 是否正确，或查看浏览器控制台获取更多信息。`)
+      alert(`${t('config.webhook_test_failed')}: ${error.message || 'Unknown error'}\n\n${t('config.webhook_test_failed_note')}`)
     }
   }
 }
