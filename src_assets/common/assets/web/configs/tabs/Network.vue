@@ -17,8 +17,8 @@ const effectivePort = computed(() => +config.value?.port ?? defaultMoonlightPort
 const showCurlModal = ref(false)
 const copied = ref(false)
 
-// 使用滚动锁定 composable，禁用滚动到顶部以保持模态窗口在视口中心
-useModalScrollLock(showCurlModal, { scrollToTop: false })
+// 使用滚动锁定 composable，弹出后滚动到顶部
+useModalScrollLock(() => showCurlModal.value)
 
 const curlCommand = computed(() => {
   if (!config.value.webhook_url) {
@@ -375,150 +375,120 @@ const testWebhook = async () => {
   </div>
 
   <!-- Curl Command Modal -->
-  <div id="curlCommandModal" class="modal" :class="{ show: showCurlModal }" @click.self="closeCurlModal">
-    <div class="modal-content" @click.stop>
-      <div class="modal-header">
-        <h5><i class="fas fa-terminal me-2"></i>{{ $t('config.webhook_curl_command') || 'Curl 命令' }}</h5>
-        <span class="close" @click="closeCurlModal">&times;</span>
-      </div>
-      <div class="modal-body">
-        <p class="text-muted mb-3">{{ $t('config.webhook_curl_command_desc') || '复制以下命令到终端中执行，可以测试 webhook 是否正常工作：' }}</p>
-        <div class="curl-command-container">
-          <pre class="curl-command" id="curlCommandText">{{ curlCommand }}</pre>
-          <button class="btn btn-sm btn-primary copy-btn" @click="copyCurlCommand" type="button">
-            <i class="fas fa-copy me-1"></i>{{ $t('_common.copy') || '复制' }}
-          </button>
+  <Transition name="fade">
+    <div v-if="showCurlModal" class="curl-command-overlay" @click.self="closeCurlModal">
+      <div class="curl-command-modal">
+        <div class="curl-command-header">
+          <h5>
+            <i class="fas fa-terminal me-2"></i>{{ $t('config.webhook_curl_command') || 'Curl 命令' }}
+          </h5>
+          <button class="btn-close" @click="closeCurlModal"></button>
         </div>
-        <div class="alert alert-info mt-3" v-if="copied">
-          <i class="fas fa-check-circle me-2"></i>{{ $t('_common.copied') || '已复制到剪贴板' }}
+        <div class="curl-command-body">
+          <p class="text-muted mb-3">{{ $t('config.webhook_curl_command_desc') || '复制以下命令到终端中执行，可以测试 webhook 是否正常工作：' }}</p>
+          <div class="curl-command-container">
+            <pre class="curl-command" id="curlCommandText">{{ curlCommand }}</pre>
+            <button class="btn btn-sm btn-primary copy-btn" @click="copyCurlCommand" type="button">
+              <i class="fas fa-copy me-1"></i>{{ $t('_common.copy') || '复制' }}
+            </button>
+          </div>
+          <div class="alert alert-info mt-3" v-if="copied">
+            <i class="fas fa-check-circle me-2"></i>{{ $t('_common.copied') || '已复制到剪贴板' }}
+          </div>
         </div>
-      </div>
-      <div class="modal-footer">
-        <button type="button" class="btn btn-secondary" @click="closeCurlModal">{{ $t('_common.close') || '关闭' }}</button>
+        <div class="curl-command-footer">
+          <button type="button" class="btn btn-secondary" @click="closeCurlModal">{{ $t('_common.close') || '关闭' }}</button>
+        </div>
       </div>
     </div>
-  </div>
+  </Transition>
 </template>
 
 <style scoped>
-.modal {
-  display: none;
+/* Curl Command Modal - 使用 ScanResultModal 样式 */
+.curl-command-overlay {
   position: fixed;
-  z-index: 1000;
-  left: 0;
   top: 0;
-  width: 100%;
-  height: 100%;
-  overflow: hidden;
-  background-color: rgba(0, 0, 0, 0.5);
+  left: 0;
+  right: 0;
+  bottom: 0;
+  width: 100vw;
+  height: 100vh;
+  margin: 0;
+  background: var(--overlay-bg, rgba(0, 0, 0, 0.7));
+  backdrop-filter: blur(8px);
+  z-index: 9999;
+  display: flex;
   align-items: center;
   justify-content: center;
+  padding: var(--spacing-lg, 20px);
+  overflow: hidden;
 }
 
-.modal.show {
-  display: flex;
-}
-
-.modal-content {
-  background-color: #ffffff;
-  margin: auto;
-  padding: 0;
-  border: 1px solid #888;
-  border-radius: 8px;
-  width: 90%;
+.curl-command-modal {
+  background: var(--modal-bg, rgba(30, 30, 50, 0.95));
+  border: 1px solid var(--border-color-light, rgba(255, 255, 255, 0.2));
+  border-radius: var(--border-radius-xl, 12px);
+  width: 100%;
   max-width: 700px;
-  max-height: 90vh;
+  max-height: 80vh;
   display: flex;
   flex-direction: column;
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  backdrop-filter: blur(20px);
+  box-shadow: var(--shadow-xl, 0 25px 50px rgba(0, 0, 0, 0.5));
+  animation: modalSlideUp 0.3s ease;
 }
 
-[data-bs-theme='dark'] .modal-content {
-  background-color: #212529;
-  border-color: #495057;
-  color: #fff;
+@keyframes modalSlideUp {
+  from {
+    transform: translateY(20px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
 }
 
-.modal-header {
+.curl-command-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 15px 20px;
-  border-bottom: 1px solid #dee2e6;
-  background-color: #f8f9fa;
-  border-radius: 8px 8px 0 0;
+  padding: var(--spacing-md, 20px) var(--spacing-lg, 24px);
+  border-bottom: 1px solid var(--border-color-light, rgba(255, 255, 255, 0.1));
+
+  h5 {
+    margin: 0;
+    color: var(--text-primary, #fff);
+    font-size: var(--font-size-lg, 1.1rem);
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-sm, 8px);
+  }
 }
 
-[data-bs-theme='dark'] .modal-header {
-  background-color: #343a40;
-  border-bottom-color: #495057;
-}
-
-.modal-header h5 {
-  margin: 0;
-  font-size: 1.1rem;
-  font-weight: 600;
-}
-
-[data-bs-theme='dark'] .modal-header h5 {
-  color: #fff;
-}
-
-.close {
-  color: #aaa;
-  font-size: 28px;
-  font-weight: bold;
-  cursor: pointer;
-  line-height: 1;
-}
-
-.close:hover,
-.close:focus {
-  color: #000;
-}
-
-[data-bs-theme='dark'] .close:hover,
-[data-bs-theme='dark'] .close:focus {
-  color: #fff;
-}
-
-.modal-body {
-  padding: 20px;
+.curl-command-body {
+  padding: var(--spacing-lg, 24px);
   overflow-y: auto;
   flex: 1;
+  color: var(--text-primary, #fff);
 }
 
-
-[data-bs-theme='dark'] .modal-body {
-  color: #e9ecef;
-}
-
-.modal-footer {
+.curl-command-footer {
   display: flex;
   justify-content: flex-end;
   gap: 10px;
-  padding: 15px 20px;
-  border-top: 1px solid #dee2e6;
-  background-color: #f8f9fa;
-  border-radius: 0 0 8px 8px;
-}
-
-[data-bs-theme='dark'] .modal-footer {
-  background-color: #343a40;
-  border-top-color: #495057;
+  padding: var(--spacing-md, 20px) var(--spacing-lg, 24px);
+  border-top: 1px solid var(--border-color-light, rgba(255, 255, 255, 0.1));
 }
 
 .curl-command-container {
   position: relative;
-  background-color: #f8f9fa;
-  border: 1px solid #dee2e6;
+  background-color: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--border-color-light, rgba(255, 255, 255, 0.1));
   border-radius: 4px;
   padding: 15px;
-}
-
-[data-bs-theme='dark'] .curl-command-container {
-  background-color: #343a40;
-  border-color: #495057;
 }
 
 .curl-command {
@@ -526,7 +496,7 @@ const testWebhook = async () => {
   padding: 0;
   font-family: 'Courier New', monospace;
   font-size: 0.9rem;
-  color: #212529;
+  color: var(--text-primary, #fff);
   background: transparent;
   border: none;
   white-space: pre-wrap;
@@ -536,13 +506,23 @@ const testWebhook = async () => {
   overflow-y: auto;
 }
 
-[data-bs-theme='dark'] .curl-command {
-  color: #e9ecef;
-}
-
 .copy-btn {
   position: absolute;
   top: 10px;
   right: 10px;
+}
+
+/* Vue 过渡动画 */
+.fade-enter-active {
+  transition: opacity 0.3s ease;
+}
+
+.fade-leave-active {
+  transition: opacity 0.3s ease;
+}
+
+.fade-enter-from,
+.fade-leave-to {
+  opacity: 0;
 }
 </style>

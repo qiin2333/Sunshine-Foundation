@@ -132,19 +132,19 @@
     </div>
 
     <!-- Boom Confirm Modal -->
-    <div id="boomConfirmModal" class="modal fade" :class="{ show: showBoomConfirmModal, 'd-block': showBoomConfirmModal }" @click.self="closeBoomModal" style="background-color: rgba(0, 0, 0, 0.5)">
-      <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content" @click.stop>
-          <div class="modal-header">
-            <h5 class="modal-title">
+    <Transition name="fade">
+      <div v-if="showBoomConfirmModal" class="boom-confirm-overlay" @click.self="closeBoomModal">
+        <div class="boom-confirm-modal">
+          <div class="boom-confirm-header">
+            <h5>
               <i class="fas fa-bomb me-2"></i>{{ $t('troubleshooting.confirm_boom') }}
             </h5>
-            <button type="button" class="btn-close" @click="closeBoomModal" aria-label="Close"></button>
+            <button class="btn-close" @click="closeBoomModal"></button>
           </div>
-          <div class="modal-body">
+          <div class="boom-confirm-body">
             <p>{{ $t('troubleshooting.confirm_boom_desc') }}</p>
           </div>
-          <div class="modal-footer">
+          <div class="boom-confirm-footer">
             <button type="button" class="btn btn-secondary" @click="closeBoomModal">
               {{ $t('_common.cancel') }}
             </button>
@@ -154,7 +154,7 @@
           </div>
         </div>
       </div>
-    </div>
+    </Transition>
   </div>
 </template>
 
@@ -195,8 +195,8 @@ const {
 
 const showBoomConfirmModal = ref(false)
 
-// 使用滚动锁定 composable，禁用滚动到顶部以保持模态窗口在视口中心
-useModalScrollLock(showBoomConfirmModal, { scrollToTop: false })
+// 使用滚动锁定 composable，弹出后滚动到顶部
+useModalScrollLock(() => showBoomConfirmModal.value)
 
 const showBoomModal = () => {
   showBoomConfirmModal.value = true
@@ -243,117 +243,103 @@ onMounted(async () => {
   padding: 0.75rem 1rem;
 }
 
-.modal {
-  display: none;
+/* Boom Confirm Modal - 使用 ScanResultModal 样式 */
+.boom-confirm-overlay {
   position: fixed;
-  z-index: 1000;
-  left: 0;
   top: 0;
-  width: 100%;
-  height: 100%;
-  overflow: hidden;
-  background-color: rgba(0, 0, 0, 0.5);
+  left: 0;
+  right: 0;
+  bottom: 0;
+  width: 100vw;
+  height: 100vh;
+  margin: 0;
+  background: var(--overlay-bg, rgba(0, 0, 0, 0.7));
+  backdrop-filter: blur(8px);
+  z-index: 9999;
+  display: flex;
   align-items: center;
   justify-content: center;
+  padding: var(--spacing-lg, 20px);
+  overflow: hidden;
 }
 
-.modal.show {
-  display: flex;
-}
-
-.modal-content {
-  background-color: #ffffff;
-  margin: auto;
-  padding: 0;
-  border: 1px solid #888;
-  border-radius: 8px;
-  width: 90%;
+.boom-confirm-modal {
+  background: var(--modal-bg, rgba(30, 30, 50, 0.95));
+  border: 1px solid var(--border-color-light, rgba(255, 255, 255, 0.2));
+  border-radius: var(--border-radius-xl, 12px);
+  width: 100%;
   max-width: 500px;
-  max-height: 90vh;
+  max-height: 80vh;
   display: flex;
   flex-direction: column;
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  backdrop-filter: blur(20px);
+  box-shadow: var(--shadow-xl, 0 25px 50px rgba(0, 0, 0, 0.5));
+  animation: modalSlideUp 0.3s ease;
 }
 
-[data-bs-theme='dark'] .modal-content {
-  background-color: #212529;
-  border-color: #495057;
-  color: #fff;
+@keyframes modalSlideUp {
+  from {
+    transform: translateY(20px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
 }
 
-.modal-header {
+.boom-confirm-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 15px 20px;
-  border-bottom: 1px solid #dee2e6;
-  background-color: #f8f9fa;
-  border-radius: 8px 8px 0 0;
+  padding: var(--spacing-md, 20px) var(--spacing-lg, 24px);
+  border-bottom: 1px solid var(--border-color-light, rgba(255, 255, 255, 0.1));
+
+  h5 {
+    margin: 0;
+    color: var(--text-primary, #fff);
+    font-size: var(--font-size-lg, 1.1rem);
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-sm, 8px);
+  }
 }
 
-[data-bs-theme='dark'] .modal-header {
-  background-color: #343a40;
-  border-bottom-color: #495057;
-}
-
-.modal-header h5 {
-  margin: 0;
-  font-size: 1.1rem;
-  font-weight: 600;
-}
-
-[data-bs-theme='dark'] .modal-header h5 {
-  color: #fff;
-}
-
-.close {
-  color: #aaa;
-  font-size: 28px;
-  font-weight: bold;
-  cursor: pointer;
-  line-height: 1;
-}
-
-.close:hover,
-.close:focus {
-  color: #000;
-}
-
-[data-bs-theme='dark'] .close:hover,
-[data-bs-theme='dark'] .close:focus {
-  color: #fff;
-}
-
-.modal-body {
-  padding: 20px;
-  font-size: 0.95rem;
+.boom-confirm-body {
+  padding: var(--spacing-lg, 24px);
+  font-size: var(--font-size-md, 0.95rem);
   line-height: 1.5;
   overflow-y: auto;
   flex: 1;
+  color: var(--text-primary, #fff);
 }
 
-[data-bs-theme='dark'] .modal-body {
-  color: #e9ecef;
-}
-
-.modal-footer {
+.boom-confirm-footer {
   display: flex;
   justify-content: flex-end;
   gap: 10px;
-  padding: 15px 20px;
-  border-top: 1px solid #dee2e6;
-  background-color: #f8f9fa;
-  border-radius: 0 0 8px 8px;
+  padding: var(--spacing-md, 20px) var(--spacing-lg, 24px);
+  border-top: 1px solid var(--border-color-light, rgba(255, 255, 255, 0.1));
 }
 
-[data-bs-theme='dark'] .modal-footer {
-  background-color: #343a40;
-  border-top-color: #495057;
-}
-
-.modal-footer button {
+.boom-confirm-footer button {
   padding: 8px 16px;
   font-size: 0.9rem;
+}
+
+/* Vue 过渡动画 */
+.fade-enter-active {
+  transition: opacity 0.3s ease;
+}
+
+.fade-leave-active {
+  transition: opacity 0.3s ease;
+}
+
+.fade-enter-from,
+.fade-leave-to {
+  opacity: 0;
 }
 
 @media (max-width: 991.98px) {
