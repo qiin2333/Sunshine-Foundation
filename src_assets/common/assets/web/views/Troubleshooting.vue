@@ -163,6 +163,7 @@ import Navbar from '../components/layout/Navbar.vue'
 import TroubleshootingCard from '../components/TroubleshootingCard.vue'
 import LogsSection from '../components/LogsSection.vue'
 import { useTroubleshooting } from '../composables/useTroubleshooting.js'
+import { useModalScrollLock } from '../composables/useModalScrollLock.js'
 
 const { t } = useI18n()
 
@@ -191,6 +192,9 @@ const {
 } = useTroubleshooting()
 
 const showBoomConfirmModal = ref(false)
+
+// 使用滚动锁定 composable，禁用滚动到顶部以保持模态窗口在视口中心
+useModalScrollLock(showBoomConfirmModal, { scrollToTop: false })
 
 const showBoomModal = () => {
   showBoomConfirmModal.value = true
@@ -245,7 +249,7 @@ onMounted(async () => {
   top: 0;
   width: 100%;
   height: 100%;
-  overflow: auto;
+  overflow: hidden;
   background-color: rgba(0, 0, 0, 0.5);
   align-items: center;
   justify-content: center;
@@ -263,6 +267,9 @@ onMounted(async () => {
   border-radius: 8px;
   width: 90%;
   max-width: 500px;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
   box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
 }
 
@@ -319,6 +326,8 @@ onMounted(async () => {
   padding: 20px;
   font-size: 0.95rem;
   line-height: 1.5;
+  overflow-y: auto;
+  flex: 1;
 }
 
 [data-bs-theme='dark'] .modal-body {

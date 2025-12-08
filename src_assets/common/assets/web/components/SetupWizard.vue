@@ -466,12 +466,30 @@ export default {
     showSkipModal() {
       const modal = document.getElementById('skipWizardModal')
       if (modal) {
+        // 锁定背景滚动
+        const body = document.body
+        const scrollbarWidth = window.innerWidth - document.documentElement.clientWidth
+        this._savedScrollPosition = window.pageYOffset || document.documentElement.scrollTop
+        body.style.overflow = 'hidden'
+        if (scrollbarWidth > 0) {
+          body.style.paddingRight = `${scrollbarWidth}px`
+        }
         modal.classList.add('show')
       }
     },
     closeSkipModal() {
       const modal = document.getElementById('skipWizardModal')
       if (modal) {
+        // 恢复背景滚动
+        const body = document.body
+        body.style.overflow = ''
+        body.style.paddingRight = ''
+        if (this._savedScrollPosition > 0) {
+          requestAnimationFrame(() => {
+            window.scrollTo({ top: this._savedScrollPosition, behavior: 'instant' })
+            this._savedScrollPosition = 0
+          })
+        }
         modal.classList.remove('show')
       }
     },
@@ -925,7 +943,7 @@ export default {
   top: 0;
   width: 100%;
   height: 100%;
-  overflow: auto;
+  overflow: hidden;
   background-color: rgba(0, 0, 0, 0.5);
   display: flex;
   align-items: center;
@@ -940,14 +958,16 @@ export default {
 .modal-content {
   background-color: #ffffff !important;
   margin: auto;
-  padding: 20px;
+  padding: 0;
   border: 1px solid #ddd;
-  max-height: 500px;
+  max-height: 90vh;
   max-width: 500px;
   width: 70% !important;
   border-radius: 8px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
   position: relative;
+  display: flex;
+  flex-direction: column;
 }
 
 [data-bs-theme='dark'] .modal-content {
@@ -999,8 +1019,11 @@ export default {
 
 .modal-body {
   margin: 8px 0;
+  padding: 20px;
   font-size: 0.95rem;
   line-height: 1.4;
+  overflow-y: auto;
+  flex: 1;
 }
 
 [data-bs-theme='dark'] .modal-body {

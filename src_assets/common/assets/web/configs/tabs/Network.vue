@@ -1,6 +1,7 @@
 <script setup>
 import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { useModalScrollLock } from '../../composables/useModalScrollLock.js'
 
 const props = defineProps([
   'platform',
@@ -16,6 +17,9 @@ const effectivePort = computed(() => +config.value?.port ?? defaultMoonlightPort
 const showCurlModal = ref(false)
 const copied = ref(false)
 
+// 使用滚动锁定 composable，禁用滚动到顶部以保持模态窗口在视口中心
+useModalScrollLock(showCurlModal, { scrollToTop: false })
+
 const curlCommand = computed(() => {
   if (!config.value.webhook_url) {
     return ''
@@ -29,9 +33,10 @@ const curlCommand = computed(() => {
     }
   })
   
-  const escapedPayload = payload.replace(/'/g, "'\\''")
+  // 转义 JSON 中的双引号，以便在双引号字符串中使用
+  const escapedPayload = payload.replace(/"/g, '\\"')
   
-  return `curl -X POST '${url}' \\\n  -H 'Content-Type: application/json' \\\n  -d '${escapedPayload}'`
+  return `curl -X POST "${url}" -H "Content-Type: application/json" -d "${escapedPayload}"`
 })
 
 const showCurlCommand = () => {
@@ -404,7 +409,7 @@ const testWebhook = async () => {
   top: 0;
   width: 100%;
   height: 100%;
-  overflow: auto;
+  overflow: hidden;
   background-color: rgba(0, 0, 0, 0.5);
   align-items: center;
   justify-content: center;
@@ -422,6 +427,9 @@ const testWebhook = async () => {
   border-radius: 8px;
   width: 90%;
   max-width: 700px;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
   box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
 }
 
@@ -476,7 +484,10 @@ const testWebhook = async () => {
 
 .modal-body {
   padding: 20px;
+  overflow-y: auto;
+  flex: 1;
 }
+
 
 [data-bs-theme='dark'] .modal-body {
   color: #e9ecef;

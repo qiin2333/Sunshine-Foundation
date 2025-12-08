@@ -227,8 +227,8 @@ const searchQuery = ref('')
 const selectedType = ref('all')
 const gamesOnly = ref(false)
 
-// 使用滚动锁定 composable
-useModalScrollLock(() => props.show)
+// 使用滚动锁定 composable，禁用滚动到顶部以保持模态窗口在视口中心
+useModalScrollLock(() => props.show, { scrollToTop: false })
 
 // 重置过滤器
 watch(
