@@ -121,9 +121,9 @@
                             class="btn btn-sm btn-outline-primary me-1"
                             @click="startEdit(client.uuid)"
                             :disabled="saving || deleting.has(client.uuid)"
-                            title="Edit client settings"
+                            :title="$t('pin.edit_client_settings')"
                           >
-                            <i class="fas fa-edit me-1"></i> Edit
+                            <i class="fas fa-edit me-1"></i> {{ $t('_common.edit') }}
                           </button>
                         </template>
                         <!-- 保存/取消按钮 -->
@@ -132,18 +132,18 @@
                             class="btn btn-sm btn-success me-1"
                             @click="handleSave(client.uuid)"
                             :disabled="saving || deleting.has(client.uuid)"
-                            title="Save changes"
+                            :title="$t('pin.save_changes')"
                           >
                             <span v-if="saving" class="spinner-border spinner-border-sm me-1"></span>
-                            <i v-else class="fas fa-check me-1"></i> Save
+                            <i v-else class="fas fa-check me-1"></i> {{ $t('_common.save') }}
                           </button>
                           <button
                             class="btn btn-sm btn-secondary me-1"
                             @click="handleCancelEdit(client.uuid)"
                             :disabled="saving || deleting.has(client.uuid)"
-                            title="Cancel editing"
+                            :title="$t('pin.cancel_editing')"
                           >
-                            <i class="fas fa-times me-1"></i> Cancel
+                            <i class="fas fa-times me-1"></i> {{ $t('_common.cancel') }}
                           </button>
                         </template>
                         <!-- 删除按钮 -->
@@ -151,10 +151,10 @@
                           class="btn btn-sm btn-outline-danger"
                           @click="handleDelete(client)"
                           :disabled="saving || deleting.has(client.uuid) || editingStates[client.uuid]"
-                          :title="editingStates[client.uuid] ? 'Please save or cancel editing first' : 'Delete client'"
+                          :title="editingStates[client.uuid] ? $t('pin.save_or_cancel_first') : $t('pin.delete_client')"
                         >
                           <span v-if="deleting.has(client.uuid)" class="spinner-border spinner-border-sm me-1"></span>
-                          <i v-else class="fas fa-trash me-1"></i> Delete
+                          <i v-else class="fas fa-trash me-1"></i> {{ $t('_common.delete') }}
                         </button>
                       </div>
                       <!-- 未保存更改提示 -->
@@ -162,7 +162,7 @@
                         v-if="editingStates[client.uuid] && hasUnsavedChanges(client.uuid)"
                         class="text-warning small mt-2"
                       >
-                        <i class="fas fa-exclamation-triangle me-1"></i> Unsaved changes
+                        <i class="fas fa-exclamation-triangle me-1"></i> {{ $t('pin.unsaved_changes') }}
                       </div>
                     </td>
                   </tr>
@@ -188,21 +188,19 @@
           <div class="delete-client-modal">
             <div class="delete-client-header">
               <h5>
-                <i class="fas fa-exclamation-triangle me-2"></i>Confirm Delete
+                <i class="fas fa-exclamation-triangle me-2"></i>{{ $t('pin.confirm_delete') }}
               </h5>
               <button class="btn-close" @click="clientToDelete = null"></button>
             </div>
             <div class="delete-client-body">
-              <p>
-                Are you sure you want to delete <strong>{{ clientToDelete.name || 'Unknown Client' }}</strong>?
-              </p>
-              <p class="text-muted small mb-0">This action cannot be undone.</p>
+              <p v-html="$t('pin.delete_confirm_message', { name: clientToDelete.name || $t('pin.unknown_client') })"></p>
+              <p class="text-muted small mb-0">{{ $t('pin.delete_warning') }}</p>
             </div>
             <div class="delete-client-footer">
-              <button type="button" class="btn btn-secondary" @click="clientToDelete = null">Cancel</button>
+              <button type="button" class="btn btn-secondary" @click="clientToDelete = null">{{ $t('_common.cancel') }}</button>
               <button type="button" class="btn btn-danger" @click="confirmDelete">
                 <span v-if="deleting.has(clientToDelete.uuid)" class="spinner-border spinner-border-sm me-2"></span>
-                Delete
+                {{ $t('_common.delete') }}
               </button>
             </div>
           </div>
