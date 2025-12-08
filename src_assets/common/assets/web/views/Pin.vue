@@ -183,27 +183,22 @@
       </div>
 
       <!-- 删除确认对话框 -->
-      <div
-        v-if="clientToDelete"
-        class="modal fade show d-block"
-        tabindex="-1"
-        style="background-color: rgba(0, 0, 0, 0.5)"
-        @click.self="clientToDelete = null"
-      >
-        <div class="modal-dialog modal-dialog-centered">
-          <div class="modal-content">
-            <div class="modal-header">
-              <h5 class="modal-title">Confirm Delete</h5>
-              <button type="button" class="btn-close" @click="clientToDelete = null"></button>
+      <Transition name="fade">
+        <div v-if="clientToDelete" class="delete-client-overlay" @click.self="clientToDelete = null">
+          <div class="delete-client-modal">
+            <div class="delete-client-header">
+              <h5>
+                <i class="fas fa-exclamation-triangle me-2"></i>Confirm Delete
+              </h5>
+              <button class="btn-close" @click="clientToDelete = null"></button>
             </div>
-            <div class="modal-body">
+            <div class="delete-client-body">
               <p>
-                Are you sure you want to delete <strong>{{ clientToDelete.name || 'Unknown Client' }}</strong
-                >?
+                Are you sure you want to delete <strong>{{ clientToDelete.name || 'Unknown Client' }}</strong>?
               </p>
               <p class="text-muted small mb-0">This action cannot be undone.</p>
             </div>
-            <div class="modal-footer">
+            <div class="delete-client-footer">
               <button type="button" class="btn btn-secondary" @click="clientToDelete = null">Cancel</button>
               <button type="button" class="btn btn-danger" @click="confirmDelete">
                 <span v-if="deleting.has(clientToDelete.uuid)" class="spinner-border spinner-border-sm me-2"></span>
@@ -212,15 +207,16 @@
             </div>
           </div>
         </div>
-      </div>
+      </Transition>
     </div>
   </div>
 </template>
 
 <script setup>
-import { onMounted, ref } from 'vue'
+import { onMounted, ref, computed } from 'vue'
 import Navbar from '../components/layout/Navbar.vue'
 import { usePin } from '../composables/usePin.js'
+import { useModalScrollLock } from '../composables/useModalScrollLock.js'
 
 const {
   pairingDeviceName,
@@ -247,6 +243,9 @@ const {
 } = usePin()
 
 const clientToDelete = ref(null)
+
+// 使用滚动锁定 composable，弹出后滚动到顶部
+useModalScrollLock(() => clientToDelete.value !== null)
 
 // 处理删除
 const handleDelete = (client) => {
@@ -330,12 +329,103 @@ onMounted(async () => {
   background-color: rgba(255, 193, 7, 0.1) !important;
 }
 
-.modal.show {
-  display: block;
+/* Delete Client Modal - 使用 ScanResultModal 样式 */
+.delete-client-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  width: 100vw;
+  height: 100vh;
+  margin: 0;
+  background: var(--overlay-bg, rgba(0, 0, 0, 0.7));
+  backdrop-filter: blur(8px);
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--spacing-lg, 20px);
+  overflow: hidden;
 }
 
-.modal.show .modal-dialog {
-  margin-top: 15vh;
+.delete-client-modal {
+  background: var(--modal-bg, rgba(30, 30, 50, 0.95));
+  border: 1px solid var(--border-color-light, rgba(255, 255, 255, 0.2));
+  border-radius: var(--border-radius-xl, 12px);
+  width: 100%;
+  max-width: 500px;
+  max-height: 80vh;
+  display: flex;
+  flex-direction: column;
+  backdrop-filter: blur(20px);
+  box-shadow: var(--shadow-xl, 0 25px 50px rgba(0, 0, 0, 0.5));
+  animation: modalSlideUp 0.3s ease;
+}
+
+@keyframes modalSlideUp {
+  from {
+    transform: translateY(20px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+.delete-client-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: var(--spacing-md, 20px) var(--spacing-lg, 24px);
+  border-bottom: 1px solid var(--border-color-light, rgba(255, 255, 255, 0.1));
+
+  h5 {
+    margin: 0;
+    color: var(--text-primary, #fff);
+    font-size: var(--font-size-lg, 1.1rem);
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-sm, 8px);
+  }
+}
+
+.delete-client-body {
+  padding: var(--spacing-lg, 24px);
+  font-size: var(--font-size-md, 0.95rem);
+  line-height: 1.5;
+  overflow-y: auto;
+  flex: 1;
+  color: var(--text-primary, #fff);
+}
+
+.delete-client-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  padding: var(--spacing-md, 20px) var(--spacing-lg, 24px);
+  border-top: 1px solid var(--border-color-light, rgba(255, 255, 255, 0.1));
+}
+
+.delete-client-footer button {
+  padding: 8px 16px;
+  font-size: 0.9rem;
+}
+
+/* Vue 过渡动画 */
+.fade-enter-active {
+  transition: opacity 0.3s ease;
+}
+
+.fade-leave-active {
+  transition: opacity 0.3s ease;
+}
+
+.fade-enter-from,
+.fade-leave-to {
+  opacity: 0;
 }
 
 /* 响应式优化 */
