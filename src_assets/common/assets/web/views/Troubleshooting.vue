@@ -132,24 +132,26 @@
     </div>
 
     <!-- Boom Confirm Modal -->
-    <div id="boomConfirmModal" class="modal" :class="{ show: showBoomConfirmModal }" @click.self="closeBoomModal">
-      <div class="modal-content" @click.stop>
-        <div class="modal-header">
-          <h5>
-            <i class="fas fa-bomb me-2"></i>{{ $t('troubleshooting.confirm_boom') }}
-          </h5>
-          <span class="close" @click="closeBoomModal">&times;</span>
-        </div>
-        <div class="modal-body">
-          <p>{{ $t('troubleshooting.confirm_boom_desc') }}</p>
-        </div>
-        <div class="modal-footer">
-          <button type="button" class="btn btn-secondary" @click="closeBoomModal">
-            {{ $t('_common.cancel') }}
-          </button>
-          <button type="button" class="btn btn-danger" @click="confirmBoom">
-            <i class="fas fa-bomb me-2"></i>{{ $t('troubleshooting.boom_sunshine') }}
-          </button>
+    <div id="boomConfirmModal" class="modal fade" :class="{ show: showBoomConfirmModal, 'd-block': showBoomConfirmModal }" @click.self="closeBoomModal" style="background-color: rgba(0, 0, 0, 0.5)">
+      <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content" @click.stop>
+          <div class="modal-header">
+            <h5 class="modal-title">
+              <i class="fas fa-bomb me-2"></i>{{ $t('troubleshooting.confirm_boom') }}
+            </h5>
+            <button type="button" class="btn-close" @click="closeBoomModal" aria-label="Close"></button>
+          </div>
+          <div class="modal-body">
+            <p>{{ $t('troubleshooting.confirm_boom_desc') }}</p>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" @click="closeBoomModal">
+              {{ $t('_common.cancel') }}
+            </button>
+            <button type="button" class="btn btn-danger" @click="confirmBoom">
+              <i class="fas fa-bomb me-2"></i>{{ $t('troubleshooting.boom_sunshine') }}
+            </button>
+          </div>
         </div>
       </div>
     </div>
