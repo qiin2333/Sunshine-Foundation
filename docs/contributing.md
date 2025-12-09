@@ -67,13 +67,45 @@ The following is a simple example of how to use it.
   }
   ```
 
-  @note{The json keys should be sorted alphabetically. You can use [jsonabc](https://novicelab.org/jsonabc)
-  to sort the keys.}
+  @note{The json keys should be sorted alphabetically. You can use the provided i18n tools to automatically
+  format and sort all locale files: `npm run i18n:format`}
 
   @attention{Due to the integration with Crowdin, it is important to only add strings to the *en.json* file,
   and to not modify any other language files. After the PR is merged, the translations can take place
   on [CrowdIn][crowdin-url]. Once the translations are complete, a PR will be made
   to merge the translations into Sunshine.}
+
+##### i18n Development Tools
+
+The project provides several npm scripts to help maintain translation quality:
+
+```bash
+# Validate all locale files have the same keys as en.json
+npm run i18n:validate
+
+# Auto-sync missing keys to all locale files (uses English as placeholder)
+npm run i18n:sync
+
+# Format and sort all locale JSON files alphabetically
+npm run i18n:format
+
+# Check if files are properly formatted (for CI)
+npm run i18n:format:check
+
+# Validate translations with CI exit code
+npm run i18n:validate:ci
+```
+
+**Workflow when adding new translation keys:**
+
+1. Add new keys to `en.json` only
+2. Run `npm run i18n:sync` to add missing keys to all locale files
+3. Run `npm run i18n:format` to ensure consistent formatting
+4. Run `npm run i18n:validate` to verify completeness
+5. Commit your changes - CI will automatically validate the translations
+
+The i18n validation is integrated into the CI pipeline and will prevent merging PRs with
+incomplete or incorrectly formatted translation files.
 
 * Use the string in the Vue component.
   ```html
