@@ -97,6 +97,91 @@ function removeKey(obj, keyPath) {
 }
 
 /**
+ * Check if a value should be excluded from translation check
+ * (e.g., technical terms, protocol names, product names that are commonly kept in English)
+ */
+function shouldSkipTranslationCheck(key, value) {
+  if (!value || typeof value !== 'string') {
+    return false
+  }
+  
+  // Whitelist of keys that can remain in English (technical terms, protocols, etc.)
+  const skipKeys = [
+    'address_family_both', // IPv4+IPv6
+    'port_tcp', // TCP
+    'port_udp', // UDP
+    'scan_result_filter_url', // URL
+    'webhook_url', // Webhook URL (URL is technical term)
+    'audio_sink_placeholder_macos', // BlackHole 2ch (product name)
+    'virtual_sink_placeholder', // Steam Streaming Speakers (product name)
+    'gamepad_ds4', // DS4 (PS4) - product name
+    'gamepad_ds5', // DS5 (PS5) - product name
+    'gamepad_switch', // Nintendo Pro (Switch) - product name
+    'gamepad_x360', // X360 (Xbox 360) - product name
+    'port_web_ui', // Web UI
+    'qsv_coder', // QuickSync Coder (H264)
+    'env_client_name', // Client friendly name
+    'boom_sunshine', // Boom!
+    'boom_sunshine_desc', // Boom!
+    'boom_sunshine_title', // Boom!
+    'boom_sunshine_button', // Boom!
+    'boom_sunshine_button_desc', // Boom!
+    'boom_sunshine_button_title', // Boom!
+    'boom_sunshine_button_desc', // Boom!
+    'upnp', // UPnP
+    "scan_result_type_url",
+    "scan_result_filter_url_title",
+  ]
+  
+  // Check if key is in skip list
+  if (skipKeys.includes(key.split('.').pop())) {
+    return true
+  }
+  
+  // Check if value is a pure technical term (all uppercase, contains numbers/special chars)
+  // Examples: "IPv4+IPv6", "TCP", "UDP", "URL", "DS4 (PS4)"
+  const isTechnicalTerm = /^[A-Z0-9+\-()\s]+$/.test(value.trim()) && 
+                          value.length < 50 && 
+                          /[A-Z]/.test(value)
+  
+  // Check if value contains only product names or technical abbreviations
+  const isProductName = /^(DS4|DS5|X360|Nintendo|Steam|BlackHole|TCP|UDP|URL|IPv4|IPv6|Webhook URL)/i.test(value.trim())
+  
+  // Check if value ends with common technical terms that can stay in English
+  const hasTechnicalSuffix = /\b(URL|TCP|UDP|IPv4|IPv6|UI|API|HTTP|HTTPS|DS4|DS5|X360)\b/i.test(value)
+  
+  return isTechnicalTerm || isProductName || hasTechnicalSuffix
+}
+
+/**
+ * Check for untranslated keys (keys that have the same value as the base locale)
+ */
+function findUntranslatedKeys(baseContent, localeContent, localeFile) {
+  // Skip English variants
+  if (localeFile === 'en_GB.json' || localeFile === 'en_US.json') {
+    return []
+  }
+  
+  const baseKeys = getAllKeys(baseContent)
+  const untranslated = []
+  
+  for (const key of baseKeys) {
+    const baseValue = getValue(baseContent, key)
+    const localeValue = getValue(localeContent, key)
+    
+    // Check if the value is the same as the base (untranslated)
+    if (localeValue !== null && localeValue === baseValue) {
+      // Skip if this key/value should not be checked for translation
+      if (!shouldSkipTranslationCheck(key, localeValue)) {
+        untranslated.push(key)
+      }
+    }
+  }
+  
+  return untranslated
+}
+
+/**
  * Main validation function
  */
 function validateLocales() {
@@ -137,10 +222,13 @@ function validateLocales() {
     const localeKeys = getAllKeys(content).sort()
     const missingKeys = baseKeys.filter(key => !localeKeys.includes(key))
     const extraKeys = localeKeys.filter(key => !baseKeys.includes(key))
+    const untranslatedKeys = findUntranslatedKeys(baseContent, content, localeFile)
     
-    if (missingKeys.length === 0 && extraKeys.length === 0) {
-      console.log(`✅ ${localeFile}: All keys present (${localeKeys.length} keys)`)
-      results.push({ file: localeFile, status: 'ok', missing: 0, extra: 0 })
+    const hasIssues = missingKeys.length > 0 || extraKeys.length > 0 || untranslatedKeys.length > 0
+    
+    if (!hasIssues) {
+      console.log(`✅ ${localeFile}: All keys present and translated (${localeKeys.length} keys)`)
+      results.push({ file: localeFile, status: 'ok', missing: 0, extra: 0, untranslated: 0 })
     } else {
       hasErrors = true
       console.log(`❌ ${localeFile}: Issues found`)
@@ -161,12 +249,26 @@ function validateLocales() {
         }
       }
       
+      if (untranslatedKeys.length > 0) {
+        console.log(`   ⚠️  ${untranslatedKeys.length} untranslated keys (same as English):`)
+        untranslatedKeys.slice(0, 10).forEach(key => {
+          const value = getValue(content, key)
+          const displayValue = value && value.length > 50 ? value.substring(0, 50) + '...' : value
+          console.log(`     - ${key}: "${displayValue}"`)
+        })
+        if (untranslatedKeys.length > 10) {
+          console.log(`     ... and ${untranslatedKeys.length - 10} more`)
+        }
+      }
+      
       results.push({ 
         file: localeFile, 
         status: 'error', 
         missing: missingKeys.length, 
         extra: extraKeys.length,
+        untranslated: untranslatedKeys.length,
         missingKeys,
+        untranslatedKeys,
         content
       })
       
@@ -209,6 +311,11 @@ function validateLocales() {
   console.log(`   Total locales checked: ${localeFiles.length}`)
   console.log(`   Locales with all keys: ${results.filter(r => r.status === 'ok').length}`)
   console.log(`   Locales with issues: ${results.filter(r => r.status === 'error').length}`)
+  
+  const totalUntranslated = results.reduce((sum, r) => sum + (r.untranslated || 0), 0)
+  if (totalUntranslated > 0) {
+    console.log(`   ⚠️  Total untranslated keys: ${totalUntranslated}`)
+  }
   
   if (syncMode) {
     const synced = results.filter(r => r.status === 'error' && r.missing > 0)
