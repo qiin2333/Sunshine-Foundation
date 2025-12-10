@@ -391,8 +391,8 @@
     "resolution_change_windows": "Resolution change",
     "resolutions": "Advertised Resolutions",
     "restart_note": "Sunshine sta riavviando per applicare le modifiche.",
-    "stream_audio": "Audio Di Stream",
-    "stream_audio_desc": "Indica se trasmettere o meno audio. Disabilitarlo può essere utile per lo streaming di display senza intestazione come secondo monitor.",
+    "stream_audio": "Abilita streaming audio",
+    "stream_audio_desc": "Disabilita questa opzione per interrompere lo streaming audio.",
     "sunshine_name": "Nome Sunshine",
     "sunshine_name_desc": "Il nome visualizzato da Moonlight. Se non specificato, viene utilizzato il nome host del PC",
     "sw_preset": "Preset SW",
@@ -425,7 +425,7 @@
     "virtual_display": "Virtual Display",
     "virtual_sink": "Uscita Audio Virtuale",
     "virtual_sink_desc": "Specifica manualmente un dispositivo audio virtuale da usare. Se disattivato, il dispositivo viene scelto automaticamente. Si consiglia vivamente di lasciare vuoto questo campo per utilizzare la selezione automatica del dispositivo!",
-    "virtual_sink_placeholder": "Altoparlanti Streaming Di Steam",
+    "virtual_sink_placeholder": "Steam Streaming Speakers",
     "vt_coder": "Coder VideoToolbox",
     "vt_realtime": "Codifica VideoToolbox In Tempo Reale",
     "vt_software": "Codifica Software VideoToolbox",
@@ -451,7 +451,7 @@
     "webhook_test_url_required": "Inserisci prima l'URL Webhook",
     "webhook_timeout": "Timeout richiesta",
     "webhook_timeout_desc": "Timeout per le richieste Webhook in millisecondi, intervallo 100-5000ms",
-    "webhook_url": "URL Webhook",
+    "webhook_url": "Webhook URL",
     "webhook_url_desc": "L'URL per ricevere notifiche di eventi, supporta protocolli HTTP/HTTPS"
   },
   "index": {

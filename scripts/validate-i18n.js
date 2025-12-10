@@ -97,6 +97,38 @@ function removeKey(obj, keyPath) {
 }
 
 /**
+ * Get list of keys that should remain in English (technical terms, protocols, etc.)
+ * These keys will be automatically overwritten with English values in sync mode
+ */
+function getEnglishOnlyKeys() {
+  return [
+    "address_family_both", // IPv4+IPv6
+    "port_tcp", // TCP
+    "port_udp", // UDP
+    "scan_result_filter_url", // URL
+    "webhook_url", // Webhook URL (URL is technical term)
+    "audio_sink_placeholder_macos", // BlackHole 2ch (product name)
+    "virtual_sink_placeholder", // Steam Streaming Speakers (product name)
+    "gamepad_ds4", // DS4 (PS4) - product name
+    "gamepad_ds5", // DS5 (PS5) - product name
+    "gamepad_switch", // Nintendo Pro (Switch) - product name
+    "gamepad_x360", // X360 (Xbox 360) - product name
+    "gamepad_xone", // XOne (Xbox One) - product name
+    "port_web_ui", // Web UI
+    "boom_sunshine", // Boom!
+    "boom_sunshine_title", // Boom!
+    "boom_sunshine_button", // Boom!
+    "boom_sunshine_button_desc", // Boom!
+    "boom_sunshine_button_title", // Boom!
+    "boom_sunshine_button_desc", // Boom!
+    "upnp", // UPnP
+    "scan_result_type_url", // URL
+    "scan_result_filter_url_title", // URL
+    "adapter_name_placeholder_windows", // Radeon RX 580 Series
+  ]
+}
+
+/**
  * Check if a value should be excluded from translation check
  * (e.g., technical terms, protocol names, product names that are commonly kept in English)
  */
@@ -105,36 +137,10 @@ function shouldSkipTranslationCheck(key, value) {
     return false
   }
   
-  // Whitelist of keys that can remain in English (technical terms, protocols, etc.)
-  const skipKeys = [
-    'address_family_both', // IPv4+IPv6
-    'port_tcp', // TCP
-    'port_udp', // UDP
-    'scan_result_filter_url', // URL
-    'webhook_url', // Webhook URL (URL is technical term)
-    'audio_sink_placeholder_macos', // BlackHole 2ch (product name)
-    'virtual_sink_placeholder', // Steam Streaming Speakers (product name)
-    'gamepad_ds4', // DS4 (PS4) - product name
-    'gamepad_ds5', // DS5 (PS5) - product name
-    'gamepad_switch', // Nintendo Pro (Switch) - product name
-    'gamepad_x360', // X360 (Xbox 360) - product name
-    'port_web_ui', // Web UI
-    'qsv_coder', // QuickSync Coder (H264)
-    'env_client_name', // Client friendly name
-    'boom_sunshine', // Boom!
-    'boom_sunshine_desc', // Boom!
-    'boom_sunshine_title', // Boom!
-    'boom_sunshine_button', // Boom!
-    'boom_sunshine_button_desc', // Boom!
-    'boom_sunshine_button_title', // Boom!
-    'boom_sunshine_button_desc', // Boom!
-    'upnp', // UPnP
-    "scan_result_type_url",
-    "scan_result_filter_url_title",
-  ]
+  const englishOnlyKeys = getEnglishOnlyKeys()
   
   // Check if key is in skip list
-  if (skipKeys.includes(key.split('.').pop())) {
+  if (englishOnlyKeys.includes(key.split('.').pop())) {
     return true
   }
   
@@ -229,6 +235,27 @@ function validateLocales() {
     if (!hasIssues) {
       console.log(`✅ ${localeFile}: All keys present and translated (${localeKeys.length} keys)`)
       results.push({ file: localeFile, status: 'ok', missing: 0, extra: 0, untranslated: 0 })
+      
+      // Still overwrite English-only keys even if no other issues
+      if (syncMode) {
+        const englishOnlyKeys = getEnglishOnlyKeys()
+        let overwrittenCount = 0
+        for (const key of baseKeys) {
+          const keyName = key.split('.').pop()
+          if (englishOnlyKeys.includes(keyName)) {
+            const baseValue = getValue(baseContent, key)
+            const currentValue = getValue(content, key)
+            if (currentValue !== baseValue) {
+              setValue(content, key, baseValue)
+              overwrittenCount++
+            }
+          }
+        }
+        if (overwrittenCount > 0) {
+          console.log(`   🔄 Overwritten ${overwrittenCount} English-only keys with English values`)
+          fs.writeFileSync(localePath, JSON.stringify(content, null, 2) + '\n', 'utf8')
+        }
+      }
     } else {
       hasErrors = true
       console.log(`❌ ${localeFile}: Issues found`)
@@ -294,6 +321,26 @@ function validateLocales() {
             removeKey(content, key)
           }
           console.log(`   ✓ Removed ${extraKeys.length} extra keys`)
+          modified = true
+        }
+        
+        // Overwrite English-only keys with English values (force overwrite even if different)
+        const englishOnlyKeys = getEnglishOnlyKeys()
+        let overwrittenCount = 0
+        for (const key of baseKeys) {
+          const keyName = key.split('.').pop()
+          if (englishOnlyKeys.includes(keyName)) {
+            const baseValue = getValue(baseContent, key)
+            const currentValue = getValue(content, key)
+            // Force overwrite English-only keys with English values
+            if (currentValue !== baseValue) {
+              setValue(content, key, baseValue)
+              overwrittenCount++
+            }
+          }
+        }
+        if (overwrittenCount > 0) {
+          console.log(`   🔄 Overwritten ${overwrittenCount} English-only keys with English values`)
           modified = true
         }
         
