@@ -65,6 +65,38 @@ function setValue(obj, path, value) {
 }
 
 /**
+ * Remove a key from nested object using dot notation
+ */
+function removeKey(obj, keyPath) {
+  const keys = keyPath.split('.')
+  const lastKey = keys.pop()
+  const target = keys.reduce((current, key) => {
+    if (!current || !current[key] || typeof current[key] !== 'object') {
+      return null
+    }
+    return current[key]
+  }, obj)
+  
+  if (target && target.hasOwnProperty(lastKey)) {
+    delete target[lastKey]
+    // Clean up empty objects
+    if (Object.keys(target).length === 0 && keys.length > 0) {
+      const parent = keys.reduce((current, key) => {
+        if (!current || !current[key] || typeof current[key] !== 'object') {
+          return null
+        }
+        return current[key]
+      }, obj)
+      if (parent && parent[keys[keys.length - 1]]) {
+        delete parent[keys[keys.length - 1]]
+      }
+    }
+    return true
+  }
+  return false
+}
+
+/**
  * Main validation function
  */
 function validateLocales() {
@@ -139,14 +171,33 @@ function validateLocales() {
       })
       
       // Auto-sync if requested
-      if (syncMode && missingKeys.length > 0) {
-        console.log(`   🔄 Syncing missing keys...`)
-        for (const key of missingKeys) {
-          const baseValue = getValue(baseContent, key)
-          setValue(content, key, baseValue)
+      if (syncMode) {
+        let modified = false
+        
+        // Add missing keys
+        if (missingKeys.length > 0) {
+          console.log(`   🔄 Syncing missing keys...`)
+          for (const key of missingKeys) {
+            const baseValue = getValue(baseContent, key)
+            setValue(content, key, baseValue)
+          }
+          console.log(`   ✓ Added ${missingKeys.length} missing keys with English values`)
+          modified = true
         }
-        fs.writeFileSync(localePath, JSON.stringify(content, null, 2) + '\n', 'utf8')
-        console.log(`   ✓ Added ${missingKeys.length} missing keys with English values`)
+        
+        // Remove extra keys
+        if (extraKeys.length > 0) {
+          console.log(`   🗑️  Removing extra keys...`)
+          for (const key of extraKeys) {
+            removeKey(content, key)
+          }
+          console.log(`   ✓ Removed ${extraKeys.length} extra keys`)
+          modified = true
+        }
+        
+        if (modified) {
+          fs.writeFileSync(localePath, JSON.stringify(content, null, 2) + '\n', 'utf8')
+        }
       }
     }
     console.log()
