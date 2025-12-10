@@ -263,7 +263,9 @@
     "key_repeat_delay_desc": "控制按键重复的速度。重复按键前的初始延迟（毫秒）。",
     "key_repeat_frequency": "按键重复频率",
     "key_repeat_frequency_desc": "按键每秒重复多少次。此可配置的选项支持小数。",
+    "key_rightalt_to_key_win": "Map Right Alt key to Windows key",
     "key_rightalt_to_key_win_desc": "您可能无法直接从 Moonlight 发送 Windows 键。在这种情况下，让 Sunshine 认为右 Alt 键是 Windows 键可能会很有用。",
+    "key_rightalt_to_key_windows": "Map Right Alt key to Windows key",
     "keyboard": "启用键盘输入",
     "keyboard_desc": "允许客户端使用键盘控制主机系统",
     "lan_encryption_mode": "局域网加密模式",
@@ -439,9 +441,7 @@
     "webhook_timeout": "请求超时时间",
     "webhook_timeout_desc": "Webhook 请求的超时时间（毫秒），范围 100-5000ms",
     "webhook_url": "Webhook URL",
-    "webhook_url_desc": "接收事件通知的 Webhook 地址，支持 HTTP/HTTPS 协议",
-    "key_rightalt_to_key_windows": "Map Right Alt key to Windows key",
-    "key_rightalt_to_key_win": "Map Right Alt key to Windows key"
+    "webhook_url_desc": "接收事件通知的 Webhook 地址，支持 HTTP/HTTPS 协议"
   },
   "index": {
     "description": "桑帅基地版 - 杂鱼们一起搞的串流服务",
