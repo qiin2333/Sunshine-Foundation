@@ -10,7 +10,6 @@
     "preview": "vite preview",
     "preview:build": "npm run build && npm run preview",
     "i18n:validate": "node scripts/validate-i18n.js",
-    "i18n:validate:ci": "node scripts/validate-i18n.js --ci",
     "i18n:sync": "node scripts/validate-i18n.js --sync",
     "i18n:reverse-sync": "node scripts/reverse-sync-i18n.js --sync",
     "i18n:reverse-check": "node scripts/reverse-sync-i18n.js",

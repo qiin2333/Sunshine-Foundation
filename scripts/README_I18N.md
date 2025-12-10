@@ -19,9 +19,6 @@ npm run i18n:validate
 
 # Auto-sync missing keys AND remove extra keys
 npm run i18n:sync
-
-# Validate with CI exit code (for CI/CD pipelines)
-npm run i18n:validate:ci
 ```
 
 **What it does:**

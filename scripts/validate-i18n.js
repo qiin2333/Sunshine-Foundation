@@ -6,9 +6,8 @@
  * It can also automatically add missing keys with placeholder values.
  * 
  * Usage:
- *   node scripts/validate-i18n.js              # Validate only (report missing keys)
+ *   node scripts/validate-i18n.js              # Validate only (report missing keys, exit with error code on failure)
  *   node scripts/validate-i18n.js --sync       # Auto-sync missing keys with English values
- *   node scripts/validate-i18n.js --ci         # Exit with error code if validation fails (for CI)
  */
 
 import fs from 'fs'
@@ -24,7 +23,6 @@ const baseLocale = 'en.json'
 // Parse command line arguments
 const args = process.argv.slice(2)
 const syncMode = args.includes('--sync')
-const ciMode = args.includes('--ci')
 
 /**
  * Get all keys from a nested object
@@ -376,14 +374,7 @@ function validateLocales() {
   
   if (hasErrors && !syncMode) {
     console.log('\n💡 Tip: Run with --sync flag to automatically add missing keys')
-  }
-  
-  if (ciMode && hasErrors && !syncMode) {
-    console.error('\n❌ Validation failed in CI mode')
-    process.exit(1)
-  }
-  
-  if (hasErrors && !syncMode) {
+    console.error('\n❌ Validation failed')
     process.exit(1)
   }
 }

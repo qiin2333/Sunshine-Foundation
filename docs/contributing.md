@@ -89,11 +89,11 @@ npm run i18n:sync
 # Format and sort all locale JSON files alphabetically
 npm run i18n:format
 
-# Check if files are properly formatted (for CI)
+# Check if files are properly formatted
 npm run i18n:format:check
 
-# Validate translations with CI exit code
-npm run i18n:validate:ci
+# Validate translations
+npm run i18n:validate
 ```
 
 **Workflow when adding new translation keys:**
@@ -111,13 +111,91 @@ incomplete or incorrectly formatted translation files.
   ```html
   <template>
     <div>
+      <!-- In template, use $t (global injection) -->
       <p>{{ $t('index.welcome') }}</p>
+      
+      <!-- Or use in attributes -->
+      <input :placeholder="$t('index.placeholder')" />
+      <button :title="$t('index.tooltip')">{{ $t('index.button') }}</button>
     </div>
   </template>
+  
+  <script setup>
+  import { useI18n } from 'vue-i18n'
+  
+  // In script, use useI18n() to get t function
+  const { t } = useI18n()
+  
+  const handleClick = () => {
+    alert(t('index.success_message'))
+    if (confirm(t('index.confirm_action'))) {
+      // Handle confirmation
+    }
+  }
+  </script>
   ```
 
   @tip{More formatting examples can be found in the
-  [Vue I18n guide](https://kazupon.github.io/vue-i18n/guide/formatting.html).}
+  [Vue I18n guide](https://vue-i18n.intlify.dev/guide/formatting.html).}
+
+##### Internationalizing Existing Components
+
+When internationalizing existing components with hardcoded text, follow these steps:
+
+1. **Identify hardcoded strings** in the component (both in template and script)
+
+2. **Add translation keys to `en.json`**:
+   ```json
+   {
+     "mycomponent": {
+       "title": "My Title",
+       "button_text": "Click Me",
+       "confirm_message": "Are you sure?"
+     }
+   }
+   ```
+
+3. **Replace hardcoded text in template**:
+   ```vue
+   <!-- Before -->
+   <h1>我的标题</h1>
+   <button>点击我</button>
+   
+   <!-- After -->
+   <h1>{{ $t('mycomponent.title') }}</h1>
+   <button>{{ $t('mycomponent.button_text') }}</button>
+   ```
+
+4. **Replace hardcoded text in script** (must use `useI18n()`):
+   ```vue
+   <script setup>
+   import { useI18n } from 'vue-i18n'
+   const { t } = useI18n()
+   
+   // Before
+   const handleClick = () => {
+     if (confirm('确定吗？')) {
+       // ...
+     }
+   }
+   
+   // After
+   const handleClick = () => {
+     if (confirm(t('mycomponent.confirm_message'))) {
+       // ...
+     }
+   }
+   </script>
+   ```
+
+5. **Sync translation keys**:
+   ```bash
+   npm run i18n:sync
+   npm run i18n:format
+   npm run i18n:validate
+   ```
+
+@note{Always use `useI18n()` in `<script setup>` when you need translations in JavaScript code (like `alert()`, `confirm()`, etc.). The `$t` function is only available in templates through global injection.}
 
 ##### C++
 
