@@ -17,7 +17,7 @@ Validates that all locale files have the same keys as the base locale file.
 # Check all locale files for missing/extra keys
 npm run i18n:validate
 
-# Auto-sync missing keys (adds English values as placeholders)
+# Auto-sync missing keys AND remove extra keys
 npm run i18n:sync
 
 # Validate with CI exit code (for CI/CD pipelines)
@@ -28,7 +28,7 @@ npm run i18n:validate:ci
 - Compares all locale files against `en.json` (base file)
 - Reports missing keys that exist in `en.json` but not in other locales
 - Reports extra keys that exist in other locales but not in `en.json`
-- In `--sync` mode, automatically adds missing keys with English values
+- In `--sync` mode, automatically adds missing keys with English values AND removes extra keys
 
 **Example output:**
 ```
@@ -44,7 +44,36 @@ npm run i18n:validate:ci
      ...
 ```
 
-### 2. format-i18n.js
+### 2. reverse-sync-i18n.js
+
+Identifies keys that exist in other locale files but are missing from `en.json` and adds them.
+
+**Usage:**
+```bash
+# Check which keys are in other locales but missing from en.json
+npm run i18n:reverse-check
+
+# Add missing keys to en.json (reverse sync)
+npm run i18n:reverse-sync
+```
+
+**What it does:**
+- Scans all locale files to find keys not present in `en.json`
+- Reports which files contain these keys
+- In `--sync` mode, adds these keys to `en.json` using sample values
+- Useful when translations were added to other locales first
+
+**When to use:**
+Use this when you discover that translations were added to locale files (like zh.json, fr.json) but the base `en.json` file doesn't have those keys yet.
+
+**Workflow:**
+1. Run `npm run i18n:reverse-check` to see what's missing
+2. Run `npm run i18n:reverse-sync` to add keys to en.json
+3. Review and update the English translations in en.json
+4. Run `npm run i18n:sync` to propagate to all locales
+5. Run `npm run i18n:format` to ensure formatting
+
+### 3. format-i18n.js
 
 Formats and sorts all locale JSON files alphabetically.
 
@@ -70,7 +99,9 @@ npm run i18n:format:check
 
 ## Workflow for Adding New Translations
 
-### Step 1: Add keys to en.json
+### Standard Workflow (Adding to en.json first)
+
+#### Step 1: Add keys to en.json
 
 Always add new translation keys to `en.json` first:
 
@@ -82,7 +113,7 @@ Always add new translation keys to `en.json` first:
 }
 ```
 
-### Step 2: Sync to other locales
+#### Step 2: Sync to other locales
 
 Run the sync command to add the new key to all other locale files:
 
@@ -92,7 +123,7 @@ npm run i18n:sync
 
 This will add the key with the English value as a placeholder in all locale files.
 
-### Step 3: Format all files
+#### Step 3: Format all files
 
 Ensure consistent formatting:
 
@@ -100,11 +131,11 @@ Ensure consistent formatting:
 npm run i18n:format
 ```
 
-### Step 4: Translate placeholders
+#### Step 4: Translate placeholders
 
 Manually translate the English placeholders in each locale file to the appropriate language.
 
-### Step 5: Validate
+#### Step 5: Validate
 
 Before committing, verify everything is correct:
 
@@ -112,13 +143,62 @@ Before committing, verify everything is correct:
 npm run i18n:validate
 ```
 
-### Step 6: Commit changes
+#### Step 6: Commit changes
 
 Commit all locale file changes together:
 
 ```bash
 git add src_assets/common/assets/web/public/assets/locale/*.json
 git commit -m "Add translation keys for new feature"
+```
+
+### Reverse Workflow (Fixing translations added to other locales first)
+
+Sometimes translations are added to other locale files (zh.json, fr.json, etc.) before being added to en.json. Use this workflow to fix that:
+
+#### Step 1: Check for missing keys in en.json
+
+```bash
+npm run i18n:reverse-check
+```
+
+This will show which keys exist in other locales but are missing from en.json.
+
+#### Step 2: Add missing keys to en.json
+
+```bash
+npm run i18n:reverse-sync
+```
+
+This automatically adds the missing keys to en.json using sample values from other locale files.
+
+#### Step 3: Review and update English translations
+
+Open `en.json` and review the newly added keys. Update them with proper English translations if the sample values aren't appropriate.
+
+#### Step 4: Sync to all locales
+
+```bash
+npm run i18n:sync
+```
+
+This ensures all locale files have the complete set of keys and removes any extra keys.
+
+#### Step 5: Format all files
+
+```bash
+npm run i18n:format
+```
+
+#### Step 6: Validate
+
+```bash
+npm run i18n:validate
+```
+
+Should show all green checkmarks!
+
+#### Step 7: Commit changes
 ```
 
 ## CI/CD Integration
