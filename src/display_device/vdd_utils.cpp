@@ -181,7 +181,7 @@ namespace display_device {
     }
 
     bool
-    create_vdd_monitor(const std::string &client_identifier) {
+    create_vdd_monitor(const std::string &client_identifier, float max_nits, float min_nits) {
       std::string response;
       std::wstring command = L"CREATEMONITOR";
 
@@ -197,14 +197,21 @@ namespace display_device {
       // 生成GUID并构建命令
       std::string guid_str = generate_client_guid(identifier_to_use);
       if (!guid_str.empty()) {
+        // 构建完整参数: {GUID}:[max_nits,min_nits]
+        std::ostringstream param_stream;
+        param_stream << guid_str << ":[" << max_nits << "," << min_nits << "]";
+        std::string param_str = param_stream.str();
+
         // 转换为宽字符并添加到命令
-        int size_needed = MultiByteToWideChar(CP_UTF8, 0, guid_str.c_str(), -1, NULL, 0);
+        int size_needed = MultiByteToWideChar(CP_UTF8, 0, param_str.c_str(), -1, NULL, 0);
         if (size_needed > 0) {
-          std::vector<wchar_t> guid_wide(size_needed);
-          MultiByteToWideChar(CP_UTF8, 0, guid_str.c_str(), -1, guid_wide.data(), size_needed);
-          command += L" " + std::wstring(guid_wide.data());
+          std::vector<wchar_t> param_wide(size_needed);
+          MultiByteToWideChar(CP_UTF8, 0, param_str.c_str(), -1, param_wide.data(), size_needed);
+          command += L" " + std::wstring(param_wide.data());
         }
-        BOOST_LOG(info) << "创建虚拟显示器，客户端标识符: " << identifier_to_use << ", GUID: " << guid_str;
+        BOOST_LOG(info) << "创建虚拟显示器，客户端标识符: " << identifier_to_use 
+                        << ", GUID: " << guid_str 
+                        << ", HDR亮度范围: [" << max_nits << ", " << min_nits << "]";
       }
 
       // 如果使用了有效的UUID，更新上一次使用的UUID

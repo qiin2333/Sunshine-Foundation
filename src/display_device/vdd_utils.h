@@ -63,7 +63,7 @@ namespace display_device {
     // 创建VDD监视器
     // @param client_identifier 客户端标识符（可选），用于驱动识别客户端并启动对应的显示器
     bool
-    create_vdd_monitor(const std::string &client_identifier = "");
+    create_vdd_monitor(const std::string &client_identifier = "", float max_nits = 1000.0f, float min_nits = 0.001f);
 
     // 销毁VDD监视器
     bool
