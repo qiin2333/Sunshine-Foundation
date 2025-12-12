@@ -42,6 +42,7 @@ namespace rtsp_stream {
     int custom_screen_mode;
     float max_nits;
     float min_nits;
+    float max_full_nits;
 
     std::optional<crypto::cipher::gcm_t> rtsp_cipher;
     std::string rtsp_url_scheme;

@@ -181,14 +181,12 @@ namespace display_device {
     }
 
     bool
-    create_vdd_monitor(const std::string &client_identifier, float max_nits, float min_nits) {
+    create_vdd_monitor(const std::string &client_identifier, const hdr_brightness_t &hdr_brightness) {
       std::string response;
       std::wstring command = L"CREATEMONITOR";
 
       // 如果没有提供UUID，使用上一次的UUID
-      std::string identifier_to_use = client_identifier.empty() && !last_used_client_uuid.empty() 
-        ? last_used_client_uuid 
-        : client_identifier;
+      std::string identifier_to_use = client_identifier.empty() && !last_used_client_uuid.empty() ? last_used_client_uuid : client_identifier;
 
       if (identifier_to_use != client_identifier && !identifier_to_use.empty()) {
         BOOST_LOG(info) << "未提供客户端标识符，使用上一次的UUID: " << identifier_to_use;
@@ -199,7 +197,7 @@ namespace display_device {
       if (!guid_str.empty()) {
         // 构建完整参数: {GUID}:[max_nits,min_nits]
         std::ostringstream param_stream;
-        param_stream << guid_str << ":[" << max_nits << "," << min_nits << "]";
+        param_stream << guid_str << ":[" << hdr_brightness.max_nits << "," << hdr_brightness.min_nits << "," << hdr_brightness.max_full_nits << "]";
         std::string param_str = param_stream.str();
 
         // 转换为宽字符并添加到命令
@@ -209,9 +207,9 @@ namespace display_device {
           MultiByteToWideChar(CP_UTF8, 0, param_str.c_str(), -1, param_wide.data(), size_needed);
           command += L" " + std::wstring(param_wide.data());
         }
-        BOOST_LOG(info) << "创建虚拟显示器，客户端标识符: " << identifier_to_use 
-                        << ", GUID: " << guid_str 
-                        << ", HDR亮度范围: [" << max_nits << ", " << min_nits << "]";
+        BOOST_LOG(info) << "创建虚拟显示器，客户端标识符: " << identifier_to_use
+                        << ", GUID: " << guid_str
+                        << ", HDR亮度范围: [" << hdr_brightness.max_nits << ", " << hdr_brightness.min_nits << ", " << hdr_brightness.max_full_nits << "]";
       }
 
       // 如果使用了有效的UUID，更新上一次使用的UUID

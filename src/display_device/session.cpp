@@ -182,14 +182,6 @@ namespace display_device {
     }
 
     /**
-     * @brief HDR brightness parameters for VDD monitor.
-     */
-    struct HdrBrightness {
-      float max_nits;
-      float min_nits;
-    };
-
-    /**
      * @brief Wait for VDD device to initialize.
      * @param device_zako Output parameter for the device ID.
      * @param max_attempts Maximum number of retry attempts.
@@ -215,19 +207,18 @@ namespace display_device {
     /**
      * @brief Attempt to recover VDD device with retries.
      * @param client_id Client identifier for the VDD monitor.
+     * @param hdr_brightness hdr_brightness_t.
      * @param device_zako Output parameter for the device ID.
-     * @param hdr HDR brightness parameters.
      * @return true if recovery succeeded, false otherwise.
      */
     bool
-    try_recover_vdd_device(const std::string &client_id, std::string &device_zako,
-      const HdrBrightness &hdr) {
+    try_recover_vdd_device(const std::string &client_id, const vdd_utils::hdr_brightness_t &hdr_brightness, std::string &device_zako) {
       constexpr int max_retries = 3;
 
       for (int retry = 1; retry <= max_retries; ++retry) {
         BOOST_LOG(info) << "正在执行第" << retry << "次VDD恢复尝试...";
 
-        if (!vdd_utils::create_vdd_monitor(client_id, hdr.max_nits, hdr.min_nits)) {
+        if (!vdd_utils::create_vdd_monitor(client_id, hdr_brightness)) {
           BOOST_LOG(error) << "创建虚拟显示器失败，尝试" << retry << "/" << max_retries;
           if (retry < max_retries) {
             std::this_thread::sleep_for(std::chrono::seconds(1 << retry));
@@ -304,7 +295,7 @@ namespace display_device {
 
   bool
   session_t::create_vdd_monitor(const std::string &client_name) {
-    return vdd_utils::create_vdd_monitor(client_name, 1000.0f, 0.001f);
+    return vdd_utils::create_vdd_monitor(client_name, vdd_utils::hdr_brightness_t { 1000.0f, 0.001f, 1000.0f });
   }
 
   bool
@@ -349,7 +340,7 @@ namespace display_device {
   void
   session_t::prepare_vdd(parsed_config_t &config, const rtsp_stream::launch_session_t &session) {
     const std::string current_client_id = get_client_id_from_session(session);
-    const HdrBrightness hdr { session.max_nits, session.min_nits };
+    const vdd_utils::hdr_brightness_t hdr_brightness { session.max_nits, session.min_nits, session.max_full_nits };
     auto device_zako = display_device::find_device_by_friendlyname(ZAKO_NAME);
 
     // Rebuild VDD device on client switch
@@ -371,7 +362,7 @@ namespace display_device {
     // Create VDD device if not present
     if (device_zako.empty()) {
       BOOST_LOG(info) << "创建虚拟显示器...";
-      vdd_utils::create_vdd_monitor(current_client_id, hdr.max_nits, hdr.min_nits);
+      vdd_utils::create_vdd_monitor(current_client_id, hdr_brightness);
       std::this_thread::sleep_for(233ms);
     }
 
@@ -381,7 +372,7 @@ namespace display_device {
       vdd_utils::disable_enable_vdd();
       std::this_thread::sleep_for(2s);
 
-      if (!try_recover_vdd_device(current_client_id, device_zako, hdr)) {
+      if (!try_recover_vdd_device(current_client_id, hdr_brightness, device_zako)) {
         BOOST_LOG(error) << "VDD设备最终初始化失败";
         vdd_utils::disable_enable_vdd();
         return;

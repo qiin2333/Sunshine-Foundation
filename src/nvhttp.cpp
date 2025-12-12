@@ -388,6 +388,7 @@ namespace nvhttp {
     launch_session->custom_screen_mode = util::from_view(get_arg(args, "customScreenMode", "-1"));
     launch_session->max_nits = std::stof(get_arg(args, "maxBrightness", "1000"));
     launch_session->min_nits = std::stof(get_arg(args, "minBrightness", "0.001"));
+    launch_session->max_full_nits = std::stof(get_arg(args, "maxAverageBrightness", "1000"));
 
     // Encrypted RTSP is enabled with client reported corever >= 1
     auto corever = util::from_view(get_arg(args, "corever", "0"));
