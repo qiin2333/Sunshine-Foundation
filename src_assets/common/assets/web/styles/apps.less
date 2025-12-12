@@ -1208,11 +1208,47 @@ td {
   color: var(--secondary-color);
 }
 
+.form-check-input {
+  position: relative;
+  appearance: none;
+  -webkit-appearance: none;
+}
+
+.form-check-input:checked::after {
+  content: '✓';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  color: #dc3545;
+  font-size: 0.875rem;
+  font-weight: bold;
+  line-height: 1;
+}
+
+#appElevation {
+  position: relative;
+  appearance: none;
+  -webkit-appearance: none;
+}
+
 #appElevation:checked,
 [id^="menu-cmd-admin-"]:checked,
 [id^="prep-cmd-admin-"]:checked {
-  background-color: #dc3545 !important;
-  border-color: #dc3545 !important;
+  background-color: #ffffff !important;
+  border-color: #ffffff !important;
+  
+  &::after {
+    content: '✓';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    color: #dc3545 !important;
+    font-size: 0.875rem;
+    font-weight: bold;
+    line-height: 1;
+  }
   
   &:focus {
     background-color: #dc3545 !important;

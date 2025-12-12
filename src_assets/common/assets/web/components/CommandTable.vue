@@ -325,6 +325,11 @@ export default {
   border-radius: 4px;
   backdrop-filter: blur(5px);
   transition: all 0.3s ease;
+  position: relative;
+  appearance: none;
+  -webkit-appearance: none;
+  width: 1.25rem;
+  height: 1.25rem;
 }
 
 .form-check-input:checked {
@@ -333,10 +338,29 @@ export default {
   box-shadow: 0 2px 8px rgba(102, 126, 234, 0.4);
 }
 
+.form-check-input:checked::after {
+  content: '✓';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  color: #dc3545;
+  font-size: 0.875rem;
+  font-weight: bold;
+  line-height: 1;
+}
+
 /* Elevated 复选框激活时内部填充显示红色 */
 .form-check-input[id^="menu-cmd-admin-"]:checked,
 .form-check-input[id^="prep-cmd-admin-"]:checked {
-  background: #dc3545 !important;
+  background: #ffffff !important;
+  border-color: #ffffff !important;
+}
+
+.form-check-input[id^="menu-cmd-admin-"]:checked::after,
+.form-check-input[id^="prep-cmd-admin-"]:checked::after {
+  content: '✓';
+  color: #dc3545 !important;
 }
 
 .form-check-label {
