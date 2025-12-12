@@ -709,6 +709,13 @@
   padding: 4px 8px !important;
   border-radius: 6px !important;
   font-family: 'Courier New', monospace !important;
+  
+  /* 浅色模式适配 */
+  [data-bs-theme='light'] & {
+    background: rgba(108, 117, 125, 0.2) !important;
+    color: #000000 !important;
+    border: 1px solid rgba(108, 117, 125, 0.3) !important;
+  }
 }
 
 .code-example {
@@ -719,6 +726,13 @@
   border: 1px solid rgba(255, 255, 255, 0.2) !important;
   font-family: 'Courier New', monospace !important;
   font-size: var(--font-size-sm) !important;
+  
+  /* 浅色模式适配 */
+  [data-bs-theme='light'] & {
+    background: rgba(248, 249, 250, 0.8) !important;
+    color: #000000 !important;
+    border: 1px solid rgba(0, 0, 0, 0.15) !important;
+  }
 }
 
 /* 动画 */
@@ -1206,60 +1220,6 @@ td {
 .form-check-label {
   font-size: var(--font-size-md);
   color: var(--secondary-color);
-}
-
-.form-check-input {
-  position: relative;
-  appearance: none;
-  -webkit-appearance: none;
-}
-
-.form-check-input:checked::after {
-  content: '✓';
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  color: #dc3545;
-  font-size: 0.875rem;
-  font-weight: bold;
-  line-height: 1;
-}
-
-#appElevation {
-  position: relative;
-  appearance: none;
-  -webkit-appearance: none;
-}
-
-#appElevation:checked,
-[id^="menu-cmd-admin-"]:checked,
-[id^="prep-cmd-admin-"]:checked {
-  background-color: #ffffff !important;
-  border-color: #ffffff !important;
-  
-  &::after {
-    content: '✓';
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    color: #dc3545 !important;
-    font-size: 0.875rem;
-    font-weight: bold;
-    line-height: 1;
-  }
-  
-  &:focus {
-    background-color: #dc3545 !important;
-    border-color: #dc3545 !important;
-    box-shadow: 0 0 0 0.25rem rgba(220, 53, 69, 0.25) !important;
-  }
-  
-  &:hover {
-    background-color: #c82333 !important;
-    border-color: #bd2130 !important;
-  }
 }
 
 .command-table {
