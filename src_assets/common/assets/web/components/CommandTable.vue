@@ -103,7 +103,7 @@
                   <button
                     v-if="type === 'menu'"
                     type="button"
-                    class="btn btn-outline-primary btn-sm me-1"
+                    class="btn btn-success btn-sm me-1"
                     @click="testCommand(index)"
                     :title="$t('apps.test_menu_cmd')"
                     :disabled="!command.cmd"
@@ -331,6 +331,12 @@ export default {
   background: linear-gradient(135deg, #667eea, #764ba2);
   border-color: rgba(255, 255, 255, 0.5);
   box-shadow: 0 2px 8px rgba(102, 126, 234, 0.4);
+}
+
+/* Elevated 复选框激活时内部填充显示红色 */
+.form-check-input[id^="menu-cmd-admin-"]:checked,
+.form-check-input[id^="prep-cmd-admin-"]:checked {
+  background: #dc3545 !important;
 }
 
 .form-check-label {
