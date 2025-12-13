@@ -197,9 +197,9 @@ namespace display_device {
 
       // 预定义尺寸映射表
       static const std::unordered_map<std::string, physical_size_t> size_map = {
-        {"small",  {31.0f, 17.4f}},   // 小型设备：约14英寸，16:9比例
-        {"medium", {59.8f, 33.6f}},   // 中型设备：约27英寸，16:9比例
-        {"large",  {121.8f, 68.5f}}   // 大型设备：约55英寸，16:9比例
+        {"small",  {13.3f, 7.5f}},    // 小型设备：约6英寸，16:9比例
+        {"medium", {34.5f, 19.4f}},   // 中型设备：约15.6英寸，16:9比例
+        {"large",  {70.8f, 39.8f}}    // 大型设备：约32英寸，16:9比例
       };
 
       try {
