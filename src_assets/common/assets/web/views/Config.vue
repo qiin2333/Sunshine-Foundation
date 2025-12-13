@@ -238,7 +238,7 @@ onMounted(async () => {
       padding: 0.75rem 1.5rem;
       font-weight: 500;
       color: var(--bs-secondary-color);
-      background: transparent;
+      background: rgba(255, 255, 255, 0.1);
       transition: all @transition-fast @cubic-smooth;
       position: relative;
       overflow: hidden;
@@ -361,10 +361,13 @@ onMounted(async () => {
   }
 }
 
-// 暗色模式适配
+[data-bs-theme='light'] .page-config .config-tabs {
+  background: linear-gradient(135deg, rgba(172, 172, 172, 0.05), rgba(0, 0, 0, 0.02));
+
+}
+
 [data-bs-theme='dark'] .page-config .config-tabs {
   background: linear-gradient(135deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.05));
-  border-bottom-color: rgba(255, 255, 255, 0.1);
 
   .nav-link {
     &:hover {
