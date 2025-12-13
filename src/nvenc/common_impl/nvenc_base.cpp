@@ -718,7 +718,15 @@ namespace nvenc {
     pic_params.outputBitstream = output_bitstream;
     pic_params.completionEvent = async_event_handle;
 
-    if (nvenc_failed(nvenc->nvEncEncodePicture(encoder, &pic_params))) {
+    NVENCSTATUS encode_status = nvenc->nvEncEncodePicture(encoder, &pic_params);
+    if (encode_status == NV_ENC_ERR_NEED_MORE_INPUT) {
+      // This is not a fatal error - encoder needs more input frames before it can produce output.
+      // This can happen with B-frame reordering or lookahead. Return empty frame to signal
+      // the caller should continue without treating this as an error.
+      BOOST_LOG(debug) << "NvEnc: frame " << frame_index << " buffered (need more input)";
+      return { {}, frame_index, false, false };
+    }
+    if (nvenc_failed(encode_status)) {
       BOOST_LOG(error) << "NvEnc: NvEncEncodePicture() failed: " << last_nvenc_error_string;
       return {};
     }
