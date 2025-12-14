@@ -437,7 +437,9 @@ namespace nvenc {
 #if NVENC_INT_VERSION >= 1202
         if (config.temporal_filter_level != nvenc_temporal_filter_level::disabled) {
           if (get_encoder_cap(NV_ENC_CAPS_SUPPORT_TEMPORAL_FILTER) != 0) {
-            if (enc_config.frameIntervalP >= 5) {
+            // Temporal filter requires frameIntervalP >= 5 and zeroReorderDelay = 0
+            // Since we always set zeroReorderDelay = 1 for low-latency streaming, temporal filter cannot be used
+            if (enc_config.frameIntervalP >= 5 && enc_config.rcParams.zeroReorderDelay == 0) {
               switch (config.temporal_filter_level) {
                 case nvenc_temporal_filter_level::level_4:
                   format_config.tfLevel = NV_ENC_TEMPORAL_FILTER_LEVEL_4;
@@ -449,7 +451,13 @@ namespace nvenc {
               }
             }
             else {
-              BOOST_LOG(warning) << "NvEnc: Temporal filter requires frameIntervalP >= 5, but current value is " << enc_config.frameIntervalP << ". Disabling temporal filter.";
+              format_config.tfLevel = NV_ENC_TEMPORAL_FILTER_LEVEL_0;
+              if (enc_config.rcParams.zeroReorderDelay != 0) {
+                BOOST_LOG(warning) << "NvEnc: Temporal filter is not compatible with zeroReorderDelay. Disabling temporal filter.";
+              }
+              else {
+                BOOST_LOG(warning) << "NvEnc: Temporal filter requires frameIntervalP >= 5, but current value is " << enc_config.frameIntervalP << ". Disabling temporal filter.";
+              }
             }
           }
           else {
@@ -480,7 +488,9 @@ namespace nvenc {
 #if NVENC_INT_VERSION >= 1202
         if (config.temporal_filter_level != nvenc_temporal_filter_level::disabled) {
           if (get_encoder_cap(NV_ENC_CAPS_SUPPORT_TEMPORAL_FILTER) != 0) {
-            if (enc_config.frameIntervalP >= 5) {
+            // Temporal filter requires frameIntervalP >= 5 and zeroReorderDelay = 0
+            // Since we always set zeroReorderDelay = 1 for low-latency streaming, temporal filter cannot be used
+            if (enc_config.frameIntervalP >= 5 && enc_config.rcParams.zeroReorderDelay == 0) {
               switch (config.temporal_filter_level) {
                 case nvenc_temporal_filter_level::level_4:
                   format_config.tfLevel = NV_ENC_TEMPORAL_FILTER_LEVEL_4;
@@ -492,7 +502,13 @@ namespace nvenc {
               }
             }
             else {
-              BOOST_LOG(warning) << "NvEnc: Temporal filter requires frameIntervalP >= 5, but current value is " << enc_config.frameIntervalP << ". Disabling temporal filter.";
+              format_config.tfLevel = NV_ENC_TEMPORAL_FILTER_LEVEL_0;
+              if (enc_config.rcParams.zeroReorderDelay != 0) {
+                BOOST_LOG(warning) << "NvEnc: Temporal filter is not compatible with zeroReorderDelay. Disabling temporal filter.";
+              }
+              else {
+                BOOST_LOG(warning) << "NvEnc: Temporal filter requires frameIntervalP >= 5, but current value is " << enc_config.frameIntervalP << ". Disabling temporal filter.";
+              }
             }
           }
           else {
@@ -551,7 +567,7 @@ namespace nvenc {
 #if NVENC_INT_VERSION >= 1202
         if (config.temporal_filter_level != nvenc_temporal_filter_level::disabled) {
           if (get_encoder_cap(NV_ENC_CAPS_SUPPORT_TEMPORAL_FILTER) != 0) {
-            if (enc_config.frameIntervalP >= 5) {
+            if (enc_config.frameIntervalP >= 5 && enc_config.rcParams.zeroReorderDelay == 0) {
               switch (config.temporal_filter_level) {
                 case nvenc_temporal_filter_level::level_4:
                   format_config.tfLevel = NV_ENC_TEMPORAL_FILTER_LEVEL_4;
@@ -563,7 +579,13 @@ namespace nvenc {
               }
             }
             else {
-              BOOST_LOG(warning) << "NvEnc: Temporal filter requires frameIntervalP >= 5, but current value is " << enc_config.frameIntervalP << ". Disabling temporal filter.";
+              format_config.tfLevel = NV_ENC_TEMPORAL_FILTER_LEVEL_0;
+              if (enc_config.rcParams.zeroReorderDelay != 0) {
+                BOOST_LOG(warning) << "NvEnc: Temporal filter is not compatible with zeroReorderDelay. Disabling temporal filter.";
+              }
+              else {
+                BOOST_LOG(warning) << "NvEnc: Temporal filter requires frameIntervalP >= 5, but current value is " << enc_config.frameIntervalP << ". Disabling temporal filter.";
+              }
             }
           }
           else {
