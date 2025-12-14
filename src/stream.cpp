@@ -377,6 +377,11 @@ namespace stream {
 
     std::atomic<bool> mic_socket_enabled { false };
     std::atomic<int> mic_sessions_count { 0 };  // 需要麦克风的会话数
+
+    std::atomic<bool> mic_encryption_enabled { false };
+    std::optional<crypto::cipher::cbc_t> mic_cipher;
+    crypto::aes_t mic_iv;
+    std::mutex mic_cipher_mutex;
   };
 
   struct session_t {
@@ -1282,6 +1287,22 @@ namespace stream {
     auto process_audio_data = [&](const uint8_t *audio_data, size_t data_size) {
       if (!ctx.mic_socket_enabled.load()) {
         return;
+      }
+
+      if (ctx.mic_encryption_enabled.load()) {
+        std::lock_guard<std::mutex> lg(ctx.mic_cipher_mutex);
+        if (ctx.mic_cipher) {
+          std::vector<std::uint8_t> plaintext;
+          std::string_view cipher_view((const char *) audio_data, data_size);
+          if (ctx.mic_cipher->decrypt(cipher_view, plaintext, &ctx.mic_iv) != 0) {
+            BOOST_LOG(debug) << "Failed to decrypt microphone data";
+            return;
+          }
+          if (int result = audio::write_mic_data(plaintext.data(), plaintext.size()); result < 0) {
+            BOOST_LOG(debug) << "Failed to write decrypted microphone data (audio context may not be active)";
+          }
+          return;
+        }
       }
 
       if (int result = audio::write_mic_data(audio_data, data_size); result < 0) {
@@ -2265,6 +2286,19 @@ namespace stream {
         if (session.audio.enable_mic) {
           session.broadcast_ref->mic_sessions_count.fetch_add(1);
           session.broadcast_ref->mic_socket_enabled.store(true);
+          if (session.config.encryptionFlagsEnabled & SS_ENC_MIC) {
+            std::lock_guard<std::mutex> lg(session.broadcast_ref->mic_cipher_mutex);
+            if (!session.broadcast_ref->mic_cipher) {
+              session.broadcast_ref->mic_cipher.emplace(session.audio.cipher.key, session.audio.cipher.padding);
+              session.broadcast_ref->mic_iv.resize(16);
+              auto rikey = session.audio.avRiKeyId;
+              std::memcpy(session.broadcast_ref->mic_iv.data(), &rikey, sizeof(rikey));
+              session.broadcast_ref->mic_encryption_enabled.store(true);
+              BOOST_LOG(info) << "Microphone encryption enabled";
+            }
+          } else {
+            BOOST_LOG(info) << "Microphone encryption disabled";
+          }
           BOOST_LOG(debug) << "Microphone socket enabled for session";
         }
         else {
