@@ -2286,15 +2286,23 @@ namespace stream {
         if (session.audio.enable_mic) {
           session.broadcast_ref->mic_sessions_count.fetch_add(1);
           session.broadcast_ref->mic_socket_enabled.store(true);
-          if (session.config.encryptionFlagsEnabled & SS_ENC_MIC) {
+          // 检查是否需要启用 MIC 加密
+          bool should_enable_mic_encryption = (session.config.encryptionFlagsEnabled & SS_ENC_MIC) != 0;
+          if (should_enable_mic_encryption) {
             std::lock_guard<std::mutex> lg(session.broadcast_ref->mic_cipher_mutex);
+            bool cipher_already_exists = session.broadcast_ref->mic_cipher.has_value();
+            BOOST_LOG(info) << "Microphone encryption will be enabled, mic_cipher already exists: " << (cipher_already_exists ? "yes" : "no");
             if (!session.broadcast_ref->mic_cipher) {
               session.broadcast_ref->mic_cipher.emplace(session.audio.cipher.key, session.audio.cipher.padding);
               session.broadcast_ref->mic_iv.resize(16);
               auto rikey = session.audio.avRiKeyId;
               std::memcpy(session.broadcast_ref->mic_iv.data(), &rikey, sizeof(rikey));
               session.broadcast_ref->mic_encryption_enabled.store(true);
-              BOOST_LOG(info) << "Microphone encryption enabled";
+              BOOST_LOG(info) << "Microphone encryption enabled and initialized, mic_encryption_enabled: " << session.broadcast_ref->mic_encryption_enabled.load();
+            } else {
+              BOOST_LOG(info) << "Microphone encryption cipher already exists, skipping initialization. "
+                << "Current mic_encryption_enabled state: " 
+                << session.broadcast_ref->mic_encryption_enabled.load();
             }
           } else {
             BOOST_LOG(info) << "Microphone encryption disabled";

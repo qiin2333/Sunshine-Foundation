@@ -822,7 +822,7 @@ namespace rtsp_stream {
       // If it's mandatory, also request it to enable use if the client
       // didn't explicitly opt in, but it otherwise has support.
       if (encryption_mode == config::ENCRYPTION_MODE_MANDATORY) {
-        encryption_flags_requested |= SS_ENC_VIDEO | SS_ENC_AUDIO;
+        encryption_flags_requested |= SS_ENC_VIDEO | SS_ENC_AUDIO | SS_ENC_MIC;
       }
     }
 
@@ -1044,6 +1044,12 @@ namespace rtsp_stream {
       // Legacy clients use nvFeatureFlags to indicate support for audio encryption
       if (util::from_view(args.at("x-nv-general.featureFlags"sv)) & 0x20) {
         config.encryptionFlagsEnabled |= SS_ENC_AUDIO;
+      }
+
+      // 如果音频加密已启用，也应该启用 MIC 加密（MIC 加密依赖于音频加密）
+      // 因为客户端是完全被动的，如果服务端不设置这个标志，客户端不会启用 MIC 加密
+      if (config.encryptionFlagsEnabled & SS_ENC_AUDIO) {
+        config.encryptionFlagsEnabled |= SS_ENC_MIC;
       }
 
       config.monitor.height = util::from_view(args.at("x-nv-video[0].clientViewportHt"sv));
