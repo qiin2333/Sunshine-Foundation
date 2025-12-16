@@ -827,13 +827,12 @@ namespace display_device {
     }
 
     auto &session = display_device::session_t::get();
-    
-    // check if we need to revert the zako display
-    if (display_device::enum_available_devices().size() > 1 && session.is_display_on()) {
+    auto devices = display_device::enum_available_devices();
+    if (devices.size() > 1 && session.is_display_on()) {
       BOOST_LOG(info) << "Multiple displays detected, closing VDD";
       session.destroy_vdd_monitor();
     }
-    else if (display_device::enum_available_devices().size() < 1) {
+    else if (devices.size() < 1) {
       // headless host case
       BOOST_LOG(info) << "No display device found, creating Zako Monitor";
       session.create_vdd_monitor("");

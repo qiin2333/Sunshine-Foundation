@@ -344,20 +344,21 @@ namespace display_device {
         return;
       }
 
-      constexpr auto notice_message =
-        L"？只不过是创建了个虚拟显示器，看到屏幕变黑就吓得手忙脚乱了吗？\n"
-        L"杂鱼❤真是没见过世面的杂鱼大叔呢❤\n"
-        L"这可是Windows记住了你那些乱七八糟的多显示器设置才变成这样的，这完全是正常现象哦？\n"
-        L"真是的，别在那边丢人现眼地慌张了，看着好丢人。\n"
-        L"听好了，本小姐大发慈悲教你这一遍——按两次 Win+P 就能变回来了。\n"
-        L"这么简单的操作都要人教，你的脑子是装饰品吗？哼~。\n\n"
-        L"After creating a virtual display, based on Windows' remembered multi-display combination strategy, "
-        L"you may see a black screen which is normal. Don't panic. You can press Win+P twice to return to a visible display.";
+      // since we enable the extended mode by default, we don't need to show the notice message
+      // constexpr auto notice_message =
+      //   L"？只不过是创建了个虚拟显示器，看到屏幕变黑就吓得手忙脚乱了吗？\n"
+      //   L"杂鱼❤真是没见过世面的杂鱼大叔呢❤\n"
+      //   L"这可是Windows记住了你那些乱七八糟的多显示器设置才变成这样的，这完全是正常现象哦？\n"
+      //   L"真是的，别在那边丢人现眼地慌张了，看着好丢人。\n"
+      //   L"听好了，本小姐大发慈悲教你这一遍——按两次 Win+P 就能变回来了。\n"
+      //   L"这么简单的操作都要人教，你的脑子是装饰品吗？哼~。\n\n"
+      //   L"After creating a virtual display, based on Windows' remembered multi-display combination strategy, "
+      //   L"you may see a black screen which is normal. Don't panic. You can press Win+P twice to return to a visible display.";
 
-      if (MessageBoxW(NULL, notice_message, L"❗Zako Display Notice", MB_OKCANCEL | MB_ICONINFORMATION) == IDCANCEL) {
-        BOOST_LOG(info) << "用户取消创建虚拟显示器";
-        return;
-      }
+      // if (MessageBoxW(NULL, notice_message, L"❗Zako Display Notice", MB_OKCANCEL | MB_ICONINFORMATION) == IDCANCEL) {
+      //   BOOST_LOG(info) << "用户取消创建虚拟显示器";
+      //   return;
+      // }
 
       if (!create_vdd_monitor("", vdd_utils::hdr_brightness_t {}, vdd_utils::physical_size_t {})) {
         return;
@@ -373,7 +374,6 @@ namespace display_device {
         else {
           BOOST_LOG(info) << "找到虚拟显示器设备: " << vdd_device_id;
 
-          // 先检查是否需要更改拓扑（扩展模式）
           bool topology_changed = ensure_vdd_extended_mode(vdd_device_id);
           if (topology_changed) {
             BOOST_LOG(info) << "已确保虚拟显示器处于扩展模式";
@@ -381,7 +381,6 @@ namespace display_device {
             std::this_thread::sleep_for(std::chrono::milliseconds(500));
           }
 
-          // 检查并处理主屏幕设置（只在必要时执行，避免重复闪烁）
           if (is_primary_device(vdd_device_id)) {
             BOOST_LOG(info) << "检测到虚拟显示器是主屏幕，正在查找其他显示器并设置为主屏幕";
 
@@ -399,16 +398,7 @@ namespace display_device {
               if (set_as_primary_device(alternative_primary)) {
                 BOOST_LOG(info) << "成功将主屏幕设置为: " << alternative_primary;
               }
-              else {
-                BOOST_LOG(warning) << "设置主屏幕失败";
-              }
             }
-            else {
-              BOOST_LOG(warning) << "未找到可用的替代主屏幕设备";
-            }
-          }
-          else {
-            BOOST_LOG(debug) << "虚拟显示器不是主屏幕，无需调整";
           }
         }
 
