@@ -823,12 +823,24 @@ namespace rtsp_stream {
       // didn't explicitly opt in, but it otherwise has support.
       if (encryption_mode == config::ENCRYPTION_MODE_MANDATORY) {
         encryption_flags_requested |= SS_ENC_VIDEO | SS_ENC_AUDIO | SS_ENC_MIC;
+      } else {
+        // Even if not mandatory, request audio and mic encryption if encryption is enabled
+        // This ensures clients that check encryptionRequested will enable audio and MIC encryption
+        encryption_flags_requested |= SS_ENC_AUDIO | SS_ENC_MIC;
       }
     }
 
     // Report supported and required encryption flags
     ss << "a=x-ss-general.encryptionSupported:" << encryption_flags_supported << std::endl;
     ss << "a=x-ss-general.encryptionRequested:" << encryption_flags_requested << std::endl;
+    
+    // 记录加密请求状态用于调试
+    BOOST_LOG(info) << "RTSP DESCRIBE encryption flags: supported=0x" << std::hex << encryption_flags_supported << std::dec
+                    << ", requested=0x" << std::hex << encryption_flags_requested << std::dec
+                    << " (CONTROL_V2=" << ((encryption_flags_requested & SS_ENC_CONTROL_V2) ? "1" : "0")
+                    << ", VIDEO=" << ((encryption_flags_requested & SS_ENC_VIDEO) ? "1" : "0")
+                    << ", AUDIO=" << ((encryption_flags_requested & SS_ENC_AUDIO) ? "1" : "0")
+                    << ", MIC=" << ((encryption_flags_requested & SS_ENC_MIC) ? "1" : "0") << ")";
 
     if (video::last_encoder_probe_supported_ref_frames_invalidation) {
       ss << "a=x-nv-video[0].refPicInvalidation:1"sv << std::endl;
@@ -1044,11 +1056,6 @@ namespace rtsp_stream {
       // Legacy clients use nvFeatureFlags to indicate support for audio encryption
       if (util::from_view(args.at("x-nv-general.featureFlags"sv)) & 0x20) {
         config.encryptionFlagsEnabled |= SS_ENC_AUDIO;
-      }
-
-      // 如果音频加密已启用，也应该启用 MIC 加密（MIC 加密依赖于音频加密）
-      // 因为客户端是完全被动的，如果服务端不设置这个标志，客户端不会启用 MIC 加密
-      if (config.encryptionFlagsEnabled & SS_ENC_AUDIO) {
         config.encryptionFlagsEnabled |= SS_ENC_MIC;
       }
 

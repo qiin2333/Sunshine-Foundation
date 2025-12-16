@@ -1284,25 +1284,85 @@ namespace stream {
     std::array<char, 2048> buffer;
     bool mic_device_initialized = false;
 
-    auto process_audio_data = [&](const uint8_t *audio_data, size_t data_size) {
+    auto process_audio_data = [&](const uint8_t *audio_data, size_t data_size, uint16_t sequence_number) {
       if (!ctx.mic_socket_enabled.load()) {
         return;
       }
 
-      if (ctx.mic_encryption_enabled.load()) {
+      // 自动检测数据是否加密：根据数据长度判断
+      // CBC 模式加密后的数据必须是 16 字节的倍数（PKCS5 填充）
+      // 如果数据长度不是 16 的倍数，说明是未加密数据
+      bool is_encrypted = (data_size % 16 == 0) && ctx.mic_encryption_enabled.load();
+      
+      if (is_encrypted && ctx.mic_cipher.has_value()) {
         std::lock_guard<std::mutex> lg(ctx.mic_cipher_mutex);
-        if (ctx.mic_cipher) {
-          std::vector<std::uint8_t> plaintext;
-          std::string_view cipher_view((const char *) audio_data, data_size);
-          if (ctx.mic_cipher->decrypt(cipher_view, plaintext, &ctx.mic_iv) != 0) {
-            BOOST_LOG(debug) << "Failed to decrypt microphone data";
-            return;
-          }
-          if (int result = audio::write_mic_data(plaintext.data(), plaintext.size()); result < 0) {
-            BOOST_LOG(debug) << "Failed to write decrypted microphone data (audio context may not be active)";
-          }
-          return;
+        // 根据 sequenceNumber 更新 IV
+        // 客户端使用: baseIv[0:4] (Big Endian) + (sequenceNumber - 1) & 0xFFFF
+        // 这与音频加密不同，音频加密使用: avRiKeyId + sequenceNumber
+        // ctx.mic_iv 的前 4 字节存储的是 baseIv（大端序），对应客户端的 remoteInputAesIv
+        crypto::aes_t current_iv = ctx.mic_iv;
+        uint32_t baseIvVal = util::endian::big<std::uint32_t>(*(std::uint32_t *) ctx.mic_iv.data());
+        // 客户端使用 (sequenceNumber - 1) & 0xFFFF，所以服务端也要匹配
+        uint32_t ivSeq = baseIvVal + ((sequence_number - 1) & 0xFFFF);
+        *(std::uint32_t *) current_iv.data() = util::endian::big<std::uint32_t>(ivSeq);
+        
+        std::vector<std::uint8_t> plaintext;
+        std::string_view cipher_view((const char *) audio_data, data_size);
+        
+        if (ctx.mic_cipher->decrypt(cipher_view, plaintext, &current_iv) != 0) {
+          // 解密失败：可能是字节序错误、密钥错误、或数据确实未加密
+          // 重要：不能直接将密文当作明文播放，这会导致爆音
+          // 如果数据长度是 16 的倍数但解密失败，很可能是加密数据，应该丢弃而不是播放
+          BOOST_LOG(warning) << "Failed to decrypt MIC data (size=" << data_size 
+                            << ", seq=" << sequence_number 
+                            << "). Data appears encrypted but decryption failed. "
+                            << "Dropping packet to avoid playing ciphertext as audio.";
+          ctx.mic_encryption_enabled.store(false);
+          return;  // 丢弃数据包，不播放
         }
+        
+        if (plaintext.size() > 0) {
+          // 简单的有效性检查：Opus 数据不应该全是 0 或全是 0xFF
+          bool looks_valid = false;
+          if (plaintext.size() >= 2) {
+            // 检查前几个字节，Opus 数据通常有特定的模式
+            // 如果解密后的数据看起来像随机数据（可能是解密失败），应该丢弃
+            uint8_t first_byte = plaintext[0];
+            uint8_t second_byte = plaintext[1];
+            // 简单的启发式检查：如果前两个字节都是 0 或都是 0xFF，可能有问题
+            if (!((first_byte == 0 && second_byte == 0) || 
+                  (first_byte == 0xFF && second_byte == 0xFF))) {
+              looks_valid = true;
+            }
+          } else {
+            looks_valid = true;  // 数据太短，无法验证，假设有效
+          }
+          
+          if (!looks_valid) {
+            BOOST_LOG(warning) << "Decrypted MIC data looks invalid (possible decryption error). "
+                              << "Dropping packet to avoid playing garbage audio.";
+            return;  // 丢弃数据包
+          }
+        }
+        
+        // 解密成功且数据看起来有效
+        if (int result = audio::write_mic_data(plaintext.data(), plaintext.size()); result < 0) {
+          BOOST_LOG(debug) << "Failed to write decrypted microphone data (audio context may not be active)";
+        }
+        return;
+      }
+      
+      // 未加密数据或加密未启用，直接处理
+      if (ctx.mic_encryption_enabled.load() && data_size % 16 != 0) {
+        // 如果加密标志已启用但数据不是 16 的倍数，说明客户端未实际启用加密
+        // 自动禁用加密标志，避免后续警告
+        BOOST_LOG(debug) << "MIC encryption flag is set but data is not encrypted (size not multiple of 16). "
+                        << "Disabling encryption flag.";
+        ctx.mic_encryption_enabled.store(false);
+      }
+      
+      if (int result = audio::write_mic_data(audio_data, data_size); result < 0) {
+        BOOST_LOG(debug) << "Failed to write microphone data (audio context may not be active)";
       }
 
       if (int result = audio::write_mic_data(audio_data, data_size); result < 0) {
@@ -1340,7 +1400,9 @@ namespace stream {
         if (header_ext->packetType == packetTypes[IDX_MIC_DATA]) {
           size_t header_size = sizeof(rtp_packet_ext_t);
           if (bytes > header_size) {
-            process_audio_data(reinterpret_cast<const uint8_t *>(buffer.data()) + header_size, bytes - header_size);
+            uint16_t sequence_number = util::endian::little(header_ext->sequenceNumber);
+            process_audio_data(reinterpret_cast<const uint8_t *>(buffer.data()) + header_size, 
+                              bytes - header_size, sequence_number);
           }
           return;
         }
@@ -1351,7 +1413,16 @@ namespace stream {
       if (header->rtp.packetType == MIC_PACKET_TYPE_OPUS) {
         size_t header_size = sizeof(mic_packet_t);
         if (bytes > header_size) {
-          process_audio_data(reinterpret_cast<const uint8_t *>(buffer.data()) + header_size, bytes - header_size);
+          // 客户端按小端序发送序列号（MicrophoneStream.java 使用 LITTLE_ENDIAN）
+          // 服务端必须按小端序读取，否则会读错（比如 1 会读成 256）
+          uint16_t sequence_number = util::endian::little(header->rtp.sequenceNumber);
+          size_t data_size = bytes - header_size;
+          BOOST_LOG(debug) << "Received MIC packet: total=" << bytes 
+                          << " bytes, header=" << header_size 
+                          << " bytes, data=" << data_size 
+                          << " bytes, sequenceNumber=" << sequence_number << " (little-endian)";
+          process_audio_data(reinterpret_cast<const uint8_t *>(buffer.data()) + header_size, 
+                            data_size, sequence_number);
         }
       }
     };
@@ -1864,8 +1935,42 @@ namespace stream {
 
       auto &shards_p = session->audio.shards_p;
 
-      auto bytes = encode_audio(session->config.encryptionFlagsEnabled & SS_ENC_AUDIO, packet_data,
+      // 检查客户端是否启用了音频加密
+      bool audio_encryption_enabled = (session->config.encryptionFlagsEnabled & SS_ENC_AUDIO) != 0;
+      if (sequenceNumber == 0) {
+        // 只在第一个包时记录一次，避免日志过多
+        BOOST_LOG(info) << "Audio encryption status: encryptionFlagsEnabled=0x" 
+                        << std::hex << session->config.encryptionFlagsEnabled << std::dec
+                        << ", SS_ENC_AUDIO (0x04) check: " << (audio_encryption_enabled ? "enabled" : "disabled")
+                        << ", will " << (audio_encryption_enabled ? "ENCRYPT" : "NOT encrypt") << " audio data";
+      }
+
+      size_t plaintext_size = packet_data.size();
+      
+      // 验证 cipher 是否已初始化
+      if (sequenceNumber == 0) {
+        bool cipher_initialized = (session->audio.cipher.key.size() > 0);
+        BOOST_LOG(info) << "Audio cipher status: initialized=" << (cipher_initialized ? "yes" : "no")
+                        << ", key_size=" << session->audio.cipher.key.size();
+      }
+      
+      auto bytes = encode_audio(audio_encryption_enabled, packet_data,
         shards_p[sequenceNumber % RTPA_DATA_SHARDS], iv, session->audio.cipher);
+      
+      if (sequenceNumber == 0) {
+        // 验证加密是否真的执行了
+        if (audio_encryption_enabled) {
+          // 加密后的大小应该大于等于明文（因为 PKCS5 填充）
+          bool encryption_applied = (bytes >= plaintext_size && bytes % 16 == 0);
+          BOOST_LOG(info) << "Audio packet encryption: plaintext_size=" << plaintext_size 
+                          << ", encrypted_size=" << bytes
+                          << ", encryption " << (encryption_applied ? "SUCCESS (data is encrypted)" : "FAILED (data may not be encrypted)");
+        } else {
+          BOOST_LOG(info) << "Audio packet: plaintext_size=" << plaintext_size 
+                          << ", output_size=" << bytes
+                          << " (NOT encrypted, sent as plaintext)";
+        }
+      }
       if (bytes < 0) {
         BOOST_LOG(error) << "Couldn't encode audio packet"sv;
         break;
@@ -2295,9 +2400,24 @@ namespace stream {
             if (!session.broadcast_ref->mic_cipher) {
               session.broadcast_ref->mic_cipher.emplace(session.audio.cipher.key, session.audio.cipher.padding);
               session.broadcast_ref->mic_iv.resize(16);
-              auto rikey = session.audio.avRiKeyId;
-              std::memcpy(session.broadcast_ref->mic_iv.data(), &rikey, sizeof(rikey));
+              // 初始化 IV：前 4 字节存储 baseIv（大端序）
+              // baseIv 对应客户端的 remoteInputAesIv 的前 4 字节
+              // avRiKeyId 就是 launch_session.iv 的前 4 字节（大端序），与 remoteInputAesIv 的前 4 字节相同
+              *(std::uint32_t *) session.broadcast_ref->mic_iv.data() = util::endian::big<std::uint32_t>(session.audio.avRiKeyId);
+              // 其余字节保持为 0（IV 是 16 字节，但只使用前 4 字节）
+              std::memset(session.broadcast_ref->mic_iv.data() + 4, 0, 12);
               session.broadcast_ref->mic_encryption_enabled.store(true);
+              
+              // 打印密钥和 IV 的十六进制值用于调试
+              std::string key_hex;
+              for (size_t i = 0; i < session.audio.cipher.key.size(); ++i) {
+                char buf[4];
+                std::snprintf(buf, sizeof(buf), "%02x", session.audio.cipher.key[i]);
+                key_hex += buf;
+                if (i < session.audio.cipher.key.size() - 1) key_hex += " ";
+              }
+              BOOST_LOG(debug) << "MIC cipher initialized, key (hex): " << key_hex;
+              BOOST_LOG(debug) << "MIC IV initialized with baseIv (avRiKeyId): 0x" << std::hex << session.audio.avRiKeyId << std::dec;
               BOOST_LOG(info) << "Microphone encryption enabled and initialized, mic_encryption_enabled: " << session.broadcast_ref->mic_encryption_enabled.load();
             } else {
               BOOST_LOG(info) << "Microphone encryption cipher already exists, skipping initialization. "
