@@ -259,7 +259,13 @@ namespace display_device {
       // user has changed the settings while the stream was paused. For the proper "evaluation" order,
       // see logic outside this conditional.
       const auto prev_duplicated_devices { get_duplicate_devices(requested_device_id, previously_configured_topology->initial) };
-      const auto prev_final_topology { determine_final_topology(config.device_prep, primary_device_requested, prev_duplicated_devices, previously_configured_topology->initial) };
+      auto prev_final_topology { determine_final_topology(config.device_prep, primary_device_requested, prev_duplicated_devices, previously_configured_topology->initial) };
+
+      // 与当前实现保持一致：在非「仅启用」模式下，也对“历史期望拓扑”做一次补全，
+      // 这样在比较是否需要回滚时，不会因为我们额外补上的 inactive 设备导致无意义的回滚与再次切换。
+      if (config.device_prep != parsed_config_t::device_prep_e::ensure_only_display) {
+        prev_final_topology = augment_topology_with_inactive_devices(prev_final_topology, requested_device_id);
+      }
 
       // There is also an edge case where we can have a different number of primary duplicated devices, which wasn't the case
       // during the initial topology configuration. If the user requested to use the primary device,
@@ -268,7 +274,11 @@ namespace display_device {
       // same final topology as the prev_final_topology.
       const auto current_topology { get_current_topology() };
       const auto duplicated_devices { get_duplicate_devices(requested_device_id, current_topology) };
-      const auto final_topology { determine_final_topology(config.device_prep, primary_device_requested, duplicated_devices, current_topology) };
+      auto final_topology { determine_final_topology(config.device_prep, primary_device_requested, duplicated_devices, current_topology) };
+
+      if (config.device_prep != parsed_config_t::device_prep_e::ensure_only_display) {
+        final_topology = augment_topology_with_inactive_devices(final_topology, requested_device_id);
+      }
 
       // If the topology we are switching to is the same as the final topology we had before, that means
       // user did not change anything, and we don't need to revert changes.
