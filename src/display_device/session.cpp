@@ -276,7 +276,7 @@ namespace display_device {
           BOOST_LOG(warning) << "Failed to apply display settings - will stop trying, but will allow stream to continue.";
           // WARNING! After call to the method below, this lambda function is no longer valid!
           // DO NOT access anything from the capture list!
-          restore_state_impl();
+          restore_state_impl(revert_reason_e::config_cleanup);
         }
         return true;
       });
@@ -291,7 +291,7 @@ namespace display_device {
       timer->setup_timer(nullptr);
     }
     else {
-      restore_state_impl();
+      restore_state_impl(revert_reason_e::config_cleanup);
     }
   }
 
@@ -414,7 +414,7 @@ namespace display_device {
   }
 
   void
-  session_t::restore_state_impl() {
+  session_t::restore_state_impl(revert_reason_e reason) {
     // 检测RDP会话
     if (w_utils::is_any_rdp_session_active()) {
       BOOST_LOG(info) << "Detected RDP remote session, disabling display settings recovery";
@@ -422,7 +422,7 @@ namespace display_device {
       return;
     }
 
-    if (!settings.is_changing_settings_going_to_fail() && settings.revert_settings(revert_reason_e::stream_ended)) {
+    if (!settings.is_changing_settings_going_to_fail() && settings.revert_settings(reason)) {
       stop_timer_and_clear_vdd_state();
     }
     else {
@@ -434,7 +434,7 @@ namespace display_device {
       static int retry_count = 0;
       const int max_retries = 20;
 
-      timer->setup_timer([this]() {
+      timer->setup_timer([this, reason]() {
         if (settings.is_changing_settings_going_to_fail()) {
           retry_count++;
           if (retry_count >= max_retries) {
@@ -447,7 +447,7 @@ namespace display_device {
         }
 
         // 只恢复一次
-        auto result = settings.revert_settings(revert_reason_e::stream_ended);
+        auto result = settings.revert_settings(reason);
         BOOST_LOG(info) << "尝试恢复显示设置" << (result ? "成功" : "失败") << "，不再重试";
         clear_vdd_state();
         return true;
