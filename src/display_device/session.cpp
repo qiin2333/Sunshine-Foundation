@@ -345,7 +345,7 @@ namespace display_device {
     const std::string current_client_id = get_client_id_from_session(session);
     const vdd_utils::hdr_brightness_t hdr_brightness { session.max_nits, session.min_nits, session.max_full_nits };
     const vdd_utils::physical_size_t physical_size = vdd_utils::get_client_physical_size(session.client_name);
-    
+
     auto device_zako = display_device::find_device_by_friendlyname(ZAKO_NAME);
 
     // Rebuild VDD device on client switch
