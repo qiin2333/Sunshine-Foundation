@@ -229,19 +229,15 @@
 </template>
 
 <script setup>
-import { onMounted, ref, computed, nextTick, watch } from 'vue'
+import { onMounted, ref, nextTick, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
-import * as bootstrap from 'bootstrap'
+import { Tooltip } from 'bootstrap'
 import Navbar from '../components/layout/Navbar.vue'
 import { usePin } from '../composables/usePin.js'
 
 const { t } = useI18n()
 
 const {
-  pairingDeviceName,
-  unpairAllPressed,
-  unpairAllStatus,
-  showApplyMessage,
   clients,
   hdrProfileList,
   hasIccFileList,
@@ -257,91 +253,47 @@ const {
   cancelEdit,
   hasUnsavedChanges,
   initPinForm,
-  clickedApplyBanner,
   loadConfig,
 } = usePin()
 
 const clientToDelete = ref(null)
 
-// 处理删除
 const handleDelete = (client) => {
-  // 如果正在编辑，不允许删除
-  if (editingStates[client.uuid]) {
-    return
-  }
+  if (editingStates[client.uuid]) return
   clientToDelete.value = client
 }
 
-// 确认删除
 const confirmDelete = async () => {
   if (!clientToDelete.value) return
-  const uuid = clientToDelete.value.uuid
-  const success = await unpairSingle(uuid)
-  if (success) {
-    clientToDelete.value = null
-  }
+  const success = await unpairSingle(clientToDelete.value.uuid)
+  if (success) clientToDelete.value = null
 }
 
-// 处理保存
 const handleSave = async (uuid) => {
   const success = await saveClient(uuid)
-  if (!success) {
-    alert(t('pin.save_failed'))
-  }
+  if (!success) alert(t('pin.save_failed'))
 }
 
-// 处理取消编辑
-const handleCancelEdit = (uuid) => {
-  cancelEdit(uuid)
-}
+const handleCancelEdit = (uuid) => cancelEdit(uuid)
 
-// 处理HDR Profile变更
-const onProfileChange = (uuid) => {
-  // 可以在这里添加实时验证或其他逻辑
-}
-
-// 处理尺寸变更
-const onSizeChange = (uuid) => {
-  // 可以在这里添加实时验证或其他逻辑
-}
-
-// 处理取消所有配对
 const handleUnpairAll = async () => {
-  if (confirm(t('pin.unpair_all_confirm'))) {
-    await unpairAll()
-  }
+  if (confirm(t('pin.unpair_all_confirm'))) await unpairAll()
 }
 
-// 初始化 tooltip
 const initTooltips = () => {
   nextTick(() => {
-    // HDR Profile tooltip
-    const hdrTooltipEl = document.querySelector('[data-tooltip="hdr-profile"]')
-    if (hdrTooltipEl) {
-      const existingTooltip = bootstrap.Tooltip.getInstance(hdrTooltipEl)
-      if (existingTooltip) {
-        existingTooltip.dispose()
-      }
-      new bootstrap.Tooltip(hdrTooltipEl, {
-        html: true,
-        placement: 'top',
-        title: t('pin.hdr_profile_info')
-      })
-    }
+    const tooltipConfigs = [
+      { selector: '[data-tooltip="hdr-profile"]', title: t('pin.hdr_profile_info') },
+      { selector: '[data-tooltip="device-size"]', title: t('pin.device_size_info') }
+    ]
     
-    // Device Size tooltip
-    const deviceSizeTooltipEl = document.querySelector('[data-tooltip="device-size"]')
-    if (deviceSizeTooltipEl) {
-      const existingTooltip = bootstrap.Tooltip.getInstance(deviceSizeTooltipEl)
-      if (existingTooltip) {
-        existingTooltip.dispose()
-      }
-      new bootstrap.Tooltip(deviceSizeTooltipEl, {
-        html: true,
-        placement: 'top',
-        title: t('pin.device_size_info')
-      })
-    }
+    tooltipConfigs.forEach(({ selector, title }) => {
+      const el = document.querySelector(selector)
+      if (!el) return
+      
+      Tooltip.getInstance(el)?.dispose()
+      new Tooltip(el, { html: true, placement: 'top', title })
+    })
   })
 }
 
@@ -349,28 +301,21 @@ onMounted(async () => {
   await loadConfig()
   await refreshClients()
 
-  initPinForm(() => {
-    setTimeout(() => refreshClients(), 0)
-  })
+  initPinForm(() => setTimeout(refreshClients, 0))
 
-  // 获取 HDR Profile 列表（如果 Electron 可用）
   if (window.electron?.getIccFileList) {
     hasIccFileList.value = true
     window.electron.getIccFileList((files = []) => {
-      hdrProfileList.value = files.filter((file) => /.icc$/.test(file))
+      hdrProfileList.value = files.filter(file => /.icc$/.test(file))
     })
   } else {
     hasIccFileList.value = false
   }
 
-  // 初始化 tooltip
   initTooltips()
 })
 
-// 监听客户端列表变化，重新初始化 tooltip
-watch(clients, () => {
-  initTooltips()
-}, { deep: true })
+watch(clients, initTooltips, { deep: true })
 </script>
 
 <style>

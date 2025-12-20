@@ -759,10 +759,4 @@ onBeforeUnmount(cleanup)
     }
   }
 }
-
-:deep(.drag-handle) {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
 </style>
