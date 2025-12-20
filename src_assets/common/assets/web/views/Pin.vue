@@ -77,8 +77,26 @@
                 <thead class="table-dark">
                   <tr>
                     <th scope="col" width="20%" class="ps-3">{{ $t('pin.client_name') }}</th>
-                    <th scope="col" class="ps-3">{{ $t('pin.hdr_profile') }}</th>
-                    <th scope="col" class="ps-3">{{ $t('pin.device_size') }}</th>
+                    <th scope="col" class="ps-3">
+                      <span class="d-inline-flex align-items-center gap-1">
+                        {{ $t('pin.hdr_profile') }}
+                        <i
+                          class="fas fa-info-circle text-info"
+                          data-tooltip="hdr-profile"
+                          style="cursor: help; font-size: 0.875rem;"
+                        ></i>
+                      </span>
+                    </th>
+                    <th scope="col" class="ps-3">
+                      <span class="d-inline-flex align-items-center gap-1">
+                        {{ $t('pin.device_size') }}
+                        <i
+                          class="fas fa-info-circle text-info"
+                          data-tooltip="device-size"
+                          style="cursor: help; font-size: 0.875rem;"
+                        ></i>
+                      </span>
+                    </th>
                     <th scope="col" width="30%" class="text-center">{{ $t('pin.actions') }}</th>
                   </tr>
                 </thead>
@@ -211,8 +229,9 @@
 </template>
 
 <script setup>
-import { onMounted, ref, computed } from 'vue'
+import { onMounted, ref, computed, nextTick, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
+import * as bootstrap from 'bootstrap'
 import Navbar from '../components/layout/Navbar.vue'
 import { usePin } from '../composables/usePin.js'
 
@@ -293,6 +312,39 @@ const handleUnpairAll = async () => {
   }
 }
 
+// 初始化 tooltip
+const initTooltips = () => {
+  nextTick(() => {
+    // HDR Profile tooltip
+    const hdrTooltipEl = document.querySelector('[data-tooltip="hdr-profile"]')
+    if (hdrTooltipEl) {
+      const existingTooltip = bootstrap.Tooltip.getInstance(hdrTooltipEl)
+      if (existingTooltip) {
+        existingTooltip.dispose()
+      }
+      new bootstrap.Tooltip(hdrTooltipEl, {
+        html: true,
+        placement: 'top',
+        title: t('pin.hdr_profile_info')
+      })
+    }
+    
+    // Device Size tooltip
+    const deviceSizeTooltipEl = document.querySelector('[data-tooltip="device-size"]')
+    if (deviceSizeTooltipEl) {
+      const existingTooltip = bootstrap.Tooltip.getInstance(deviceSizeTooltipEl)
+      if (existingTooltip) {
+        existingTooltip.dispose()
+      }
+      new bootstrap.Tooltip(deviceSizeTooltipEl, {
+        html: true,
+        placement: 'top',
+        title: t('pin.device_size_info')
+      })
+    }
+  })
+}
+
 onMounted(async () => {
   await loadConfig()
   await refreshClients()
@@ -310,16 +362,35 @@ onMounted(async () => {
   } else {
     hasIccFileList.value = false
   }
+
+  // 初始化 tooltip
+  initTooltips()
 })
+
+// 监听客户端列表变化，重新初始化 tooltip
+watch(clients, () => {
+  initTooltips()
+}, { deep: true })
 </script>
 
 <style>
 @import '../styles/global.less';
 </style>
 
-<style scoped>
+<style scoped lang="less">
 .client-list-container {
   margin-top: 1rem;
+
+  .table-responsive {
+    border-radius: var(--border-radius-md, 8px);
+    overflow: hidden;
+  }
+
+  .table {
+    border-radius: var(--border-radius-md, 12px);
+    overflow: hidden;
+    margin-bottom: 0;
+  }
 }
 
 .table-warning {
@@ -344,7 +415,7 @@ onMounted(async () => {
   justify-content: center;
   padding: var(--spacing-lg, 20px);
   overflow: hidden;
-  
+
   [data-bs-theme='light'] & {
     background: rgba(0, 0, 0, 0.5);
   }
@@ -362,7 +433,7 @@ onMounted(async () => {
   backdrop-filter: blur(20px);
   box-shadow: var(--shadow-xl, 0 25px 50px rgba(0, 0, 0, 0.5));
   animation: modalSlideUp 0.3s ease;
-  
+
   [data-bs-theme='light'] & {
     background: rgba(255, 255, 255, 0.95);
     border: 1px solid rgba(0, 0, 0, 0.15);
@@ -397,10 +468,10 @@ onMounted(async () => {
     align-items: center;
     gap: var(--spacing-sm, 8px);
   }
-  
+
   [data-bs-theme='light'] & {
     border-bottom: 1px solid rgba(0, 0, 0, 0.1);
-    
+
     h5 {
       color: #000000;
     }
@@ -414,7 +485,7 @@ onMounted(async () => {
   overflow-y: auto;
   flex: 1;
   color: var(--text-primary, #fff);
-  
+
   [data-bs-theme='light'] & {
     color: #000000;
   }
@@ -426,22 +497,19 @@ onMounted(async () => {
   gap: 10px;
   padding: var(--spacing-md, 20px) var(--spacing-lg, 24px);
   border-top: 1px solid var(--border-color-light, rgba(255, 255, 255, 0.1));
-  
+
   [data-bs-theme='light'] & {
     border-top: 1px solid rgba(0, 0, 0, 0.1);
   }
-}
 
-.delete-client-footer button {
-  padding: 8px 16px;
-  font-size: 0.9rem;
+  button {
+    padding: 8px 16px;
+    font-size: 0.9rem;
+  }
 }
 
 /* Vue 过渡动画 */
-.fade-enter-active {
-  transition: opacity 0.3s ease;
-}
-
+.fade-enter-active,
 .fade-leave-active {
   transition: opacity 0.3s ease;
 }
@@ -455,11 +523,11 @@ onMounted(async () => {
 @media (max-width: 768px) {
   .btn-toolbar {
     flex-direction: column;
-  }
 
-  .btn-toolbar .btn {
-    width: 100%;
-    margin-bottom: 0.25rem;
+    .btn {
+      width: 100%;
+      margin-bottom: 0.25rem;
+    }
   }
 
   .table-responsive {
