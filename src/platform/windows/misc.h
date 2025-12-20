@@ -62,4 +62,12 @@ namespace platf {
    */
   std::error_code
   impersonate_current_user(HANDLE user_token, std::function<void()> callback);
+
+  /**
+   * @brief Launch Sunshine in user session (non-service mode) from service mode.
+   * This is useful when WGC capture is needed but service mode doesn't support it.
+   * @return true if successfully launched, false otherwise.
+   */
+  bool
+  launch_sunshine_in_user_session();
 }  // namespace platf
