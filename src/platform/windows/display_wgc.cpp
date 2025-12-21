@@ -3,6 +3,8 @@
  * @brief Definitions for WinRT Windows.Graphics.Capture API
  */
 // platform includes
+#include <winsock2.h>
+#include <windows.h>
 #include <algorithm>
 #include <chrono>
 #include <dxgi1_2.h>
@@ -34,7 +36,7 @@ namespace winrt {
   using namespace Windows::Graphics::DirectX::Direct3D11;
 
   extern "C" {
-  HRESULT __stdcall CreateDirect3D11DeviceFromDXGIDevice(::IDXGIDevice *dxgiDevice, ::IInspectable **graphicsDevice);
+    HRESULT __stdcall CreateDirect3D11DeviceFromDXGIDevice(::IDXGIDevice *dxgiDevice, ::IInspectable **graphicsDevice);
   }
 
   /**
@@ -137,19 +139,19 @@ namespace platf::dxgi {
    */
   int
   wgc_capture_t::init(display_base_t *display, const ::video::config_t &config) {
-    if (!winrt::GraphicsCaptureSession::IsSupported()) {
-      BOOST_LOG(error) << "Screen capture is not supported on this device for this release of Windows!"sv;
-      return -1;
-    }
+      if (!winrt::GraphicsCaptureSession::IsSupported()) {
+        BOOST_LOG(error) << "Screen capture is not supported on this device for this release of Windows!"sv;
+        return -1;
+      }
 
     HRESULT status;
     dxgi::dxgi_t dxgi;
     winrt::com_ptr<::IInspectable> d3d_comhandle;
 
-    if (FAILED(status = display->device->QueryInterface(IID_IDXGIDevice, (void **) &dxgi))) {
-      BOOST_LOG(error) << "Failed to query DXGI interface from device [0x"sv << util::hex(status).to_string_view() << ']';
-      return -1;
-    }
+      if (FAILED(status = display->device->QueryInterface(IID_IDXGIDevice, (void **) &dxgi))) {
+        BOOST_LOG(error) << "Failed to query DXGI interface from device [0x"sv << util::hex(status).to_string_view() << ']';
+        return -1;
+      }
 
     auto handle_wgc_service_error = [](HRESULT code) {
       if (code != 0x80070424) return;
@@ -233,8 +235,8 @@ namespace platf::dxgi {
       HWND target_hwnd = find_window_by_title(window_title);
       if (target_hwnd == nullptr) {
         BOOST_LOG(error) << "Window not found: ["sv << window_title << ']';
-        return -1;
-      }
+      return -1;
+    }
 
       BOOST_LOG(info) << "Capturing window: ["sv << window_title << ']';
       if (FAILED(status = capture_factory->CreateForWindow(target_hwnd, winrt::guid_of<winrt::IGraphicsCaptureItem>(), winrt::put_abi(item)))) {
@@ -247,13 +249,13 @@ namespace platf::dxgi {
         BOOST_LOG(error) << "Display output is null, cannot capture monitor"sv;
         return -1;
       }
-      DXGI_OUTPUT_DESC output_desc;
-      display->output->GetDesc(&output_desc);
+    DXGI_OUTPUT_DESC output_desc;
+    display->output->GetDesc(&output_desc);
       BOOST_LOG(info) << "Capturing display: ["sv << platf::to_utf8(output_desc.DeviceName) << ']';
       if (FAILED(status = capture_factory->CreateForMonitor(output_desc.Monitor, winrt::guid_of<winrt::IGraphicsCaptureItem>(), winrt::put_abi(item)))) {
-        BOOST_LOG(error) << "Screen capture is not supported on this device for this release of Windows: failed to acquire display: [0x"sv << util::hex(status).to_string_view() << ']';
-        return -1;
-      }
+      BOOST_LOG(error) << "Screen capture is not supported on this device for this release of Windows: failed to acquire display: [0x"sv << util::hex(status).to_string_view() << ']';
+      return -1;
+    }
     }
 
     display->capture_format = config.dynamicRange ? DXGI_FORMAT_R16G16B16A16_FLOAT : DXGI_FORMAT_B8G8R8A8_UNORM;
