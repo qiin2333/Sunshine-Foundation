@@ -13,6 +13,7 @@
 #include "misc.h"
 #include "src/config.h"
 #include "src/logging.h"
+#include "src/process.h"
 
 // Gross hack to work around MINGW-packages#22160
 #define ____FIReference_1_boolean_INTERFACE_DEFINED__
@@ -205,6 +206,17 @@ namespace platf::dxgi {
     if (config::video.capture_target == "window") {
       capture_window = true;
       window_title = config::video.window_title;
+      
+      // If window_title is empty, try to use the current running app name
+      if (window_title.empty()) {
+        int running_app_id = proc::proc.running();
+        if (running_app_id > 0) {
+          window_title = proc::proc.get_last_run_app_name();
+          if (!window_title.empty()) {
+            BOOST_LOG(info) << "Window title not specified, using current app name: ["sv << window_title << ']';
+          }
+        }
+      }
     }
     // Priority 2: Check "window:" prefix in display_name (backward compatibility)
     else if (config.display_name.length() > 7 && config.display_name.substr(0, 7) == "window:") {
@@ -214,7 +226,7 @@ namespace platf::dxgi {
 
     if (capture_window) {
       if (window_title.empty()) {
-        BOOST_LOG(error) << "Window capture requested but window_title is empty"sv;
+        BOOST_LOG(error) << "Window capture requested but window_title is empty and no app is running"sv;
         return -1;
       }
 
