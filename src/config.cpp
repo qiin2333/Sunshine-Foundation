@@ -1172,20 +1172,11 @@ namespace config {
     
 #ifdef _WIN32
     // Check if WGC is selected and we're running in service mode
-    // If so, automatically switch to user session mode
+    // If so, automatically switch to DDX since WGC doesn't work in system mode
     if (!video.capture.empty() && video.capture == "wgc") {
       if (platf::is_running_as_system()) {
-        BOOST_LOG(warning) << "WGC capture requires user session mode. Attempting to switch..."sv;
-        if (platf::launch_sunshine_in_user_session()) {
-          BOOST_LOG(info) << "Successfully launched Sunshine in user session. Service instance will exit."sv;
-          // Give the new process a moment to start, then exit
-          std::this_thread::sleep_for(std::chrono::seconds(2));
-          // Exit the service instance gracefully
-          exit(0);
-        }
-        else {
-          BOOST_LOG(error) << "Failed to automatically switch to user session mode."sv;
-        }
+        BOOST_LOG(warning) << "WGC capture requires user session mode. Automatically switching to DDX capture."sv;
+        video.capture = "ddx";
       }
     }
 #endif

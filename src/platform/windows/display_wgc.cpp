@@ -36,7 +36,7 @@ namespace winrt {
   using namespace Windows::Graphics::DirectX::Direct3D11;
 
   extern "C" {
-    HRESULT __stdcall CreateDirect3D11DeviceFromDXGIDevice(::IDXGIDevice *dxgiDevice, ::IInspectable **graphicsDevice);
+  HRESULT __stdcall CreateDirect3D11DeviceFromDXGIDevice(::IDXGIDevice *dxgiDevice, ::IInspectable **graphicsDevice);
   }
 
   /**
@@ -139,56 +139,27 @@ namespace platf::dxgi {
    */
   int
   wgc_capture_t::init(display_base_t *display, const ::video::config_t &config) {
-      if (!winrt::GraphicsCaptureSession::IsSupported()) {
-        BOOST_LOG(error) << "Screen capture is not supported on this device for this release of Windows!"sv;
-        return -1;
-      }
+    if (!winrt::GraphicsCaptureSession::IsSupported()) {
+      BOOST_LOG(error) << "Screen capture is not supported on this device for this release of Windows!"sv;
+      return -1;
+    }
 
     HRESULT status;
     dxgi::dxgi_t dxgi;
     winrt::com_ptr<::IInspectable> d3d_comhandle;
 
-      if (FAILED(status = display->device->QueryInterface(IID_IDXGIDevice, (void **) &dxgi))) {
-        BOOST_LOG(error) << "Failed to query DXGI interface from device [0x"sv << util::hex(status).to_string_view() << ']';
-        return -1;
-      }
-
-    auto handle_wgc_service_error = [](HRESULT code) {
-      if (code != 0x80070424) return;
-
-      BOOST_LOG(error) << "Error 0x80070424: Windows Graphics Capture (WGC) cannot be used in service mode."sv;
-      BOOST_LOG(error) << "WGC requires access to user session graphics, which services cannot access."sv;
-
-      if (platf::is_running_as_system()) {
-        BOOST_LOG(warning) << "Attempting to automatically switch to user session mode..."sv;
-        if (platf::launch_sunshine_in_user_session()) {
-          BOOST_LOG(info) << "Successfully launched Sunshine in user session. Service instance will exit."sv;
-          std::this_thread::sleep_for(std::chrono::seconds(2));
-          exit(0);
-        }
-        BOOST_LOG(error) << "Failed to automatically switch to user session mode."sv;
-        BOOST_LOG(error) << "  1. Use Desktop Duplication API (DDX) instead: set 'capture=ddx' in sunshine.conf"sv;
-        BOOST_LOG(error) << "  2. Manually run Sunshine as a regular application (not as a service)"sv;
-        BOOST_LOG(error) << "  3. Use 'Allow service to interact with desktop' (not recommended, may not work on Windows 10+)"sv;
-      }
-      else {
-        BOOST_LOG(error) << "Solutions:"sv;
-        BOOST_LOG(error) << "  1. Use Desktop Duplication API (DDX) instead: set 'capture=ddx' in sunshine.conf"sv;
-        BOOST_LOG(error) << "  2. Run Sunshine as a regular application (not as a service)"sv;
-        BOOST_LOG(error) << "  3. Use 'Allow service to interact with desktop' (not recommended, may not work on Windows 10+)"sv;
-      }
-    };
-
+    if (FAILED(status = display->device->QueryInterface(IID_IDXGIDevice, (void **) &dxgi))) {
+      BOOST_LOG(error) << "Failed to query DXGI interface from device [0x"sv << util::hex(status).to_string_view() << ']';
+      return -1;
+    }
     try {
       if (FAILED(status = winrt::CreateDirect3D11DeviceFromDXGIDevice(*&dxgi, d3d_comhandle.put()))) {
         BOOST_LOG(error) << "Failed to query WinRT DirectX interface from device [0x"sv << util::hex(status).to_string_view() << ']';
-        handle_wgc_service_error(status);
         return -1;
       }
     }
     catch (winrt::hresult_error &e) {
       BOOST_LOG(error) << "Screen capture is not supported on this device for this release of Windows: failed to acquire device: [0x"sv << util::hex(e.code()).to_string_view() << ']';
-      handle_wgc_service_error(e.code());
       return -1;
     }
 
@@ -208,7 +179,7 @@ namespace platf::dxgi {
     if (config::video.capture_target == "window") {
       capture_window = true;
       window_title = config::video.window_title;
-      
+
       // If window_title is empty, try to use the current running app name
       if (window_title.empty()) {
         int running_app_id = proc::proc.running();
@@ -235,8 +206,8 @@ namespace platf::dxgi {
       HWND target_hwnd = find_window_by_title(window_title);
       if (target_hwnd == nullptr) {
         BOOST_LOG(error) << "Window not found: ["sv << window_title << ']';
-      return -1;
-    }
+        return -1;
+      }
 
       BOOST_LOG(info) << "Capturing window: ["sv << window_title << ']';
       if (FAILED(status = capture_factory->CreateForWindow(target_hwnd, winrt::guid_of<winrt::IGraphicsCaptureItem>(), winrt::put_abi(item)))) {
@@ -249,13 +220,13 @@ namespace platf::dxgi {
         BOOST_LOG(error) << "Display output is null, cannot capture monitor"sv;
         return -1;
       }
-    DXGI_OUTPUT_DESC output_desc;
-    display->output->GetDesc(&output_desc);
+      DXGI_OUTPUT_DESC output_desc;
+      display->output->GetDesc(&output_desc);
       BOOST_LOG(info) << "Capturing display: ["sv << platf::to_utf8(output_desc.DeviceName) << ']';
       if (FAILED(status = capture_factory->CreateForMonitor(output_desc.Monitor, winrt::guid_of<winrt::IGraphicsCaptureItem>(), winrt::put_abi(item)))) {
-      BOOST_LOG(error) << "Screen capture is not supported on this device for this release of Windows: failed to acquire display: [0x"sv << util::hex(status).to_string_view() << ']';
-      return -1;
-    }
+        BOOST_LOG(error) << "Screen capture is not supported on this device for this release of Windows: failed to acquire display: [0x"sv << util::hex(status).to_string_view() << ']';
+        return -1;
+      }
     }
 
     display->capture_format = config.dynamicRange ? DXGI_FORMAT_R16G16B16A16_FLOAT : DXGI_FORMAT_B8G8R8A8_UNORM;
