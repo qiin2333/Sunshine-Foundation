@@ -42,6 +42,7 @@ const navItems = Object.freeze([
   { path: '/pin', icon: 'fa-unlock', label: 'navbar.pin' },
   { path: '/apps', icon: 'fa-stream', label: 'navbar.applications' },
   { path: '/config', icon: 'fa-cog', label: 'navbar.configuration' },
+  { path: '/settings', icon: 'fa-sliders-h', label: 'navbar.settings' },
   { path: '/password', icon: 'fa-user-shield', label: 'navbar.password' },
   { path: '/troubleshooting', icon: 'fa-info', label: 'navbar.troubleshoot' },
 ])

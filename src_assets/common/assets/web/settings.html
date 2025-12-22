@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html lang="en" data-bs-theme="auto">
+  <head>
+    <%- header %>
+  </head>
+
+  <body id="app" v-cloak>
+    <!-- Vue 应用挂载点 -->
+  </body>
+
+  <script type="module">
+    import { createApp } from 'vue'
+    import { initApp } from './init'
+    import UserSettings from './views/UserSettings.vue'
+
+    const app = createApp(UserSettings)
+    initApp(app)
+  </script>
+</html>
