@@ -149,7 +149,11 @@ namespace subprocess {
      */
     inline std::string
     get_pipe_name(uint32_t session_id) {
-      return "\\\\.\\pipe\\sunshine_subprocess_" + std::to_string(session_id);
+#ifdef _WIN32
+      return R"(\\.\pipe\sunshine_subprocess_)" + std::to_string(session_id);
+#else
+      return "/tmp/sunshine_subprocess_" + std::to_string(session_id);
+#endif
     }
 
     /**

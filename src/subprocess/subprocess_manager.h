@@ -12,6 +12,7 @@
 #include <memory>
 #include <mutex>
 #include <string>
+#include <unordered_map>
 
 #include "ipc_pipe.h"
 #include "ipc_protocol.h"

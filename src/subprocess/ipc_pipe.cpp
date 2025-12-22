@@ -19,10 +19,10 @@
   #include <cstring>
 #endif
 
-using namespace std::literals;
-
 namespace subprocess {
   namespace ipc {
+    // Use chrono_literals only in the implementation
+    using namespace std::chrono_literals;
 
     const char *
     result_to_string(result_e result) {

@@ -26,7 +26,8 @@
   #include <winsock2.h>
 #endif
 
-using namespace std::literals;
+// Use chrono_literals for time durations
+using namespace std::chrono_literals;
 namespace ipc = subprocess::ipc;
 
 // Global state
