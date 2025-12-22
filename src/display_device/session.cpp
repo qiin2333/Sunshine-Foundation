@@ -447,6 +447,17 @@ namespace display_device {
       return;
     }
 
+    // 在串流结束时处理VDD销毁（即使锁屏也可以执行清理工作）
+    // 注意：创建VDD需要在 revert_settings 中处理，因为需要用户会话解锁才能被DXGI捕获
+    if (reason == revert_reason_e::stream_ended) {
+      auto devices = display_device::enum_available_devices();
+      if (devices.size() > 1 && is_display_on()) {
+        // 销毁VDD：可以在锁屏状态下执行（清理工作）
+        BOOST_LOG(info) << "检测到多个显示器，关闭VDD" << (settings.is_changing_settings_going_to_fail() ? "（锁屏状态）" : "");
+        destroy_vdd_monitor();
+      }
+    }
+
     if (!settings.is_changing_settings_going_to_fail() && settings.revert_settings(reason)) {
       stop_timer_and_clear_vdd_state();
     }
