@@ -4,7 +4,7 @@
  */
 #include "ipc_pipe.h"
 
-#include "src/logging.h"
+#include "subprocess_logging.h"
 
 #ifdef _WIN32
   #include <windows.h>
@@ -77,12 +77,12 @@ namespace subprocess {
       );
 
       if (handle == INVALID_HANDLE_VALUE) {
-        BOOST_LOG(error) << "Failed to create named pipe: " << GetLastError();
+        SUBPROCESS_LOG(error) << "Failed to create named pipe: " << GetLastError();
         return result_e::error_create_pipe;
       }
 
       pipe_handle_ = handle;
-      BOOST_LOG(debug) << "Created named pipe: " << pipe_name_;
+      SUBPROCESS_LOG(debug) << "Created named pipe: " << pipe_name_;
       return result_e::success;
 #else
       // On Unix, we use FIFO (named pipes)
@@ -90,11 +90,11 @@ namespace subprocess {
       unlink(pipe_name_.c_str());
 
       if (mkfifo(pipe_name_.c_str(), 0600) != 0) {
-        BOOST_LOG(error) << "Failed to create FIFO: " << strerror(errno);
+        SUBPROCESS_LOG(error) << "Failed to create FIFO: " << strerror(errno);
         return result_e::error_create_pipe;
       }
 
-      BOOST_LOG(debug) << "Created FIFO: " << pipe_name_;
+      SUBPROCESS_LOG(debug) << "Created FIFO: " << pipe_name_;
       return result_e::success;
 #endif
     }
@@ -112,7 +112,7 @@ namespace subprocess {
       OVERLAPPED overlapped = {};
       overlapped.hEvent = CreateEvent(nullptr, TRUE, FALSE, nullptr);
       if (!overlapped.hEvent) {
-        BOOST_LOG(error) << "Failed to create event: " << GetLastError();
+        SUBPROCESS_LOG(error) << "Failed to create event: " << GetLastError();
         return result_e::error_create_pipe;
       }
 
@@ -128,11 +128,11 @@ namespace subprocess {
 
           if (wait_result == WAIT_TIMEOUT) {
             CancelIo(handle);
-            BOOST_LOG(debug) << "Connection timeout";
+            SUBPROCESS_LOG(debug) << "Connection timeout";
             return result_e::error_timeout;
           }
           else if (wait_result != WAIT_OBJECT_0) {
-            BOOST_LOG(error) << "Wait failed: " << GetLastError();
+            SUBPROCESS_LOG(error) << "Wait failed: " << GetLastError();
             return result_e::error_connect;
           }
 
@@ -141,14 +141,14 @@ namespace subprocess {
           if (!GetOverlappedResult(handle, &overlapped, &bytes, FALSE)) {
             error = GetLastError();
             if (error != ERROR_PIPE_CONNECTED) {
-              BOOST_LOG(error) << "GetOverlappedResult failed: " << error;
+              SUBPROCESS_LOG(error) << "GetOverlappedResult failed: " << error;
               return result_e::error_connect;
             }
           }
         }
         else if (error != ERROR_PIPE_CONNECTED) {
           CloseHandle(overlapped.hEvent);
-          BOOST_LOG(error) << "ConnectNamedPipe failed: " << error;
+          SUBPROCESS_LOG(error) << "ConnectNamedPipe failed: " << error;
           return result_e::error_connect;
         }
       }
@@ -157,19 +157,19 @@ namespace subprocess {
       }
 
       connected_ = true;
-      BOOST_LOG(info) << "Client connected to IPC pipe";
+      SUBPROCESS_LOG(info) << "Client connected to IPC pipe";
       return result_e::success;
 #else
       // On Unix, open the FIFO for read+write (non-blocking initially)
       int fd = open(pipe_name_.c_str(), O_RDWR | O_NONBLOCK);
       if (fd < 0) {
-        BOOST_LOG(error) << "Failed to open FIFO: " << strerror(errno);
+        SUBPROCESS_LOG(error) << "Failed to open FIFO: " << strerror(errno);
         return result_e::error_create_pipe;
       }
 
       pipe_handle_ = reinterpret_cast<void *>(static_cast<intptr_t>(fd));
       connected_ = true;
-      BOOST_LOG(info) << "IPC pipe ready";
+      SUBPROCESS_LOG(info) << "IPC pipe ready";
       return result_e::success;
 #endif
     }
@@ -190,7 +190,7 @@ namespace subprocess {
       // Write header
       DWORD written;
       if (!WriteFile(handle, &header, sizeof(header), &written, nullptr) || written != sizeof(header)) {
-        BOOST_LOG(error) << "Failed to write header: " << GetLastError();
+        SUBPROCESS_LOG(error) << "Failed to write header: " << GetLastError();
         return result_e::error_write;
       }
 
@@ -198,7 +198,7 @@ namespace subprocess {
       if (payload && payload_length > 0) {
         if (!WriteFile(handle, payload, static_cast<DWORD>(payload_length), &written, nullptr) ||
             written != payload_length) {
-          BOOST_LOG(error) << "Failed to write payload: " << GetLastError();
+          SUBPROCESS_LOG(error) << "Failed to write payload: " << GetLastError();
           return result_e::error_write;
         }
       }
@@ -210,7 +210,7 @@ namespace subprocess {
       // Write header
       ssize_t written = write(fd, &header, sizeof(header));
       if (written != sizeof(header)) {
-        BOOST_LOG(error) << "Failed to write header: " << strerror(errno);
+        SUBPROCESS_LOG(error) << "Failed to write header: " << strerror(errno);
         return result_e::error_write;
       }
 
@@ -218,7 +218,7 @@ namespace subprocess {
       if (payload && payload_length > 0) {
         written = write(fd, payload, payload_length);
         if (written != static_cast<ssize_t>(payload_length)) {
-          BOOST_LOG(error) << "Failed to write payload: " << strerror(errno);
+          SUBPROCESS_LOG(error) << "Failed to write payload: " << strerror(errno);
           return result_e::error_write;
         }
       }
@@ -346,7 +346,7 @@ namespace subprocess {
         return result_e::error_timeout;
       }
       else if (ret < 0) {
-        BOOST_LOG(error) << "Poll failed: " << strerror(errno);
+        SUBPROCESS_LOG(error) << "Poll failed: " << strerror(errno);
         return result_e::error_read;
       }
 
@@ -398,7 +398,7 @@ namespace subprocess {
             continue;
           }
           else if (result != result_e::success) {
-            BOOST_LOG(warning) << "IPC receive error: " << result_to_string(result);
+            SUBPROCESS_LOG(warning) << "IPC receive error: " << result_to_string(result);
             break;
           }
 
@@ -475,13 +475,13 @@ namespace subprocess {
           DWORD mode = PIPE_READMODE_MESSAGE;
           if (!SetNamedPipeHandleState(handle, &mode, nullptr, nullptr)) {
             CloseHandle(handle);
-            BOOST_LOG(error) << "Failed to set pipe mode: " << GetLastError();
+            SUBPROCESS_LOG(error) << "Failed to set pipe mode: " << GetLastError();
             return result_e::error_connect;
           }
 
           pipe_handle_ = handle;
           connected_ = true;
-          BOOST_LOG(info) << "Connected to IPC pipe: " << pipe_name_;
+          SUBPROCESS_LOG(info) << "Connected to IPC pipe: " << pipe_name_;
           return result_e::success;
         }
 
@@ -499,7 +499,7 @@ namespace subprocess {
           continue;
         }
         else {
-          BOOST_LOG(error) << "Failed to connect to pipe: " << error;
+          SUBPROCESS_LOG(error) << "Failed to connect to pipe: " << error;
           return result_e::error_connect;
         }
       }
@@ -512,7 +512,7 @@ namespace subprocess {
         if (fd >= 0) {
           pipe_handle_ = reinterpret_cast<void *>(static_cast<intptr_t>(fd));
           connected_ = true;
-          BOOST_LOG(info) << "Connected to IPC pipe: " << pipe_name_;
+          SUBPROCESS_LOG(info) << "Connected to IPC pipe: " << pipe_name_;
           return result_e::success;
         }
 
@@ -522,7 +522,7 @@ namespace subprocess {
           continue;
         }
 
-        BOOST_LOG(error) << "Failed to open FIFO: " << strerror(errno);
+        SUBPROCESS_LOG(error) << "Failed to open FIFO: " << strerror(errno);
         return result_e::error_connect;
       }
 
@@ -546,7 +546,7 @@ namespace subprocess {
       // Write header
       DWORD written;
       if (!WriteFile(handle, &header, sizeof(header), &written, nullptr) || written != sizeof(header)) {
-        BOOST_LOG(error) << "Failed to write header: " << GetLastError();
+        SUBPROCESS_LOG(error) << "Failed to write header: " << GetLastError();
         return result_e::error_write;
       }
 
@@ -554,7 +554,7 @@ namespace subprocess {
       if (payload && payload_length > 0) {
         if (!WriteFile(handle, payload, static_cast<DWORD>(payload_length), &written, nullptr) ||
             written != payload_length) {
-          BOOST_LOG(error) << "Failed to write payload: " << GetLastError();
+          SUBPROCESS_LOG(error) << "Failed to write payload: " << GetLastError();
           return result_e::error_write;
         }
       }
@@ -566,7 +566,7 @@ namespace subprocess {
       // Write header
       ssize_t written = write(fd, &header, sizeof(header));
       if (written != sizeof(header)) {
-        BOOST_LOG(error) << "Failed to write header: " << strerror(errno);
+        SUBPROCESS_LOG(error) << "Failed to write header: " << strerror(errno);
         return result_e::error_write;
       }
 
@@ -574,7 +574,7 @@ namespace subprocess {
       if (payload && payload_length > 0) {
         written = write(fd, payload, payload_length);
         if (written != static_cast<ssize_t>(payload_length)) {
-          BOOST_LOG(error) << "Failed to write payload: " << strerror(errno);
+          SUBPROCESS_LOG(error) << "Failed to write payload: " << strerror(errno);
           return result_e::error_write;
         }
       }
@@ -702,7 +702,7 @@ namespace subprocess {
         return result_e::error_timeout;
       }
       else if (ret < 0) {
-        BOOST_LOG(error) << "Poll failed: " << strerror(errno);
+        SUBPROCESS_LOG(error) << "Poll failed: " << strerror(errno);
         return result_e::error_read;
       }
 
@@ -754,7 +754,7 @@ namespace subprocess {
             continue;
           }
           else if (result != result_e::success) {
-            BOOST_LOG(warning) << "IPC receive error: " << result_to_string(result);
+            SUBPROCESS_LOG(warning) << "IPC receive error: " << result_to_string(result);
             break;
           }
 
